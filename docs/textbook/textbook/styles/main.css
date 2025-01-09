@@ -1,0 +1,194 @@
+/* Base Variables */
+:root {
+    --primary-color: #13294B;
+    --secondary-color: #E84A27;
+    --text-color: #333;
+    --light-bg: #f5f5f5;
+    --border-color: #ddd;
+    --code-bg: #f6f8fa;
+    --note-bg: #e8f4f8;
+    --note-border: #a8d1e0;
+    --warning-color: #856404;
+    --warning-bg: #fff3cd;
+    --warning-border: #ffeeba;
+}
+
+/* Base Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    background-color: var(--light-bg);
+}
+
+/* Layout */
+.header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 1.5rem 2rem;
+    text-align: left;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.content {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    color: var(--primary-color);
+    margin-top: 2rem;
+}
+
+h3 {
+    color: var(--secondary-color);
+    margin-top: 1.5rem;
+}
+
+/* Code Blocks */
+.command-block {
+    background: var(--code-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    overflow-x: auto;
+    margin: 1rem 0;
+    white-space: pre;
+}
+
+.code-inline {
+    background: var(--code-bg);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+/* Content Boxes */
+.section-box {
+    background: var(--light-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+    border-left: 4px solid var(--secondary-color);
+}
+
+.note-box {
+    background: var(--note-bg);
+    border: 1px solid var(--note-border);
+    padding: 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+}
+
+.warning-box {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    color: var(--warning-color);
+    padding: 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+}
+
+/* Directory Trees */
+.directory-tree {
+    background: var(--light-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    margin: 1rem 0;
+    white-space: pre;
+}
+
+/* Configuration Files */
+.config-file {
+    background: var(--note-bg);
+    border: 1px solid var(--note-border);
+    padding: 1rem;
+    border-radius: 6px;
+    margin: 1rem 0;
+}
+
+/* YAML Blocks */
+.yaml-block {
+    background: var(--code-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    margin: 1rem 0;
+    white-space: pre;
+}
+
+/* Navigation */
+.nav-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.nav-button {
+    color: var(--secondary-color);
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--secondary-color);
+    border-radius: 4px;
+    transition: all 0.2s ease-in-out;
+}
+
+.nav-button:hover {
+    background: var(--secondary-color);
+    color: white;
+}
+
+.back-link {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+    padding-left: 2rem;
+}
+
+li {
+    margin-bottom: 0.5rem;
+}
+
+/* Links */
+a {
+    color: var(--secondary-color);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}

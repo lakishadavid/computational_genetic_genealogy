@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloning the Course Repository</title>
+    <link rel="stylesheet" href="/docs/textbook/styles/main.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Cloning the Course Repository</h1>
+        <p>Chapter 2: Section 1 - Page 4</p>
+    </div>
+
+    <div class="container">
+        <div class="nav-header">
+            <a href="section1-page3.html" class="back-link">← Back to VSCode Setup</a>
+        </div>
+
+        <div class="content">
+            <div class="intro-box">
+                <p>After installing Git and VSCode, our next step is to download (or "clone" in Git terminology) the course materials from GitHub. In computational research, code sharing platforms like GitHub are essential for distributing analysis pipelines and datasets.</p>
+            </div>
+
+            <section>
+                <h2>Understanding Git Clone vs. ZIP Download</h2>
+                <div class="method-box">
+                    <h3>Why Clone?</h3>
+                    <ul>
+                        <li><strong>Version Control:</strong> Maintains Git connection for updates and change tracking</li>
+                        <li><strong>Complete History:</strong> Access the full development history</li>
+                        <li><strong>Reproducibility:</strong> Aligns with research best practices</li>
+                        <li><strong>Real-world Practice:</strong> Learn professional workflows</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>Choosing Where to Clone</h2>
+                
+                <div class="os-note">
+                    <h4>Windows (non-WSL2) Users</h4>
+                    <p>Choose a location in your Windows filesystem (e.g., <span class="path-example">Documents/Courses</span>)</p>
+                </div>
+
+                <div class="os-note">
+                    <h4>WSL2 Users</h4>
+                    <p>Recommended: Clone into your WSL2 filesystem (e.g., <span class="path-example">~/courses</span>)</p>
+                    <p>Access from Windows: <span class="path-example">\\wsl$\Ubuntu\home\yourusername\courses</span></p>
+                </div>
+
+                <div class="os-note">
+                    <h4>macOS/Linux Users</h4>
+                    <p>Choose any location in your home directory (e.g., <span class="path-example">~/courses</span>)</p>
+                </div>
+            </section>
+
+            <section>
+                <h2>Cloning Options</h2>
+
+                <div class="method-box">
+                    <h3>Option 1: Command Line (Recommended)</h3>
+                    <ol>
+                        <li>Open your terminal</li>
+                        <li>Navigate to your chosen directory:
+                            <div class="command-box">
+                                cd path/to/your/preferred/directory
+                            </div>
+                        </li>
+                        <li>Clone the repository:
+                            <div class="command-box">
+                                git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+
+                <div class="method-box">
+                    <h3>Option 2: VSCode Interface</h3>
+                    <ol>
+                        <li>Open VSCode (WSL2 users: ensure you're in a WSL2 window)</li>
+                        <li>Open Command Palette (<span class="keyboard-shortcut">Ctrl+Shift+P</span> or <span class="keyboard-shortcut">Cmd+Shift+P</span>)</li>
+                        <li>Type "Git: Clone" and select it</li>
+                        <li>Enter the repository URL</li>
+                        <li>Choose your storage location</li>
+                    </ol>
+                </div>
+            </section>
+
+            <section>
+                <h2>Verification</h2>
+                <div class="verification-step">
+                    <ol>
+                        <li>Check for the new directory:
+                            <div class="command-box">
+                                ls computational_genetic_genealogy
+                            </div>
+                        </li>
+                        <li>Verify Git tracking:
+                            <div class="command-box">
+                                git status
+                            </div>
+                        </li>
+                    </ol>
+                </div>
+            </section>
+
+            <section>
+                <h2>Troubleshooting</h2>
+                <div class="troubleshooting">
+                    <h3>Common Issues</h3>
+                    <ul>
+                        <li><strong>"Permission denied" error</strong>
+                            <ul>
+                                <li>Check GitHub account and login</li>
+                                <li>Verify directory permissions</li>
+                            </ul>
+                        </li>
+                        <li><strong>"Could not resolve host" error</strong>
+                            <ul>
+                                <li>Check internet connection</li>
+                                <li>Verify repository URL</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="resources">
+                <h2>Additional Resources</h2>
+                <ul>
+                    <li><a href="https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository">GitHub's Guide to Cloning</a></li>
+                    <li><a href="https://git-scm.com/docs/git-clone">Git Clone Documentation</a></li>
+                    <li><a href="https://code.visualstudio.com/docs/editor/versioncontrol">Visual Studio Code Git Integration</a></li>
+                </ul>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="section1-page3.html" class="nav-button">← Previous: VSCode Setup</a>
+                <a href="section1-page5.html" class="nav-button">Next: Docker Setup →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

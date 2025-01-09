@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    volumes:
+      # "use the environment variable if it exists, otherwise use the default path after the :-"
+      # Map environment variables or default paths to specific directories in the container
+      - ${PROJECT_DATA_DIR:-}:/home/ubuntu/data
+      - ${PROJECT_RESULTS_DIR:-}:/home/ubuntu/results
+      - ${PROJECT_REFERENCES_DIR:-}:/home/ubuntu/references
+    stdin_open: true  # equivalent to -i
+    tty: true        # equivalent to -t
+    working_dir: /home/ubuntu

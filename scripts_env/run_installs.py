@@ -1,7 +1,7 @@
 import os
 import subprocess
 import sys
-from scripts_support.confirm_directories import find_working_directory
+from decouple import config
 
 
 def find_install_scripts(directory):
@@ -46,7 +46,17 @@ def run_scripts(scripts):
     print("All install scripts executed successfully.")
 
 def main():
-    working_directory = find_working_directory()
+    try:
+        subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
+        working_directory = config('PROJECT_WORKING_DIR', default=None)
+
+        if not all([working_directory]):
+            raise ValueError("Not all required directories were configured")
+            
+    except Exception as e:
+        print(f"Error verifying directories: {e}")
+        sys.exit(1)
+        
     script_dir = os.path.join(working_directory, "scripts_env")
 
     try:

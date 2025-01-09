@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Storage and Backups</title>
+    <link rel="stylesheet" href="/docs/textbook/styles/main.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Docker Storage and Backups</h1>
+        <p>Chapter 2: Section 1 - Page 7</p>
+    </div>
+
+    <div class="container">
+        <div class="content">
+            <section>
+                <h2>Docker Volumes and Mapping</h2>
+                
+                <h3>What are Volumes?</h3>
+                <p>Docker volumes are like special folders that exist outside your container but can be accessed from inside it. Think of them as bridges between your computer and the container:</p>
+                <ul>
+                    <li>They persist even when the container stops</li>
+                    <li>They can be shared between containers</li>
+                    <li>They're managed separately from the container lifecycle</li>
+                </ul>
+
+                <h3>Volume Mapping (Mounting)</h3>
+                <p>Volume mapping connects a directory on your computer to a directory in the container:</p>
+                <div class="yaml-block">volumes:
+  - /home/your_username/data:/home/ubuntu/data</div>
+                <p>This means:</p>
+                <ul>
+                    <li>Left side (<code>/home/your_username/data</code>): Path on your computer</li>
+                    <li>Right side (<code>/home/ubuntu/data</code>): Where it appears in the container</li>
+                    <li>Changes in either location instantly reflect in the other</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Data Persistence</h2>
+                
+                <h3>Container vs. Volume Data</h3>
+                <p>When working with Docker, data can exist in two states:</p>
+                <ol>
+                    <li><strong>Container Data</strong>
+                        <ul>
+                            <li>Lives inside the container</li>
+                            <li>Temporary by default</li>
+                            <li>Lost when container is removed</li>
+                            <li>Good for: temporary computations, caches</li>
+                        </ul>
+                    </li>
+                    <li><strong>Volume Data</strong>
+                        <ul>
+                            <li>Lives on your computer</li>
+                            <li>Persists between container runs</li>
+                            <li>Survives container removal</li>
+                            <li>Good for: important files, results, datasets</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>What Gets Saved vs. What Doesn't</h3>
+                <div class="section-box">
+                    <p>When you use <code>docker save</code>:</p>
+                    <p>✅ Saves:</p>
+                    <ul>
+                        <li>Base image (Ubuntu, Python, initial packages)</li>
+                    </ul>
+                    <p>❌ Doesn't Save:</p>
+                    <ul>
+                        <li>The newly installed pandas package (added via poetry)</li>
+                        <li>The temp_notes.txt file (in unmapped container directory)</li>
+                        <li>Any configuration changes</li>
+                        <li>Command history</li>
+                        <li>Environmental changes</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>Backup Strategies</h2>
+
+                <h3>Directory Organization</h3>
+                <div class="directory-tree">project/
+├── data/          # Raw data (mounted volume)
+│   ├── raw/
+│   └── processed/
+├── results/       # Analysis outputs (mounted volume)
+│   ├── figures/
+│   └── reports/
+└── references/    # Reference materials (mounted volume)</div>
+
+                <h3>Manual Backup Workflow</h3>
+                <ol>
+                    <li><strong>Daily Backups</strong>
+                        <ul>
+                            <li>Copy critical results files</li>
+                            <li>Document container changes</li>
+                            <li>Save intermediate analyses</li>
+                        </ul>
+                    </li>
+                    <li><strong>Weekly Backups</strong>
+                        <ul>
+                            <li>Full volume backup</li>
+                            <li>Save container image</li>
+                            <li>Update documentation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Monthly Archives</strong>
+                        <ul>
+                            <li>Archive complete project state</li>
+                            <li>Validate backups</li>
+                            <li>Clean up unnecessary files</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Automated Backups</h3>
+                <p>Using our backup script:</p>
+                <div class="command-block"># Run automated backup
+python container_backup.py <container_id> --backup-path /path/to/backups</div>
+
+                <p>Schedule regular backups:</p>
+                <div class="command-block"># Add to crontab for daily backups at 1 AM
+0 1 * * * python /path/to/container_backup.py <container_id> --backup-path /backups</div>
+            </section>
+
+            <section>
+                <h2>Transfer Protocol</h2>
+                <ol>
+                    <li>Save image:
+                        <div class="command-block">docker save -o image_backup.tar devcontainer-image</div>
+                    </li>
+                    <li>Backup volumes:
+                        <div class="command-block">python container_backup.py <container_id></div>
+                    </li>
+                    <li>Transfer files:
+                        <div class="command-block">rsync -avz backups/ user@remote:/path/to/destination/</div>
+                    </li>
+                </ol>
+            </section>
+
+            <section>
+                <h2>Monitoring and Maintenance</h2>
+
+                <h3>Space Management</h3>
+                <div class="command-block"># Check Docker space usage
+docker system df
+
+# Clean up unused resources
+docker system prune
+
+# Remove specific types
+docker container prune  # Remove stopped containers
+docker image prune      # Remove unused images
+docker volume prune     # Remove unused volumes</div>
+
+                <h3>Backup Validation</h3>
+                <div class="command-block"># Verify backup integrity
+md5sum backups/devcontainer-image.tar > checksum.txt
+diff checksum.txt previous_checksum.txt
+
+# Test backup restoration
+./verify_backup.sh</div>
+
+                <h3>Performance Monitoring</h3>
+                <div class="command-block"># Monitor container resources
+docker stats
+
+# Check volume usage
+du -h /path/to/volumes/*</div>
+            </section>
+
+            <section>
+                <h2>Quick Reference</h2>
+
+                <h3>Common Backup Commands</h3>
+                <div class="command-block"># Save container image
+docker save -o backup.tar devcontainer-image
+
+# Load saved image
+docker load -i backup.tar
+
+# Copy from container
+docker cp <container_id>:/home/ubuntu/results ./backup_results
+
+# Copy to container
+docker cp ./local_file <container_id>:/home/ubuntu/data/</div>
+
+                <h3>Maintenance Commands</h3>
+                <div class="command-block"># Check container status
+docker ps
+
+# View logs
+docker compose logs
+
+# Clean up space
+docker system prune
+
+# Monitor resources
+docker stats</div>
+            </section>
+
+            <section>
+                <h2>Troubleshooting</h2>
+                <p>Common issues when saving/copying:</p>
+
+                <ol>
+                    <li><strong>Permission Denied</strong>
+                        <div class="command-block"># Fix permissions on destination
+sudo chmod a+rw /path/to/destination</div>
+                    </li>
+                    <li><strong>Space Issues</strong>
+                        <ul>
+                            <li>Check available space: <code>df -h</code></li>
+                            <li>Clean up Docker: <code>docker system prune</code></li>
+                            <li>Remove old images: <code>docker image prune</code></li>
+                        </ul>
+                    </li>
+                    <li><strong>Path Not Found</strong>
+                        <ul>
+                            <li>Verify container is running</li>
+                            <li>Check path exists in container</li>
+                            <li>Use absolute paths</li>
+                        </ul>
+                    </li>
+                    <li><strong>Backup Script Errors</strong>
+                        <ul>
+                            <li>Verify container ID is correct</li>
+                            <li>Check backup destination permissions</li>
+                            <li>Ensure sufficient disk space</li>
+                        </ul>
+                    </li>
+                    <li><strong>Transfer Failures</strong>
+                        <ul>
+                            <li>Verify network connection</li>
+                            <li>Check file permissions</li>
+                            <li>Confirm sufficient space at destination</li>
+                        </ul>
+                    </li>
+                </ol>
+            </section>
+
+            <section>
+                <h2>Additional Resources</h2>
+                <ul>
+                    <li><a href="https://docs.docker.com/compose/">Docker Compose Documentation</a></li>
+                    <li><a href="https://docs.docker.com/storage/volumes/">Docker Volume Documentation</a></li>
+                    <li><a href="https://python-poetry.org/docs/">Poetry Documentation</a></li>
+                    <li><a href="https://docs.docker.com/config/containers/resource_constraints/">Docker Resource Management</a></li>
+                    <li><a href="https://docs.docker.com/develop/develop-images/dockerfile_best-practices/">Docker Best Practices</a></li>
+                    <li><a href="https://docs.docker.com/storage/backup-restore/">Docker Backup Strategies</a></li>
+                    <li><a href="https://man7.org/linux/man-pages/man5/crontab.5.html">Cron Documentation</a></li>
+                    <li><a href="https://download.samba.org/pub/rsync/rsync.1">Rsync Manual</a></li>
+                </ul>
+            </section>
+
+            <div class="nav-buttons">
+                <a href="section1-page6.html" class="nav-button">← Previous: Running Docker</a>
+                <!-- <a href="../chapter3/chapter3.html" class="nav-button">Next: DNA Analysis →</a> -->
+            </div>
+        </div>
+    </div>
+</body>
+</html>

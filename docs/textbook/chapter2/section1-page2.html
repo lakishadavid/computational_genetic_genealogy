@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chapter 2: Installing and Configuring Git</title>
+    <link rel="stylesheet" href="/docs/textbook/styles/main.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Installing and Configuring Git</h1>
+        <p>Chapter 2: Section 1 - Page 2</p>
+    </div>
+
+    <div class="container">
+        <div class="nav-header">
+            <a href="section1-page1.html" class="back-link">← Back to Introduction</a>
+        </div>
+
+        <div class="content">
+            <div class="intro-box">
+                <h2>What is Git?</h2>
+                <p>Git is a distributed version control system originally developed by Linus Torvalds (creator of Linux) to manage large software projects. In research, Git helps us:</p>
+                <ul>
+                    <li>Track changes in our code and analysis scripts</li>
+                    <li>Collaborate with other researchers without overwriting each other's work</li>
+                    <li>Maintain different versions of our analysis pipelines</li>
+                    <li>Document when and why changes were made</li>
+                    <li>Share our work with the broader scientific community</li>
+                </ul>
+            </div>
+
+            <div class="installation-steps">
+                <h2>Installation Instructions</h2>
+                <p>Before installing, note that Git might already be installed on your system. If you're using a Unix-based system (macOS or Linux), Git often comes pre-installed.</p>
+
+                <h3>Windows</h3>
+                <ol>
+                    <li>Download the Git installer from <a href="https://gitforwindows.org/">Git for Windows</a></li>
+                    <li>Run the downloaded .exe file</li>
+                    <li>During installation:
+                        <ul>
+                            <li>Accept the default options</li>
+                            <li>When prompted about "Adjusting your PATH environment", select "Git from the command line and also from 3rd-party software"</li>
+                            <li>For "Configuring the line ending conversions", choose "Checkout Windows-style, commit Unix-style line endings"</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>macOS</h3>
+                <ol>
+                    <li>If you have Homebrew installed:
+                        <div class="code-block">
+                            <code>brew install git</code>
+                        </div>
+                    </li>
+                    <li>Otherwise, download the installer from <a href="https://git-scm.com/download/mac">Git Downloads</a></li>
+                </ol>
+
+                <h3>Linux (Ubuntu/Debian)</h3>
+                <div class="code-block">
+                    <code>sudo apt-get update<br>
+                    sudo apt-get install git</code>
+                </div>
+            </div>
+
+            <div class="installation-steps">
+                <h2>Initial Configuration</h2>
+                <p>After installing Git, set up your identity:</p>
+                <div class="code-block">
+                    <code>git config --global user.name "Your Name"<br>
+                    git config --global user.email "your.email@example.com"</code>
+                </div>
+            </div>
+
+            <div class="troubleshooting">
+                <h2>Troubleshooting</h2>
+                <h3>Common Issues</h3>
+                <ol>
+                    <li><strong>"git is not recognized as an internal or external command" (Windows)</strong>
+                        <ul>
+                            <li>Close and reopen your command prompt</li>
+                            <li>Check if Git is added to your PATH</li>
+                        </ul>
+                    </li>
+                    <li><strong>"Permission denied" (macOS/Linux)</strong>
+                        <ul>
+                            <li>Add <code>sudo</code> before the installation command</li>
+                            <li>Ensure you have administrator privileges</li>
+                        </ul>
+                    </li>
+                </ol>
+            </div>
+
+            <div class="installation-steps">
+                <h2>Verification Exercise</h2>
+                <p>To ensure everything is working, run these commands:</p>
+                <div class="code-block">
+                    <code>git --version<br>
+                    git config --global user.name<br>
+                    git config --global user.email</code>
+                </div>
+            </div>
+
+            <div class="resources">
+                <h2>Additional Resources</h2>
+                <ul>
+                    <li><a href="https://git-scm.com/doc">Git Documentation</a></li>
+                    <li><a href="https://github.com/git-guides">GitHub's Git Guides</a></li>
+                    <li><a href="https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004668">Version Control in Research</a> - An excellent paper on using version control in computational research</li>
+                </ul>
+            </div>
+
+            <div class="nav-buttons">
+                <a href="section1-page1.html" class="nav-button">← Previous: Introduction</a>
+                <a href="section1-page3.html" class="nav-button">Next: VSCode Setup →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

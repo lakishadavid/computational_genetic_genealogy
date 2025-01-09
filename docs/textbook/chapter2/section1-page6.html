@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Running the Course Container</title>
+    <link rel="stylesheet" href="/docs/textbook/styles/main.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Running the Course Container</h1>
+        <p>Chapter 2: Section 1 - Page 6</p>
+    </div>
+
+    <div class="container">
+        <div class="content">
+            <section>
+                <h2>Understanding Configuration Files</h2>
+                
+                <div class="config-file">
+                    <h3>Dockerfile</h3>
+                    <p>The recipe for building our container image:</p>
+                    <ul>
+                        <li>Specifies the base Ubuntu image</li>
+                        <li>Installs required system packages</li>
+                        <li>Sets up Python and Poetry</li>
+                        <li>Creates necessary directories</li>
+                    </ul>
+                </div>
+
+                <div class="config-file">
+                    <h3>docker-compose.yml</h3>
+                    <p>Configures how our container runs:</p>
+                    <ul>
+                        <li>Maps directories between your computer and the container</li>
+                        <li>Uses environment variables for directory mapping</li>
+                        <li>Sets up the working environment</li>
+                    </ul>
+                </div>
+
+                <div class="config-file">
+                    <h3>scripts_support/directory_setup.py</h3>
+                    <p>Helps set up your local directories:</p>
+                    <ul>
+                        <li>Creates environment variables for directory locations</li>
+                        <li>Ensures proper directory structure exists</li>
+                        <li>Creates/updates the .env file with your paths</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>Understanding Builds vs. Containers</h2>
+                <div class="note-box">
+                    <h3>Docker Build:</h3>
+                    <ul>
+                        <li>Creates a blueprint (image) for your container</li>
+                        <li>Follows instructions in the Dockerfile</li>
+                        <li>Installs all necessary software and dependencies</li>
+                    </ul>
+
+                    <h3>Docker Container:</h3>
+                    <ul>
+                        <li>Is a running instance of the built image</li>
+                        <li>Like a virtual computer running your environment</li>
+                        <li>Can be started, stopped, and restarted</li>
+                        <li>Maintains isolation from your host system</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>Setting Up Your Container</h2>
+
+                <div class="step-box">
+                    <h3>Step 1: Navigate to Course Directory</h3>
+                    <div class="command-block">cd ~/computational_genetic_genealogy</div>
+                    <p class="note">Use a regular terminal window, not VSCode's integrated terminal, for consistent behavior.</p>
+                </div>
+
+                <div class="step-box">
+                    <h3>Step 2: Build the Container</h3>
+                    <div class="command-block">docker compose build</div>
+                </div>
+
+                <div class="step-box">
+                    <h3>Step 3: Directory Setup and Volume Mapping</h3>
+                    <div class="command-block">docker compose run --rm app poetry run python -m scripts_support.directory_setup</div>
+                    
+                    <div class="yaml-block">volumes:
+  - ${PROJECT_DATA_DIR:-}:/home/ubuntu/data
+  - ${PROJECT_RESULTS_DIR:-}:/home/ubuntu/results
+  - ${PROJECT_REFERENCES_DIR:-}:/home/ubuntu/references</div>
+                </div>
+
+                <div class="step-box">
+                    <h3>Step 4: Start the Container</h3>
+                    <div class="command-block">docker compose up</div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Verification Steps</h2>
+                <div class="command-block"># Check mounted directories
+ls /home/ubuntu/data       # Your data files
+ls /home/ubuntu/results    # Analysis outputs
+ls /home/ubuntu/references # Reference materials
+
+# Verify Python environment
+python --version
+poetry --version</div>
+            </section>
+
+            <section>
+                <h2>Managing Docker Resources</h2>
+                <div class="command-block"># Monitor resource usage
+docker stats
+
+# Remove unused containers
+docker container prune
+
+# Remove unused images
+docker image prune
+
+# Remove unused volumes
+docker volume prune
+
+# Clean everything unused
+docker system prune</div>
+            </section>
+
+            <section>
+                <h2>Troubleshooting</h2>
+                <div class="note-box">
+                    <h3>Common Issues:</h3>
+                    <h4>Build Fails</h4>
+                    <ul>
+                        <li>Ensure Docker is running</li>
+                        <li>Check internet connection</li>
+                        <li>Verify you have enough disk space</li>
+                    </ul>
+
+                    <h4>Directory Setup Issues</h4>
+                    <ul>
+                        <li>Check error messages in the setup script output</li>
+                        <li>Ensure you have write permissions</li>
+                        <li>WSL2 users: Verify correct filesystem permissions</li>
+                    </ul>
+                </div>
+            </section>
+
+            <div class="nav-buttons">
+                <a href="section1-page5.html" class="nav-button">← Previous: Docker Installation</a>
+                <a href="section1-page7.html" class="nav-button">Next: Docker Storage →</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

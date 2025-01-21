@@ -46,6 +46,7 @@ def run_scripts(scripts):
     print("All install scripts executed successfully.")
 
 def main():
+    # poetry run python -m scripts_env.run_installs
     try:
         subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
         working_directory = config('PROJECT_WORKING_DIR', default=None)

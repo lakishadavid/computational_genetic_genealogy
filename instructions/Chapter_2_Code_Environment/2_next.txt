@@ -1,0 +1,5 @@
+In the Ubuntu terminal window
+
+```
+sudo bash scripts_env/setup_env.sh
+```

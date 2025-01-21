@@ -67,7 +67,7 @@ POETRY_VERSION="1.8.5"
 PATH="$POETRY_HOME/bin:$PATH"
 curl -sSL https://install.python-poetry.org | POETRY_HOME=$POETRY_HOME python3 -
 ln -s $POETRY_HOME/bin/poetry /usr/local/bin/poetry
-sudo -u $USERNAME poetry config virtualenvs.create false
+sudo -u $USERNAME poetry config virtualenvs.create true
 
 # Install Python packages
 echo "Installing Python packages with Poetry..."

@@ -1,5 +1,8 @@
+Do not need to run this week, but you can.
+
 In the Ubuntu terminal window
 
 ```
 sudo bash scripts_env/setup_env.sh
+poetry run python -m scripts_env.run_installs
 ```

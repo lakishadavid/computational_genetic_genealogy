@@ -60,6 +60,19 @@ git config --global user.email "your.email@example.com"
 
 This configuration step is important for research reproducibility and collaboration, as it helps track who made which changes to the analysis pipeline.
 
+## ON 338 Davenport Hall Computers
+```
+wsl --install -d Ubuntu
+```
+Follow the prompts. enter username: ubuntu, password: ubuntu.
+For here on out, you should be able to search for Ubuntu to launch the Ubuntu window. 
+In the Ubuntu window, enter
+```
+lsb_release -a
+```
+The Ubuntu version should be at least Ubuntu 24.04.1 LTS.
+
+
 ## Troubleshooting
 
 ### Common Issues

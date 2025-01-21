@@ -237,7 +237,8 @@ def subset_1000_genomes(references_directory, snp_file_path):
 
 
 def main():
-    logging.info("\nopen_snps.py: running...\n")  # Add a blank line before and after
+    # poetry run python -m scripts_support.onethousandgenomes_process
+    logging.info("\nrunning...\n")  # Add a blank line before and after
     
     try:
         subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)

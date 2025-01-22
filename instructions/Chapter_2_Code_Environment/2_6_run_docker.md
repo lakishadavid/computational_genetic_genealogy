@@ -65,7 +65,7 @@ docker build -t cgg_image .
 
 This command reads the Dockerfile and creates an image with all necessary tools and dependencies.
 
-## Step 3: Directory Setup and Volume Mapping
+## Step 3: Directory Setup and Volume Mapping (optional, maps your local directories to the container directories)
 
 Run the directory setup script:
 ```
@@ -101,7 +101,7 @@ These mappings mean:
 
 ## Step 4: Start the Container
 
-Start your container:
+Option 1: If you used the previous docker compose command to map your directories or you manually created a .env file defining the requested variables:
 ```
 docker compose up
 ```
@@ -112,7 +112,7 @@ This command:
 3. Sets up volume mappings using your .env file
 4. Starts the container with access to your directories
 
-Alternative, you can run
+Option 2: Starts the cointainer without the volume mappings, which means that you'll need to copy any files from the container that you want to save (e.g., results)
 ```
 docker run -d \
   --name cgg_container \
@@ -121,10 +121,13 @@ docker run -d \
 ```
 
 ## When you are finished using the container, stop it using one of the following commands based on how you started it.
+Option 1
 ```
 docker compose down
 ```
 or
+
+Option 2
 ```
 docker stop cgg_container
 ```

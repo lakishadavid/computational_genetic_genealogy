@@ -112,9 +112,21 @@ This command:
 3. Sets up volume mappings using your .env file
 4. Starts the container with access to your directories
 
-## When you are finished using the container
+Alternative, you can run
+```
+docker run -d \
+  --name cgg_container \
+  -w /home/ubuntu \
+  cgg_image
+```
+
+## When you are finished using the container, stop it using one of the following commands based on how you started it.
 ```
 docker compose down
+```
+or
+```
+docker stop cgg_container
 ```
 
 ### Container Persistence

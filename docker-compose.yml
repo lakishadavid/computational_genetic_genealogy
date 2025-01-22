@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    build: .
+    image: cgg_image 
     volumes:
       # "use the environment variable if it exists, otherwise use the default path after the :-"
       # Map environment variables or default paths to specific directories in the container

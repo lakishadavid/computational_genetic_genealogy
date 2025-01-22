@@ -71,6 +71,8 @@ RUN poetry install --no-root
 # Copy the repository directory to the container
 COPY . .
 
+# Setup your directories
+RUN poetry run python -m scripts_support.directory_setup --non-interactive
 
 # Copy entrypoint script into the container
 # COPY entrypoint.sh /usr/local/bin/entrypoint.sh

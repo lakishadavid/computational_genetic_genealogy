@@ -60,7 +60,7 @@ Note: We use a regular terminal window because some Docker operations may have p
 
 Build the Docker container using Docker Compose:
 ```
-docker compose build
+docker build -t cgg_image .
 ```
 
 This command reads the Dockerfile and creates an image with all necessary tools and dependencies.
@@ -111,6 +111,11 @@ This command:
 2. Uses the previously built image
 3. Sets up volume mappings using your .env file
 4. Starts the container with access to your directories
+
+## When you are finished using the container
+```
+docker compose down
+```
 
 ### Container Persistence
 Once built, your container image persists on your system. This means:

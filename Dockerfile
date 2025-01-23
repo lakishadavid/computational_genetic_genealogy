@@ -48,10 +48,6 @@ RUN apt-get update -y && \
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 
-# Install Docker Compose plugin
-RUN curl -L "https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose && \
-    chmod +x /usr/local/bin/docker-compose
-
 # Set working directory inside the container
 ARG WORKSPACE_DIR=/home/ubuntu
 WORKDIR ${WORKSPACE_DIR}

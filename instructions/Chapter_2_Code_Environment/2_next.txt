@@ -2,7 +2,12 @@ Do not need to run this week, but you can.
 
 In the Ubuntu terminal window
 
+Run this only if you are not using Docker. This is the equivalent of the Dockerfile script.
 ```
 sudo bash scripts_env/setup_env.sh
+```
+
+
+```
 poetry run python -m scripts_env.run_installs
 ```

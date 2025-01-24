@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Dict, Optional
 from decouple import config
 from dotenv import set_key
+import shutil
+from pathlib import Path
 
 def load_env_directories() -> Dict[str, str]:
     """Load directory paths from .env file if they exist."""
@@ -79,56 +81,80 @@ def get_user_confirmation(prompt: str) -> bool:
 
 def find_working_directory(custom_path: Optional[str] = None, interactive: bool = True) -> str:
     """
-    Find and confirm the project root directory.
+    Find the full path to the working directory across different operating systems.
+    
+    Prioritizes:
+    1. Environment variable
+    2. Custom path 
+    3. Script's current directory
+    4. Fallback default paths
+    5. Interactive user input
     """
     logging.info("Finding working directory...")
-    
-    # First check environment variable
-    env_working_dir = config('PROJECT_WORKING_DIR', default=None)
-    if env_working_dir and os.path.isdir(env_working_dir):
-        if not interactive or get_user_confirmation(
-            f"Use working directory from environment: {env_working_dir}?"
-        ):
+
+    # Helper function to validate and potentially expand a path
+    def validate_path(path: str) -> Optional[str]:
+        if not path:
+            return None
+        expanded_path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+        return expanded_path if os.path.isdir(expanded_path) else None
+
+    # Check environment variable
+    env_working_dir = validate_path(os.getenv('PROJECT_WORKING_DIR', ''))
+    if env_working_dir:
+        if not interactive or get_user_confirmation(f"Use working directory from environment: {env_working_dir}?"):
             return env_working_dir
-    
-    # If a custom path is provided, validate it
+
+    # Check custom path
     if custom_path:
-        expanded_path = os.path.expanduser(os.path.expandvars(custom_path))
-        if os.path.isdir(expanded_path):
-            if not interactive or get_user_confirmation(
-                f"Use custom working directory: {expanded_path}?"
-            ):
-                return expanded_path
+        validated_custom_path = validate_path(custom_path)
+        if validated_custom_path:
+            if not interactive or get_user_confirmation(f"Use custom working directory: {validated_custom_path}?"):
+                return validated_custom_path
+
+    # Use script's directory as the base for finding 'computational_genetic_genealogy'
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    target_dir = os.path.join(script_dir, 'computational_genetic_genealogy')
     
-    # Default directory detection logic
+    if os.path.isdir(target_dir):
+        return target_dir
+
+    # Search parent directories for the target directory
+    current_dir = script_dir
+    while current_dir != os.path.dirname(current_dir):  # Stop at root
+        potential_target = os.path.join(current_dir, 'computational_genetic_genealogy')
+        if os.path.isdir(potential_target):
+            return potential_target
+        current_dir = os.path.dirname(current_dir)
+
+    # Fallback to default paths
     default_paths = [
-        "/home/ubuntu/bagg_analysis",
-        os.path.join(os.getenv("HOME", ""), "bagg_analysis")
+        os.path.join(os.path.expanduser('~'), 'computational_genetic_genealogy'),
+        os.path.join(os.path.expanduser('~'), 'bagg_analysis')
     ]
     
     for path in default_paths:
         if os.path.isdir(path):
-            if not interactive or get_user_confirmation(
-                f"Use default working directory: {path}?"
-            ):
+            if not interactive or get_user_confirmation(f"Use default working directory: {path}?"):
                 return path
-    
+
+    # Interactive prompt if all else fails
     if interactive:
         custom_input = input("Please enter a custom working directory path: ")
-        expanded_custom = os.path.expanduser(os.path.expandvars(custom_input))
-        if os.path.isdir(expanded_custom):
+        expanded_custom = validate_path(custom_input)
+        
+        if expanded_custom:
             return expanded_custom
-        else:
-            create = get_user_confirmation(
-                f"Directory {expanded_custom} doesn't exist. Create it?"
-            )
-            if create:
-                os.makedirs(expanded_custom)
-                return expanded_custom
-    
+        
+        create = get_user_confirmation(f"Directory {custom_input} doesn't exist. Create it?")
+        if create:
+            os.makedirs(expanded_custom)
+            return expanded_custom
+
     raise FileNotFoundError(
         "No valid working directory found. Please specify a custom directory path."
     )
+
 
 def get_directories(
     working_directory: str,
@@ -138,6 +164,24 @@ def get_directories(
     """
     Configure and confirm directory structure.
     """
+    # First validate working directory exists
+    if not os.path.exists(working_directory):
+        if interactive:
+            confirm = get_user_confirmation(
+                f"Working directory {working_directory} does not exist. Create it?"
+            )
+            if not confirm:
+                raise FileNotFoundError(f"Working directory {working_directory} does not exist.")
+            os.makedirs(working_directory)
+        else:
+            os.makedirs(working_directory)
+    
+    # Confirm working directory before proceeding
+    if interactive:
+        print(f"\nProposed working directory: {working_directory}")
+        if not get_user_confirmation("Do you want to use this working directory?"):
+            raise FileNotFoundError("Working directory not confirmed.")
+
     # First check environment variables
     env_dirs = load_env_directories()
     
@@ -162,28 +206,33 @@ def get_directories(
                 )
     
     if interactive:
-        print("\nProposed directory structure:")
-        print(json.dumps(directories, indent=2))
+        print("\nProposed additional directories:")
+        # Remove working directory from display to avoid redundancy
+        display_dirs = {k: v for k, v in directories.items() if k != 'working_directory'}
+        print(json.dumps(display_dirs, indent=2))
+        
         if not get_user_confirmation("Do you want to use these directories?"):
             print("Please provide alternative paths (press Enter to keep current):")
-            for key in directories:
-                if key != 'working_directory':  # Skip working directory as it's already confirmed
-                    new_path = input(f"{key} [{directories[key]}]: ").strip()
-                    if new_path:
-                        directories[key] = (
-                            new_path if os.path.isabs(new_path)
-                            else os.path.join(working_directory, new_path)
-                        )
+            for key in [k for k in directories.keys() if k != 'working_directory']:
+                new_path = input(f"{key} [{directories[key]}]: ").strip()
+                if new_path:
+                    directories[key] = (
+                        new_path if os.path.isabs(new_path)
+                        else os.path.join(working_directory, new_path)
+                    )
     
-    # Ensure all directories exist
-    for name, directory in directories.items():
+    # Ensure all non-working directories exist
+    for name, directory in [
+        (name, dir_path) for name, dir_path in directories.items() 
+        if name != 'working_directory'
+    ]:
         try:
             if not os.path.exists(directory):
-                if not interactive or get_user_confirmation(
-                    f"Create directory {directory}?"
-                ):
+                if not interactive or get_user_confirmation(f"Create directory {directory}?"):
                     os.makedirs(directory)
                     logging.info(f"Created {name}: {directory}")
+                else:
+                    logging.warning(f"Directory {name} at {directory} was not created.")
             else:
                 logging.info(f"Using existing {name}: {directory}")
         except OSError as e:

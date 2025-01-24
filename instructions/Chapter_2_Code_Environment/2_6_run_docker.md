@@ -65,26 +65,13 @@ docker build -t cgg_image .
 
 This command reads the Dockerfile and creates an image with all necessary tools and dependencies.
 
-## Step 3: Directory Setup and Volume Mapping (optional, maps your local directories to the container directories)
+## Step 3: Directory Setup and Sart the Container
 
 Run the directory setup script:
 ```
-docker compose run --rm app poetry run python -m scripts_support.directory_setup
+poetry run python -m scripts_support.directory_setup
+docker compose up -d
 ```
-
-Let's break down what this command does:
-- `docker compose run`: Runs a one-off command in a new container
-- `--rm`: Removes the container after the command finishes
-- `app`: Uses the service defined in docker-compose.yml
-- `poetry run python -m scripts_support.directory_setup`: Runs our setup script
-
-The setup script will:
-1. Ask you to confirm or specify locations for:
-   - Data directory (for your datasets)
-   - Results directory (for analysis outputs)
-   - References directory (for reference materials)
-2. Create these directories if they don't exist
-3. Save these locations in a .env file
 
 This .env file is then used by docker-compose.yml to map your directories into the container using volumes:
 ```yaml
@@ -99,24 +86,22 @@ These mappings mean:
 - Files in your PROJECT_RESULTS_DIR appear in /home/ubuntu/results in the container
 - Files in your PROJECT_REFERENCES_DIR appear in /home/ubuntu/references in the container
 
-## Step 4: Start the Container
-
-Option 1: If you used the previous docker compose command to map your directories or you manually created a .env file defining the requested variables:
-```
-docker compose up
-```
-
 This command:
 1. Reads docker-compose.yml
 2. Uses the previously built image
 3. Sets up volume mappings using your .env file
 4. Starts the container with access to your directories
 
-Option 2: Starts the cointainer without the volume mappings, which means that you'll need to copy any files from the container that you want to save (e.g., results)
+Option 2:
+Where the file path on the left should reflect your own directory,
+which gets mapped to the file path on the right in the containter.
 ```
 docker run -d \
   --name cgg_container \
   -w /home/ubuntu \
+  -v /home/lakishadavid/data:/home/ubuntu/data \
+  -v /home/lakishadavid/results:/home/ubuntu/results \
+  -v /home/lakishadavid/references:/home/ubuntu/references \
   cgg_image
 ```
 
@@ -147,6 +132,12 @@ Think of it like your virtual research workspace:
 ## Verifying Your Setup
 
 After starting the container, verify everything is working:
+
+pre. If you're using `docker compose`
+```
+docker compose exec app bash
+```
+When you're ready to exit the container bash shell, enter `exit`. Your container will still be running until you run `docker compose down`.
 
 1. Check mounted directories:
    ```

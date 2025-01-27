@@ -68,10 +68,10 @@ This command reads the Dockerfile and creates an image with all necessary tools 
 ## Step 3: Directory Setup and Sart the Container
 
 ```
- sudo apt-get update -y
- curl -sSL https://install.python-poetry.org | python3 -
- echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
- source ~/.bashrc
+sudo apt-get update -y
+curl -sSL https://install.python-poetry.org | python3 -
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
 poetry install --no-root
 ```
 

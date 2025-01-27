@@ -69,7 +69,8 @@ This command reads the Dockerfile and creates an image with all necessary tools 
 
 Run the directory setup script:
 ```
-poetry install --no-root
+docker run -d --name cgg_container -w /home/ubuntu cgg_image
+docker stop cgg_container
 poetry run python -m scripts_support.directory_setup
 docker compose up -d
 ```

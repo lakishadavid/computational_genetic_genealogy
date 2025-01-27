@@ -67,10 +67,15 @@ This command reads the Dockerfile and creates an image with all necessary tools 
 
 ## Step 3: Directory Setup and Sart the Container
 
+```
+    sudo apt-get update -y
+    curl -sSL https://install.python-poetry.org | python3 -
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc
+```
+
 Run the directory setup script:
 ```
-docker run -d --name cgg_container -w /home/ubuntu cgg_image
-docker stop cgg_container
 poetry run python -m scripts_support.directory_setup
 docker compose up -d
 ```

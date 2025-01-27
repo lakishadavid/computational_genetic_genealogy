@@ -69,6 +69,7 @@ This command reads the Dockerfile and creates an image with all necessary tools 
 
 Run the directory setup script:
 ```
+poetry install --no-root
 poetry run python -m scripts_support.directory_setup
 docker compose up -d
 ```

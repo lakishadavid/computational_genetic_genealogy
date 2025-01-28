@@ -90,6 +90,20 @@ VSCode becomes more powerful through extensions. Here are the ones we'll need:
 
 4. Restart VSCode when prompted
 
+## Connecting to the container
+
+1. In a terminal window, make sure the container is running with `docker ps`.
+
+2. In VSCode, go to the Command Palette in the View submenu  
+
+3. Search for "Remote-Containers: Attach to Running Container"
+
+4. You should see your running container there. You can also search for it using the container name from the docker ps command. Select the running container.
+
+5. This will open a new VSCode window connected to the container. You can confirm by checking the lower left corner. It'll have the name of the image and container there.
+
+6. To see the list of folders, click on open folder. You'll see "/home/ubuntu" and subdirectories as options. You don't need to select a subdirectory. Select "ok" here and the list of directories and files within the container will display in the file explorer section.
+
 ## Configuring VSCode
 
 ### Basic Settings

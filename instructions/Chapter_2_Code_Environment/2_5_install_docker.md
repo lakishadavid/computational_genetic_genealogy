@@ -41,8 +41,8 @@ Before installing Docker, ensure:
 5. Note: Some images may need Rosetta 2 compatibility
 
 
-
-#### Step 2: In Ubuntu Terminal
+---
+## Step 2: In Ubuntu Terminal
 Run these commands in sequence:
 ```
 # Update system
@@ -71,6 +71,8 @@ sudo usermod -aG docker $USER
 sudo systemctl restart docker
 newgrp docker
 ```
+
+---
 
 #### Other Linux Distributions
 Visit [Install Docker Engine](https://docs.docker.com/engine/install/) and select your distribution.

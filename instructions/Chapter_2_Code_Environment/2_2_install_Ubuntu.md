@@ -19,7 +19,7 @@ Follow these steps to install WSL2 and Ubuntu on your Windows system directly th
 ---
 
 ## **3. Choose a Version**
-1. Select one of the available Ubuntu versions (e.g., **Ubuntu 20.04 LTS**, **Ubuntu 22.04 LTS**, or simply **Ubuntu**).
+1. Select one of the available Ubuntu versions (e.g., **Ubuntu 22.04 LTS**).
 2. Click the **Get** or **Install** button. This will download and install the Ubuntu app on your system.
 
 ---

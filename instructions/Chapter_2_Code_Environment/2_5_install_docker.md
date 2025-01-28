@@ -12,11 +12,11 @@ Before installing Docker, ensure:
   - **macOS**: macOS 10.15 or newer
   - **Linux**: 64-bit version of Ubuntu, Debian, Fedora, or similar
 
-## Installation Instructions
+## Step 1: Installation Instructions
 
 ### Windows Users
 
-#### Regular Windows
+#### WSL2 Users
 1. Visit [Docker Desktop for Windows](https://docs.docker.com/desktop/install/windows-install/)
 2. Download Docker Desktop Installer
 3. Run the installer (must be administrator)
@@ -24,18 +24,6 @@ Before installing Docker, ensure:
    - Enable WSL2 features if prompted
    - Keep Hyper-V enabled if asked
    - Leave "Use WSL2 instead of Hyper-V" checked
-
-#### WSL2 Users
-1. First install Docker Desktop in Windows following steps above
-2. In WSL2:
-   ```
-   # Nothing to install in WSL2 - Docker Desktop for Windows 
-   # will automatically integrate with your WSL2 environment
-   ```
-3. Configure WSL2 integration in Docker Desktop:
-   - Open Docker Desktop
-   - Go to Settings → Resources → WSL Integration
-   - Enable integration for your WSL2 distro
 
 ### macOS Users
 
@@ -52,9 +40,9 @@ Before installing Docker, ensure:
 4. Open Docker from Applications
 5. Note: Some images may need Rosetta 2 compatibility
 
-### Linux Users
 
-#### Ubuntu (Including Davenport Hall Room 338)
+
+#### Step 2: In Ubuntu Terminal
 Run these commands in sequence:
 ```
 # Update system
@@ -108,10 +96,10 @@ You should see a success message explaining the steps Docker took.
 - Look for the green "Running" status
 - Check Resources tab for memory allocation
 
-### 4. WSL2 Specific Check
-WSL2 users should also verify:
+### 4. Ubuntu Specific Check
+
 ```
-# In WSL2 terminal
+docker image ls
 docker ps
 # Should show no error
 ```

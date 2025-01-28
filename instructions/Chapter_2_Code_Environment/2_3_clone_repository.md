@@ -33,18 +33,14 @@ However, note that the ZIP download:
 
 ## Choosing Where to Clone
 
-### For Windows (non-WSL2) Users
-- Choose a location in your Windows filesystem (e.g., `Documents/Courses`)
-- Avoid paths with spaces or special characters
-
 ### For WSL2 Users
-- Recommended: Clone into your WSL2 filesystem (e.g., `~/courses` or `/home/yourusername/courses`)
+- Clone into your WSL2 filesystem using Ubuntu
 - Why? Better performance and compatibility with Linux-based tools
 - Note: You can still access these files from Windows at `\\wsl$\Ubuntu\home\yourusername\courses`
 - Avoid cloning into Windows filesystem mounted in WSL2 (`/mnt/c/...`) for better performance
 
 ### For macOS/Linux Users
-- Choose any location in your home directory (e.g., `~/courses`)
+- Choose any location in your home directory
 - Avoid paths with spaces or special characters
 
 ## Cloning Options
@@ -55,17 +51,13 @@ You can clone the repository in two ways - through VSCode or using the command l
 
 This method works universally across all systems and helps build command-line familiarity.
 
-1. Open your terminal:
-   - **Windows**: Command Prompt or PowerShell
-   - **WSL2**: WSL2 terminal or VSCode's integrated WSL2 terminal
-   - **macOS/Linux**: Terminal app
+1. Open your Ubuntu terminal
 
 2. Navigate to where you want to store the course materials:
    ```
    cd path/to/your/preferred/directory
    ```
    Examples:
-   - Windows: `cd Documents\Courses`
    - WSL2: `cd ~/courses`
    - macOS/Linux: `cd ~/courses`
 

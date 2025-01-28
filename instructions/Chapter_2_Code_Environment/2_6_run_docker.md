@@ -135,7 +135,6 @@ docker ps
 docker compose exec app bash
 # you should see your prompt change indicating that you are in the container
 ```
-When you're ready to exit the container bash shell, enter `exit`. Your container will still be running until you run `docker compose down`.
 
 1. Check mounted directories:
    ```
@@ -149,6 +148,8 @@ When you're ready to exit the container bash shell, enter `exit`. Your container
    python --version
    poetry --version
    ```
+   
+When you're ready to exit the container bash shell, enter `exit`. Your container will still be running until you run `docker compose down`.
 
 ## Managing Docker Resources
 

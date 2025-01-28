@@ -100,30 +100,13 @@ This command:
 3. Sets up volume mappings using your .env file
 4. Starts the container with access to your directories
 
-Option 2:
-Where the file path on the left should reflect your own directory,
-which gets mapped to the file path on the right in the containter.
-```
-docker run -d \
-  --name cgg_container \
-  -w /home/ubuntu \
-  -v /home/lakishadavid/data:/home/ubuntu/data \
-  -v /home/lakishadavid/results:/home/ubuntu/results \
-  -v /home/lakishadavid/references:/home/ubuntu/references \
-  cgg_image
-```
 
-## When you are finished using the container, stop it using one of the following commands based on how you started it.
-Option 1
+## When you are finished using the container...
+
 ```
 docker compose down
 ```
-or
 
-Option 2
-```
-docker stop cgg_container
-```
 
 ### Container Persistence
 Once built, your container image persists on your system. This means:
@@ -141,9 +124,16 @@ Think of it like your virtual research workspace:
 
 After starting the container, verify everything is working:
 
-pre. If you're using `docker compose`
 ```
+# see your list of Docker images
+docker image ls
+
+# see your container running
+docker ps
+
+# enter the container
 docker compose exec app bash
+# you should see your prompt change indicating that you are in the container
 ```
 When you're ready to exit the container bash shell, enter `exit`. Your container will still be running until you run `docker compose down`.
 

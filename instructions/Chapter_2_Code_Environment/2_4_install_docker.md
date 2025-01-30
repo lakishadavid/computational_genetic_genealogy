@@ -68,7 +68,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 # Set up permissions
 sudo groupadd docker
 sudo usermod -aG docker $USER
-sudo systemctl restart docker
+sudo service docker restart
 newgrp docker
 ```
 

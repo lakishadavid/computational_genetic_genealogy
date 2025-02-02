@@ -2,19 +2,10 @@
 
 echo "install_java.sh: running..."
 
-# Define utils_directory prioritizing /home/ubuntu
-if [ -d "/home/ubuntu/bagg_analysis/utils" ]; then
-    utils_directory="/home/ubuntu/bagg_analysis/utils"
-else
-    # Fall back to finding any other matching directory
-    utils_directory=$(find /home -type d -path "*/bagg_analysis/utils" 2>/dev/null | head -n 1)
-fi
-
-# Ensure the utils directory exists
-if [ -z "$utils_directory" ]; then
-    echo "Error: utils_directory not found in /home/ubuntu or /home/*/bagg_analysis/utils."
-    exit 1
-fi
+# ------------------------------------------------------------------------------
+# 1. Define directories relative to current location
+# ------------------------------------------------------------------------------
+base_directory="$(pwd)"  # Current directory (computational_genetic_genealogy)
 
 echo "Using utils_directory: $utils_directory"
 

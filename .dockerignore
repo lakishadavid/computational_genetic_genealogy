@@ -1,0 +1,9 @@
+# Ignore logs, temp files, and unnecessary directories
+.git
+*.log
+__pycache__/
+.venv/
+
+references/
+data/
+results/

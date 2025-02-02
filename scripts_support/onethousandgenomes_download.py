@@ -4,7 +4,11 @@ import json
 import sys
 import logging
 from inputimeout import inputimeout, TimeoutOccurred
-from decouple import config
+from dotenv import load_dotenv
+notebook_dir = os.getcwd()
+project_root = os.path.dirname(notebook_dir)
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path, override=True)
 
 def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO"):
     """
@@ -134,12 +138,11 @@ def main():
     # poetry run python -m scripts_support.onethousandgenomes_download
 
     try:
-        subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
-        working_directory = config('PROJECT_WORKING_DIR', default=None)
-        data_directory = config('PROJECT_DATA_DIR', default=None)
-        references_directory = config('PROJECT_REFERENCES_DIR', default=None)
-        results_directory = config('PROJECT_RESULTS_DIR', default=None)
-        utils_directory = config('PROJECT_UTILS_DIR', default=None)
+        working_directory = os.getenv('PROJECT_WORKING_DIR', default=None)
+        data_directory = os.getenv('PROJECT_DATA_DIR', default=None)
+        references_directory = os.getenv('PROJECT_REFERENCES_DIR', default=None)
+        results_directory = os.getenv('PROJECT_RESULTS_DIR', default=None)
+        utils_directory = os.getenv('PROJECT_UTILS_DIR', default=None)
 
         if not all([working_directory, data_directory, references_directory, 
                    results_directory, utils_directory]):

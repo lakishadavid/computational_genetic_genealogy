@@ -172,8 +172,6 @@ cython_debug/
 
 references/*
 !references/__init__.py
-data/*
-!data/__init__.py
 results/*
 !results/__init__.py
 utils/*

@@ -2,28 +2,28 @@
 
 echo "install_bonsaitree.sh: running..."
 
-# Define working_directory prioritizing /home/ubuntu
-if [ -d "/home/ubuntu/bagg_analysis" ]; then
-    working_directory="/home/ubuntu/bagg_analysis"
-else
-    working_directory=$(find /home -type d -path "*/bagg_analysis" 2>/dev/null | head -n 1)
+# ------------------------------------------------------------------------------
+# 1. Define directories relative to current location
+# ------------------------------------------------------------------------------
+base_directory="$(pwd)"  # Current directory (computational_genetic_genealogy)
+
+# Define utils_directory based on base_directory
+utils_directory="$base_directory/utils"
+
+# Ensure the utils_directory exists
+if [ ! -d "$utils_directory" ]; then
+    mkdir -p "$utils_directory"
+    if [ $? -ne 0 ]; then
+        echo "Failed to create utils_directory: $utils_directory"
+        exit 1
+    fi
 fi
 
-# Ensure the working_directory exists
-if [ -z "$working_directory" ]; then
-    echo "Error: working_directory not found."
-    exit 1
-fi
+echo "Using base_directory: $base_directory"
+echo "Using utils_directory: $utils_directory"
 
-# Define utils_directory
-utils_directory="$working_directory/utils"
-mkdir -p "$utils_directory" || { echo "Failed to create utils directory."; exit 1; }
-
-user_home="${working_directory%/bagg_analysis}"
 bonsai_dir="$utils_directory/bonsaitree"
 
-echo "Using working_directory: $working_directory"
-echo "Using utils_directory: $utils_directory"
 echo "Bonsai installation directory: $bonsai_dir"
 
 # Clone the Bonsai repository
@@ -35,19 +35,6 @@ else
 fi
 
 cd "$bonsai_dir" || { echo "Failed to enter $bonsai_dir."; exit 1; }
-
-# Ensure Poetry is installed
-if ! command -v poetry &> /dev/null; then
-    echo "Installing Poetry..."
-    curl -sSL https://install.python-poetry.org | python3 - || { echo "Poetry installation failed."; exit 1; }
-    export PATH="$user_home/.local/bin:$PATH"
-    echo 'export PATH="$user_home/.local/bin:$PATH"' >> "$user_home/.bashrc"
-    source "$user_home/.bashrc"
-else
-    echo "Poetry is already installed."
-fi
-
-echo "Poetry version: $(poetry --version)"
 
 # Use the currently installed Python for Poetry
 poetry env use python3 || { echo "Failed to configure Poetry to use the default Python."; exit 1; }

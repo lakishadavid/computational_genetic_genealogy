@@ -51,8 +51,15 @@ RUN rm -rf /var/lib/apt/lists/*
 # Set working directory inside the container
 ARG WORKSPACE_DIR=/home/ubuntu
 WORKDIR ${WORKSPACE_DIR}
-RUN mkdir results data references utils
-RUN chown -R ubuntu:ubuntu results data references utils
+
+# Create directories with correct ownership and permissions
+RUN install -d -m 775 -o ${USERNAME} -g ${USERNAME} \
+    ${WORKSPACE_DIR}/results ${WORKSPACE_DIR}/data ${WORKSPACE_DIR}/references ${WORKSPACE_DIR}/utils && \
+    touch ${WORKSPACE_DIR}/references/__init__.py \
+          ${WORKSPACE_DIR}/data/__init__.py \
+          ${WORKSPACE_DIR}/results/__init__.py \
+          ${WORKSPACE_DIR}/utils/__init__.py && \
+    chown -R ${USERNAME}:${USERNAME} ${WORKSPACE_DIR}
 
 # Install poetry with hash verification
 ENV POETRY_HOME=/opt/poetry
@@ -61,22 +68,25 @@ ENV PATH="${POETRY_HOME}/bin:${PATH}"
 RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 - && \
     cd /usr/local/bin && \
     ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false
+    poetry config virtualenvs.create false && \
+    chown -R ${USERNAME}:${USERNAME} ${POETRY_HOME}
 
-# Install Python packages
-COPY pyproject.toml poetry.lock ./
+USER ${USERNAME}
+WORKDIR ${WORKSPACE_DIR}
+
+# Install Python packages as user
+COPY --chown=${USERNAME}:${USERNAME} pyproject.toml poetry.lock ./
 RUN poetry install --no-root
 
-# Copy the repository directory to the container
-COPY . .
+# Copy with correct ownership
+COPY --chown=${USERNAME}:${USERNAME} . .
 
-# Copy entrypoint script into the container
-# COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-# RUN chmod +x /usr/local/bin/entrypoint.sh
+# Ensure .env setup and directory structure before running
+RUN chmod +x /home/ubuntu/setup_docker_env_file.sh
 
-# # Set the entrypoint
-# ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Ensure script executes correctly
+ENTRYPOINT ["/bin/bash", "-c", "/home/ubuntu/setup_docker_env_file.sh"]
+
+# Stay as user
 USER ${USERNAME}
-
-# Default command
 CMD ["bash"]

@@ -3,19 +3,10 @@
 
 echo "install_beagle.sh: running..."
 
-# Define base_directory prioritizing /home/ubuntu
-if [ -d "/home/ubuntu/bagg_analysis" ]; then
-    base_directory="/home/ubuntu/bagg_analysis"
-else
-    # Fall back to finding any other matching directory
-    base_directory=$(find /home -type d -path "*/bagg_analysis" 2>/dev/null | head -n 1)
-fi
-
-# Ensure the base_directory exists
-if [ -z "$base_directory" ]; then
-    echo "Error: base_directory not found in /home/ubuntu or /home/*/bagg_analysis."
-    exit 1
-fi
+# ------------------------------------------------------------------------------
+# 1. Define directories relative to current location
+# ------------------------------------------------------------------------------
+base_directory="$(pwd)"  # Current directory (computational_genetic_genealogy)
 
 # Define utils_directory based on base_directory
 utils_directory="$base_directory/utils"

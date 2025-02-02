@@ -3,20 +3,9 @@
 echo "install_bcftools.sh: running..."
 
 # ------------------------------------------------------------------------------
-# 1. Define base_directory, prioritizing /home/ubuntu
+# 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
-if [ -d "/home/ubuntu/bagg_analysis" ]; then
-    base_directory="/home/ubuntu/bagg_analysis"
-else
-    # Fall back to finding any matching directory under /home
-    base_directory=$(find /home -type d -path "*/bagg_analysis" 2>/dev/null | head -n 1)
-fi
-
-# Ensure the base_directory exists
-if [ -z "$base_directory" ]; then
-    echo "Error: base_directory not found in /home/ubuntu or /home/*/bagg_analysis."
-    exit 1
-fi
+base_directory="$(pwd)"  # Current directory (computational_genetic_genealogy)
 
 # ------------------------------------------------------------------------------
 # 2. Define utils_directory based on base_directory

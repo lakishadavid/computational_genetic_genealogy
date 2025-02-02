@@ -6,8 +6,6 @@ import argparse
 from pathlib import Path
 from typing import Dict, Optional
 from decouple import config
-from dotenv import set_key
-import shutil
 from pathlib import Path
 
 def load_env_directories() -> Dict[str, str]:

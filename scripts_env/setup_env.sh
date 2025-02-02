@@ -1,26 +1,22 @@
 #!/bin/bash
 
-# Metadata
-MAINTAINER="LaKisha David <ltdavid2@illinois.edu>"
-DESCRIPTION="A script for genetic genealogy analysis setup"
-VERSION="1.0.0"
+# setup.sh: Configuration script for computational genetic genealogy environment
+# This script:
+# - Updates your system packages
+# - Adds ~/.local/bin to PATH for installed executables
+# - Installs Python kernel for Jupyter Notebooks in VSCode
 
-# Variables
-USERNAME="ubuntu"
-USER_UID=1000
-USER_GID=1000
-WORKSPACE_DIR="/home/$USERNAME"
+set -e  # Exit immediately if a command exits with a non-zero status
+set -o pipefail  # Exit on pipe errors
+# set -x  # Print commands before execution
 
-# Ensure script runs with root privileges
-if [ "$(id -u)" -ne 0 ]; then
-    echo "This script must be run as root. Use sudo." >&2
-    exit 1
-fi
+echo "Starting environment setup..."
 
-# Update and install dependencies
-echo "Updating system and installing dependencies..."
-apt-get update -y && \
-apt-get install -y --no-install-recommends \
+# Update system packages
+echo "Updating system packages..."
+sudo apt-get update -y
+
+sudo apt-get install -y --no-install-recommends \
     build-essential \
     wget \
     curl \
@@ -45,37 +41,120 @@ apt-get install -y --no-install-recommends \
     default-jre \
     gawk \
     libboost-all-dev \
-    docker-compose-plugin && \
-apt-get clean && \
-rm -rf /var/lib/apt/lists/*
+    docker-compose-plugin
 
-# Add non-root user
-echo "Setting up non-root user: $USERNAME..."
-groupadd --gid $USER_GID $USERNAME
-useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
-chown -R $USERNAME:$USERNAME $WORKSPACE_DIR
+sudo apt-get clean
+sudo rm -rf /var/lib/apt/lists/*
 
-# Create necessary directories
-echo "Creating workspace directories..."
-mkdir -p $WORKSPACE_DIR/results $WORKSPACE_DIR/data $WORKSPACE_DIR/references $WORKSPACE_DIR/utils
-chown -R $USERNAME:$USERNAME $WORKSPACE_DIR/results $WORKSPACE_DIR/data $WORKSPACE_DIR/references $WORKSPACE_DIR/utils
+# Add local bin to PATH
+echo "Adding ~/.local/bin to PATH..."
+if ! grep -q "HOME/.local/bin" ~/.bashrc; then
+   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+fi
+
+# Create and set permissions for local directories if they don't exist
+if [ ! -d "$HOME/.local" ]; then
+    mkdir -p "$HOME/.local"
+    sudo chown -R $USER:$USER "$HOME/.local"
+fi
+
+# Install pip and kernel
+echo "Installing Python packages..."
+sudo apt-get install -y python3-pip
+pip install ipykernel
+
+# Setup Jupyter kernel
+echo "Installing Jupyter kernel..."
+python3 -m ipykernel install --user
 
 # Install Poetry
 echo "Installing Poetry..."
-POETRY_HOME="/opt/poetry"
-POETRY_VERSION="1.8.5"
-PATH="$POETRY_HOME/bin:$PATH"
-curl -sSL https://install.python-poetry.org | POETRY_HOME=$POETRY_HOME python3 -
-ln -s $POETRY_HOME/bin/poetry /usr/local/bin/poetry
-sudo -u $USERNAME poetry config virtualenvs.create true
+curl -sSL https://install.python-poetry.org | python3 -
 
-# Install Python packages
-echo "Installing Python packages with Poetry..."
-cd $WORKSPACE_DIR
-if [ -f "pyproject.toml" ] && [ -f "poetry.lock" ]; then
-    sudo -u $USERNAME poetry install --no-root
-else
-    echo "No pyproject.toml or poetry.lock found. Skipping Python package installation."
+# Configure Poetry to install in user space
+poetry config virtualenvs.create true
+poetry config virtualenvs.in-project true
+
+# Add Poetry to PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+poetry --version || { echo "Poetry installation failed"; exit 1; }
+
+if [ -d "$HOME/.cache/poetry" ]; then
+    sudo chown -R $USER:$USER "$HOME/.cache/poetry"
 fi
 
-echo "Setup complete!"
+# Install project dependencies
+echo "Installing project dependencies with Poetry..."
+if [ -f "pyproject.toml" ] && [ -f "poetry.lock" ]; then
+    poetry install --no-root
+else
+    echo "Warning: pyproject.toml not found in current directory"
+fi
+
+
+
+echo 'export PATH=$PATH:/home/lakishadavid/computational_genetic_genealogy/utils' >> ~/.bashrc
+source ~/.bashrc
+
+# Find and run all install scripts in order
+echo "Finding installation scripts..."
+
+# Directory containing the install scripts
+SCRIPTS_DIR="scripts_env"
+
+# Scripts to exclude
+EXCLUDE_SCRIPTS=("setup_env.sh" "install_docker.sh" "mount_efs.sh" "install_yhaplo.sh")
+
+# Function to check if a script should be excluded
+should_exclude() {
+    local script="$1"
+    for exclude in "${EXCLUDE_SCRIPTS[@]}"; do
+        if [[ "$(basename "$script")" == "$exclude" ]]; then
+            return 0  # true, should exclude
+        fi
+    done
+    return 1  # false, should not exclude
+}
+
+# Find and sort install scripts
+INSTALL_SCRIPTS=()
+for script in "$SCRIPTS_DIR"/install_*.sh; do
+    if [[ -f "$script" ]] && ! should_exclude "$script"; then
+        INSTALL_SCRIPTS+=("$script")
+    fi
+done
+
+# Run each script
+for script in "${INSTALL_SCRIPTS[@]}"; do
+    echo "Running $script..."
+    
+    # Check if script is executable
+    if [[ ! -x "$script" ]]; then
+        echo "Error: $script is not executable. Skipping..."
+        continue
+    fi
+    
+    # Run the script
+    if ! bash "$script"; then
+        echo "Error: Script $script failed."
+        exit 1
+    fi
+done
+
+echo "All installation scripts executed successfully."
+
+echo
+echo
+echo "==============================================="
+echo "Setup completed!"
+echo "Your environment has been configured with:"
+echo "- Updated system packages"
+echo "- ~/.local/bin added to PATH"
+echo "- System dependencies"
+echo "- Poetry installed and configured"
+echo "- Project dependencies installed (if pyproject.toml exists)"
+echo "- Python kernel installed for Jupyter Notebooks"
+echo "==============================================="

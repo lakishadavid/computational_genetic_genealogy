@@ -7,7 +7,11 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 import logging
-from decouple import config
+from dotenv import load_dotenv
+notebook_dir = os.getcwd()
+project_root = os.path.dirname(notebook_dir)
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path, override=True)
 
 
 # Configure logging
@@ -241,12 +245,11 @@ def main():
     logging.info("\nrunning...\n")  # Add a blank line before and after
     
     try:
-        subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
-        working_directory = config('PROJECT_WORKING_DIR', default=None)
-        data_directory = config('PROJECT_DATA_DIR', default=None)
-        references_directory = config('PROJECT_REFERENCES_DIR', default=None)
-        results_directory = config('PROJECT_RESULTS_DIR', default=None)
-        utils_directory = config('PROJECT_UTILS_DIR', default=None)
+        working_directory = os.getenv('PROJECT_WORKING_DIR', default=None)
+        data_directory = os.getenv('PROJECT_DATA_DIR', default=None)
+        references_directory = os.getenv('PROJECT_REFERENCES_DIR', default=None)
+        results_directory = os.getenv('PROJECT_RESULTS_DIR', default=None)
+        utils_directory = os.getenv('PROJECT_UTILS_DIR', default=None)
 
         if not all([working_directory, data_directory, references_directory, 
                    results_directory, utils_directory]):

@@ -85,7 +85,7 @@ COPY --chown=${USERNAME}:${USERNAME} . .
 RUN chmod +x /home/ubuntu/setup_docker_env_file.sh
 
 # Ensure script executes correctly
-ENTRYPOINT ["/bin/bash", "-c", "/home/ubuntu/setup_docker_env_file.sh"]
+ENTRYPOINT ["/bin/bash", "-c", "/home/ubuntu/setup_docker_env_file.sh && exec bash"]
 
 # Stay as user
 USER ${USERNAME}

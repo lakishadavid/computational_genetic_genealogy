@@ -177,3 +177,9 @@ results/*
 utils/*
 !utils/__init__.py
 
+data/class_data/converted_vcf_files/*
+data/class_data/parsed_tsv_files/*
+data/merged_opensnps_data.vcf.gz
+data/merged_opensnps_data.vcf.gz.tbi
+data/class_data/determined_sex.txt
+data/class_data/failed_sex.txt

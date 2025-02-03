@@ -7,5 +7,5 @@ if [ ! -f .env ]; then
     echo "PROJECT_REFERENCES_DIR=/home/ubuntu/references" >> .env
 fi
 
-poetry run python -m scripts_support.directory_setup
+# Keep container running
 exec bash

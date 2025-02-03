@@ -2,8 +2,8 @@
 .git
 *.log
 __pycache__/
-.venv/
 
 references/
-data/
+# data/
 results/
+# utils/

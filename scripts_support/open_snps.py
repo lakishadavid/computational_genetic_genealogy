@@ -233,7 +233,7 @@ def extract_files(zip_file, target_dir, prefix="user", suffix=None, max_files=No
 
     return True
         
-# class GenotypeProcessor:
+
 def parse_genotype_files(target_subdir, references_directory):
     """
     Parses all genotype files, ensures Build 38, determines sex, and converts to VCF.

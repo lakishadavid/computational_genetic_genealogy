@@ -59,15 +59,6 @@ if [ ! -d "$HOME/.local" ]; then
     sudo chown -R $USER:$USER "$HOME/.local"
 fi
 
-# Install pip and kernel
-echo "Installing Python packages..."
-sudo apt-get install -y python3-pip
-pip install ipykernel
-
-# Setup Jupyter kernel
-echo "Installing Jupyter kernel..."
-python3 -m ipykernel install --user
-
 # Install Poetry
 echo "Installing Poetry..."
 curl -sSL https://install.python-poetry.org | python3 -

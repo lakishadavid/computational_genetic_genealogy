@@ -24,12 +24,9 @@ sudo apt-get install -y --no-install-recommends \
     python3 \
     python3-pip \
     python3-dev \
-    python3.10-dev \
     graphviz \
-    graphviz-dev \
-    libfreetype6-dev \
+    libfreetype-dev \
     pkg-config \
-    libfreetype6-dev \
     libpng-dev \
     zlib1g-dev \
     libbz2-dev \
@@ -48,18 +45,6 @@ sudo apt-get install -y --no-install-recommends \
 
 sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*
-
-# Verify Graphviz installation
-echo "Verifying Graphviz installation..."
-dot -V || echo "Graphviz installation failed!"
-
-# Ensure Python development headers are accessible
-echo "Checking for Python development headers..."
-ls /usr/include/python3.10 || echo "Python development headers not found!"
-
-# Attempt installing pygraphviz explicitly with correct paths
-echo "Installing pygraphviz..."
-pip install --no-cache-dir --global-option=build_ext --global-option="-I/usr/include/graphviz" --global-option="-L/usr/lib/graphviz" pygraphviz
 
 # Add local bin to PATH
 echo "Adding ~/.local/bin to PATH..."

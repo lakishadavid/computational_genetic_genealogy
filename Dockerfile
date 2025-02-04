@@ -29,6 +29,7 @@ RUN apt-get update -y && \
     python3 \
     python3-pip \
     python3-dev \
+    python3.10-dev \
     graphviz \
     graphviz-dev \
     g++ \

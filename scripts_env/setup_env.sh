@@ -40,8 +40,7 @@ sudo apt-get install -y --no-install-recommends \
     unzip \
     default-jre \
     gawk \
-    libboost-all-dev \
-    docker-compose-plugin
+    libboost-all-dev
 
 sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*

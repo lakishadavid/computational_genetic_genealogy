@@ -40,7 +40,7 @@ sudo apt-get install -y --no-install-recommends \
     unzip \
     default-jre \
     gawk \
-    libboost-all-dev
+    libboost-all-dev 
 
 sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*
@@ -83,8 +83,6 @@ if [ -f "pyproject.toml" ] && [ -f "poetry.lock" ]; then
 else
     echo "Warning: pyproject.toml not found in current directory"
 fi
-
-
 
 echo 'export PATH=$PATH:/home/lakishadavid/computational_genetic_genealogy/utils' >> ~/.bashrc
 source ~/.bashrc

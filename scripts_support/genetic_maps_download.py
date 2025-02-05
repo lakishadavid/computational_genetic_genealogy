@@ -13,7 +13,11 @@ import urllib3
 from urllib3.util import Retry
 import time
 import subprocess
-from decouple import config
+from dotenv import load_dotenv
+notebook_dir = os.getcwd()
+project_root = os.path.dirname(notebook_dir)
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path, override=True)
 
 def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO"):
     """
@@ -260,21 +264,28 @@ def main(references_directory):
     genetic_maps_dir = os.path.join(args.references_directory, "genetic_maps")
     os.makedirs(genetic_maps_dir, exist_ok=True)
 
-    # Create source-specific subdirectories
+    # Create a dictionary mapping each data source to its directory path
     source_dirs = {
         "BEAGLE": os.path.join(genetic_maps_dir, "beagle_genetic_maps"),
         "PLINK2": os.path.join(genetic_maps_dir, "plink2_genetic_maps"),
         "UCSC": os.path.join(genetic_maps_dir, "ucsc_genetic_maps"),
         "IBIS": os.path.join(genetic_maps_dir, "ibis_genetic_maps")
     }
-    
-    for directory in source_dirs.values():
-        os.makedirs(directory, exist_ok=True)
+
+    # Determine the selected data source
+    selected_source = args.data_source
+    selected_dir = source_dirs.get(selected_source)
+    if selected_dir is None:
+        raise ValueError(f"Invalid data source: {selected_source}")
+
+    # Create the directory only for the selected source
+    os.makedirs(selected_dir, exist_ok=True)
 
     # Set default output file if not specified
     if not args.output_file:
-        filename = f"{args.data_source.lower()}_{args.assembly}.{'csv' if args.data_source == 'UCSC' else 'map'}"
-        args.output_file = os.path.join(source_dirs[args.data_source], filename)
+        extension = 'csv' if selected_source == 'UCSC' else 'map'
+        filename = f"{selected_source.lower()}_{args.assembly}.{extension}"
+        args.output_file = os.path.join(selected_dir, filename)
 
     retrieve = MultiSourceGeneticMap()
 
@@ -306,12 +317,11 @@ if __name__ == "__main__":
     # poetry run python -m scripts_support.genetic_maps_download --data-source PLINK2 --assembly hg38
 
     try:
-        subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
-        working_directory = config('PROJECT_WORKING_DIR', default=None)
-        data_directory = config('PROJECT_DATA_DIR', default=None)
-        references_directory = config('PROJECT_REFERENCES_DIR', default=None)
-        results_directory = config('PROJECT_RESULTS_DIR', default=None)
-        utils_directory = config('PROJECT_UTILS_DIR', default=None)
+        working_directory = os.getenv('PROJECT_WORKING_DIR', default=None)
+        data_directory = os.getenv('PROJECT_DATA_DIR', default=None)
+        references_directory = os.getenv('PROJECT_REFERENCES_DIR', default=None)
+        results_directory = os.getenv('PROJECT_RESULTS_DIR', default=None)
+        utils_directory = os.getenv('PROJECT_UTILS_DIR', default=None)
 
         if not all([working_directory, data_directory, references_directory, 
                    results_directory, utils_directory]):

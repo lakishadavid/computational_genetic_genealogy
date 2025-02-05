@@ -22,19 +22,17 @@ USER root
 RUN apt-get update -y && \
     apt-get install -y --no-install-recommends \
     build-essential \
-    wget \
-    curl \
-    git \
-    unzip \
+    g++ \
+    gcc \
+    make \
     python3 \
     python3-pip \
     python3-dev \
     python3.10-dev \
     graphviz \
     graphviz-dev \
-    g++ \
-    gcc \
-    make \
+    libfreetype6-dev \
+    pkg-config \
     libfreetype6-dev \
     libpng-dev \
     zlib1g-dev \
@@ -43,9 +41,14 @@ RUN apt-get update -y && \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
+    wget \
+    curl \
+    git \
+    unzip \
     default-jre \
     gawk \
     libboost-all-dev
+    
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
 

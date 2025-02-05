@@ -17,7 +17,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 for CHR in {1..22}; do
     echo "Processing chromosome $CHR"
 
-    INPUT_VCF="${RESULTS_DIR}/opensnps_qcfinished_chr${CHR}.vcf.gz"
+    INPUT_VCF="${RESULTS_DIR}/merged_opensnps_data_qcfinished_chr${CHR}.vcf.gz"
     REF_VCF="${REFERENCES_DIR}/onethousandgenomes_genotype/onethousandgenomes_genotyped_phased.chr${CHR}.vcf.gz"
     MAP_FILE="${REFERENCES_DIR}/genetic_maps/beagle_genetic_maps/plink.chr${CHR}.GRCh38.map"
     OUTPUT_PREFIX="${PHASED_DIR}/opensnps_phased_chr${CHR}"
@@ -29,12 +29,22 @@ for CHR in {1..22}; do
         continue
     fi
 
-    # Run Beagle
-    java -jar "$BEAGLE_JAR" \
-        gt="$INPUT_VCF" \
-        ref="$REF_VCF" \
-        map="$MAP_FILE" \
-        out="$OUTPUT_PREFIX"
+    if [ -f "$REF_VCF" ]; then
+        # Run Beagle with reference file
+        java -jar "$BEAGLE_JAR" \
+            gt="$INPUT_VCF" \
+            ref="$REF_VCF" \
+            map="$MAP_FILE" \
+            out="$OUTPUT_PREFIX"
+    else
+        echo "Note: The reference file does not exist; the file is phased based on no reference panel."
+        # Run Beagle without reference file
+        java -jar "$BEAGLE_JAR" \
+            gt="$INPUT_VCF" \
+            map="$MAP_FILE" \
+            out="$OUTPUT_PREFIX"
+    fi
+
 
     if [ $? -ne 0 ]; then
         echo "Beagle failed for chromosome $CHR. Skipping."

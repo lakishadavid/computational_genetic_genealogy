@@ -507,7 +507,8 @@ def main(working_directory, utils_directory, results_directory):
     determined_sex_file = args.determined_sex_file
     failed_sex = args.failed_sex
 
-    beagle_jar = check_dependencies(working_directory, utils_directory)
+    # beagle_jar = check_dependencies(working_directory, utils_directory)
+    beagle_jar = "beagle.17Dec24.224.jar"
 
     if os.path.exists(vcf_path):
         logging.info(f"Validating merged VCF: {vcf_path}")

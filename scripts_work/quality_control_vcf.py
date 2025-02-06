@@ -527,6 +527,11 @@ def main(working_directory, utils_directory, results_directory):
             logging.info(f"Validation successful for {vcf_path}.")
             
             plink2_path = os.path.join(utils_directory, "plink2")
+            print("************************************************************")
+            print("************************************************************")
+            print(f"This is the plink2_path: {plink2_path}. ***************************")
+            print("************************************************************")
+            print("************************************************************")
             if not os.path.exists(plink2_path):
                 logging.info("Plink2 not found. Installing Plink2...")
                 subprocess.run(["bash", "scripts_env/install_plink2.sh"], check=True)

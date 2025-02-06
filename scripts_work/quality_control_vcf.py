@@ -351,6 +351,7 @@ def step_3_split_by_chromosome(input_prefix, output_dir, sample_file, plink2_pat
         # Index the VCF file
         index_command = ["bcftools", "index", bcftools_output]
         run_command(index_command)
+    return 
 
 def step_process_X(vcf_path, output_prefix, sex_update_file, plink2_path):
     """Process chromosome X with PAR splitting."""
@@ -591,7 +592,8 @@ def main(working_directory, utils_directory, results_directory):
 
             logging.info("Phasing chromosomes...")
             script_path = os.path.join(working_directory, "scripts_work/phase_chromosomes.sh")
-            command = [script_path, results_directory, references_directory, utils_directory, beagle_jar]
+            input_prefix = f"{sample_file}_qcfinished"
+            command = [script_path, results_directory, references_directory, utils_directory, input_prefix, beagle_jar]
 
             try:
                 # subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

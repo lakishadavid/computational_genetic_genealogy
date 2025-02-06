@@ -4,7 +4,8 @@
 RESULTS_DIR=$1
 REFERENCES_DIR=$2
 UTILS_DIR=$3
-BEAGLE_JAR=$4
+INPUT_PREFIX=$4
+BEAGLE_JAR=$5
 
 PHASED_DIR="${RESULTS_DIR}/phased_samples"
 mkdir -p "$PHASED_DIR"
@@ -17,7 +18,7 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 for CHR in {1..22}; do
     echo "Processing chromosome $CHR"
 
-    INPUT_VCF="${RESULTS_DIR}/merged_opensnps_data_qcfinished_chr${CHR}.vcf.gz"
+    INPUT_VCF="${RESULTS_DIR}/${INPUT_PREFIX}_chr${CHR}.vcf.gz"
     REF_VCF="${REFERENCES_DIR}/onethousandgenomes_genotype/onethousandgenomes_genotyped_phased.chr${CHR}.vcf.gz"
     MAP_FILE="${REFERENCES_DIR}/genetic_maps/beagle_genetic_maps/plink.chr${CHR}.GRCh38.map"
     OUTPUT_PREFIX="${PHASED_DIR}/opensnps_phased_chr${CHR}"
@@ -26,6 +27,7 @@ for CHR in {1..22}; do
     # Check if input VCF exists
     if [ ! -f "$INPUT_VCF" ]; then
         echo "Input VCF file not found for chromosome $CHR. Skipping."
+        echo "$INPUT_VCF"
         continue
     fi
 
@@ -60,7 +62,7 @@ for CHR in {1..22}; do
     echo "Sorting and indexing phased VCF for chromosome $CHR"
     SORTED_VCF="${PHASED_DIR}/opensnps_phased_chr${CHR}_sorted.vcf.gz"
     bcftools sort -Oz -o "$SORTED_VCF" "$PHASED_VCF"
-    bcftools index --tbi "$SORTED_VCF"
+    tabix -p vcf "$SORTED_VCF"
 
     # Replace original VCF with sorted version
     mv "$SORTED_VCF" "$PHASED_VCF"

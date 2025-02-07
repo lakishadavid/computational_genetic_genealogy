@@ -9,6 +9,7 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Exit on pipe errors
 # set -x  # Print commands before execution
+# revised
 
 echo "Starting environment setup..."
 

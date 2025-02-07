@@ -46,11 +46,15 @@ sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*
 
 # Add local bin to PATH
-echo "Adding ~/.local/bin to PATH..."
-if ! grep -q "HOME/.local/bin" ~/.bashrc; then
-   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-   source ~/.bashrc
+if ! grep -q "# BEGIN custom PATH additions" ~/.bashrc; then
+    cat << 'EOF' >> ~/.bashrc
+# BEGIN custom PATH additions
+export PATH="$HOME/.local/bin:$PATH"
+# END custom PATH additions
+EOF
 fi
+
+source ~/.bashrc
 
 # Create and set permissions for local directories if they don't exist
 if [ ! -d "$HOME/.local" ]; then
@@ -66,10 +70,6 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry config virtualenvs.create true
 poetry config virtualenvs.in-project true
 
-# Add Poetry to PATH
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-
 poetry --version || { echo "Poetry installation failed"; exit 1; }
 
 if [ -d "$HOME/.cache/poetry" ]; then
@@ -83,6 +83,8 @@ if [ -f "pyproject.toml" ] && [ -f "poetry.lock" ]; then
 else
     echo "Warning: pyproject.toml not found in current directory"
 fi
+
+source ~/.bashrc
 
 # Find and run all install scripts in order
 echo "Finding installation scripts..."

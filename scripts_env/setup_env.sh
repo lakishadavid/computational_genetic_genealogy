@@ -9,7 +9,6 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 set -o pipefail  # Exit on pipe errors
 # set -x  # Print commands before execution
-# revised
 
 echo "Starting environment setup..."
 
@@ -46,21 +45,26 @@ sudo apt-get install -y --no-install-recommends \
 sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*
 
-# Add local bin to PATH
-if ! grep -q "# BEGIN custom PATH additions" ~/.bashrc; then
-    cat << 'EOF' >> ~/.bashrc
-# BEGIN custom PATH additions
-export PATH="$HOME/.local/bin:$PATH"
-# END custom PATH additions
-EOF
+# Add ~/.local/bin to PATH only if it's not already in ~/.bashrc
+if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' ~/.bashrc; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    echo "Added ~/.local/bin to PATH in ~/.bashrc"
+else
+    echo "~/.local/bin is already in PATH in ~/.bashrc"
 fi
 
-source ~/.bashrc
+# Apply path updates immediately
+export PATH="$HOME/.local/bin:$PATH"
 
-# Create and set permissions for local directories if they don't exist
 if [ ! -d "$HOME/.local" ]; then
     mkdir -p "$HOME/.local"
-    sudo chown -R $USER:$USER "$HOME/.local"
+fi
+
+# Ensure the correct ownership only if needed
+CURRENT_USER=$(whoami)
+if [ "$(stat -c '%U' "$HOME/.local")" != "$CURRENT_USER" ]; then
+    echo "Fixing ownership of $HOME/.local..."
+    sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$HOME/.local"
 fi
 
 # Install Poetry

@@ -4,11 +4,19 @@ import json
 import sys
 import logging
 from inputimeout import inputimeout, TimeoutOccurred
+import argparse
+
 from dotenv import load_dotenv
-notebook_dir = os.getcwd()
-project_root = os.path.dirname(notebook_dir)
+
+# Determine the directory where the script is located
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# Assuming your project root is one level up from the script's directory
+project_root = os.path.dirname(script_dir)
+# Construct the full path to the .env file located in the project root
 env_path = os.path.join(project_root, '.env')
-load_dotenv(env_path, override=True)
+
+# Load environment variables from the .env file; 'override=True' ensures that variables in the .env file overwrite any existing environment variables
+load_dotenv(dotenv_path=env_path, override=True)
 
 def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO"):
     """
@@ -38,12 +46,6 @@ def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_l
     logger.addHandler(file_handler)
     logger.addHandler(console_handler)
 
-def install_dependencies():
-    """Install necessary dependencies using apt-get."""
-    logging.info("Installing dependencies...")
-    subprocess.run(["sudo", "apt-get", "update", "-qq", "-y"])
-    subprocess.run(["sudo", "apt-get", "install", "-qq", "-y", "tabix", "bcftools", "default-jre", "wget", "unzip", "jq"])
-
 def prompt_chromosome_selection():
     """Prompt the user to select chromosomes to process with a timeout and default option."""
     print("Choose an option for chromosomes to process:")
@@ -52,12 +54,13 @@ def prompt_chromosome_selection():
     print("c) Multiple chromosomes: 1 and 20 (default)")
     print("d) Single chromosome: chromosome 20")
     print("e) Single chromosomes: chromosome X")
+    print("f) Custom range: Enter start and end chromosomes")
 
     # Default selection if input times out
     default_selection = "c"
 
     try:
-        selection = inputimeout(prompt="Enter your choice (a, b, c, d, or e): ", timeout=20).strip().lower()
+        selection = inputimeout(prompt="Enter your choice (a, b, c, d, e, or f): ", timeout=20).strip().lower()
     except TimeoutOccurred:
         print("\nNo input provided. Defaulting to 'c'.")
         selection = default_selection
@@ -70,72 +73,126 @@ def prompt_chromosome_selection():
         "e": ["X"],  # Single chromosome
     }
 
-    if selection not in options:
-        logging.info("Invalid choice. Please choose a, b, c, d, or e.")
+    if selection == "f":
+        try:
+            start = input("Enter start chromosome (1-22 or X): ").strip()
+            end = input("Enter end chromosome (1-22 or X): ").strip()
+            
+            # Convert start and end to appropriate types
+            if start.upper() == "X":
+                start = "X"
+            else:
+                start = int(start)
+                if not 1 <= start <= 22:
+                    raise ValueError("Start chromosome must be between 1 and 22 or X")
+            
+            if end.upper() == "X":
+                end = "X"
+            else:
+                end = int(end)
+                if not 1 <= end <= 22:
+                    raise ValueError("End chromosome must be between 1 and 22 or X")
+            
+            # Generate chromosome range
+            if start == "X" or end == "X":
+                if start == "X":
+                    chromosomes = ["X"]
+                else:
+                    chromosomes = list(range(start, 23)) + ["X"]
+            else:
+                if start <= end:
+                    chromosomes = list(range(start, end + 1))
+                else:
+                    chromosomes = list(range(end, start + 1))
+            
+            return "f", chromosomes
+            
+        except ValueError as e:
+            logging.info(f"Invalid input: {str(e)}")
+            sys.exit(1)
+    elif selection not in options:
+        logging.info("Invalid choice. Please choose a, b, c, d, e, or f.")
         sys.exit(1)
 
     return selection, options[selection]
 
-def download_files(selection, base_url, chromosomes, destination_dir):
-    """Download VCF and index files for the specified chromosomes."""
-    for chromosome in chromosomes:
-        vcf_filename = f"1kGP_high_coverage_Illumina.chr{chromosome}.filtered.SNV_INDEL_SV_phased_panel.vcf.gz"
-        tbi_filename = f"{vcf_filename}.tbi"
-        new_vcf_filename = f"onethousandgenomes_sequenced_phased.chr{chromosome}.vcf.gz"
-
-        vcf_url = f"{base_url}/{vcf_filename}"
-        tbi_url = f"{vcf_url}.tbi"
-
-        if selection == "e":
-            # Download VCF file
-            logging.info(f"\nDownloading {vcf_filename}...")
-            vcf_filename = f"1kGP_high_coverage_Illumina.chr{chromosome}.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz"
-            vcf_url = f"{base_url}/{vcf_filename}"
-            vcf_path = os.path.join(destination_dir, new_vcf_filename)
-            result = subprocess.run(["wget", "-O", vcf_path, vcf_url], stdout=None, stderr=None)
+def index_downloaded_files(vcf_path):        
+        if os.path.isfile(vcf_path):
+            logging.info(f"Indexing {vcf_path}...")
+            # Execute tabix with the vcf preset to create an index file (.tbi)
+            result = subprocess.run(["tabix", "-f", "-p", "vcf", vcf_path],
+                                    stdout=None, stderr=None)
             if result.returncode != 0:
-                logging.info(f"Failed to download {vcf_filename}. Skipping...")
-                continue
-
-            # Download TBI file
-            logging.info(f"\nDownloading {tbi_filename}...")
-            tbi_filename = f"{vcf_filename}.tbi"
-            tbi_url = f"{vcf_url}.tbi"
-            tbi_path = os.path.join(destination_dir, f"{new_vcf_filename}.tbi")
-            result = subprocess.run(["wget", "-O", tbi_path, tbi_url], stdout=None, stderr=None)
-            if result.returncode != 0:
-                logging.info(f"Failed to download {tbi_filename}. Skipping...")
-                continue
+                error_message = result.stderr.decode().strip()
+                logging.error(f"Failed to index {vcf_path}: {error_message}")
+            else:
+                logging.info(f"Successfully indexed {vcf_path}.")
         else:
-            # Download VCF file
-            logging.info(f"\nDownloading {vcf_filename}...")
-            vcf_path = os.path.join(destination_dir, new_vcf_filename)
-            result = subprocess.run(["wget", "-O", vcf_path, vcf_url], stdout=None, stderr=None)
-            if result.returncode != 0:
-                logging.info(f"Failed to download {vcf_filename}. Skipping...")
-                continue
+            logging.error(f"File {vcf_path} not found.")
+            
+def index_files(chromosomes, destination_dir):
+    """
+    Index VCF files for all specified chromosomes.
 
-            # Download TBI file
-            logging.info(f"\nDownloading {tbi_filename}...")
-            tbi_path = os.path.join(destination_dir, f"{new_vcf_filename}.tbi")
-            result = subprocess.run(["wget", "-O", tbi_path, tbi_url], stdout=None, stderr=None)
-            if result.returncode != 0:
-                logging.info(f"Failed to download {tbi_filename}. Skipping...")
-                continue
+    Parameters:
+        chromosomes (list): List of chromosomes to index.
+        destination_dir (str): Directory where the VCF files are stored.
+    """
+    for chromosome in chromosomes:
+        new_vcf_filename = f"onethousandgenomes_sequenced_phased.chr{chromosome}.vcf.gz"
+        vcf_path = os.path.join(destination_dir, new_vcf_filename)
+        index_downloaded_files(vcf_path)
+        if not os.path.isfile(vcf_path + ".tbi"):
+            logging.info(f"{new_vcf_filename} was not indexed.")
 
-        # Confirm downloads
+def download_files(base_url, chromosomes, destination_dir):
+    """
+    Download VCF files for the specified chromosomes.
+
+    Parameters:
+        base_url (str): Base URL where the VCF files are hosted.
+        chromosomes (list): List of chromosomes to download.
+        destination_dir (str): Directory where the downloaded files will be saved.
+    """
+    for chromosome in chromosomes:
+        if chromosome == "X":
+            vcf_filename = f"1kGP_high_coverage_Illumina.chr{chromosome}.filtered.SNV_INDEL_SV_phased_panel.v2.vcf.gz"
+        else:
+            vcf_filename = f"1kGP_high_coverage_Illumina.chr{chromosome}.filtered.SNV_INDEL_SV_phased_panel.vcf.gz"
+
+        # Use a new filename for saving the downloaded file
+        new_vcf_filename = f"onethousandgenomes_sequenced_phased.chr{chromosome}.vcf.gz"
+        vcf_url = f"{base_url}/{vcf_filename}"
+
+        logging.info(f"\nDownloading {vcf_filename}...")
+        vcf_path = os.path.join(destination_dir, new_vcf_filename)
+        result = subprocess.run(
+            ["wget", "-O", vcf_path, vcf_url],
+            stdout=None, stderr=None
+        )
+        if result.returncode != 0:
+            logging.info(f"Failed to download {vcf_filename}. Skipping...")
+            continue
+
+        # Confirm that the file was successfully downloaded
         if not os.path.isfile(vcf_path):
             logging.info(f"{vcf_filename} was not downloaded.")
             continue
-
-        if not os.path.isfile(tbi_path):
-            logging.info(f"{tbi_filename} was not downloaded.")
-            continue
+        
+        index_downloaded_files(vcf_path)
+        if not os.path.isfile(vcf_path + ".tbi"):
+            logging.info(f"{vcf_filename} was not indexed")
 
         logging.info(f"Successfully downloaded and verified files for chromosome {chromosome}.")
 
+
 def main():
     # poetry run python -m scripts_support.onethousandgenomes_download
+    # poetry run python -m scripts_support.onethousandgenomes_download --only-index
+    
+    parser = argparse.ArgumentParser(description="Script description")
+    parser.add_argument('--only-index', action='store_true', help='Run indexing only')
+    args = parser.parse_args()
 
     try:
         working_directory = os.getenv('PROJECT_WORKING_DIR', default=None)
@@ -161,24 +218,25 @@ def main():
     logging.info(f"References Directory: {references_directory}")
     logging.info(f"Utils Directory: {utils_directory}")
 
-    # Step 2: Install dependencies
-    install_dependencies()
-
-    # Step 3: Ensure onethousandgenomes_seq directory exists
+    # Ensure onethousandgenomes_seq directory exists
     onethousandgenomes_seq = os.path.join(references_directory, "onethousandgenomes_seq")
     logging.info(f"onethousandgenomes_seq directory: {onethousandgenomes_seq}")
     os.makedirs(onethousandgenomes_seq, exist_ok=True)
 
-    # Step 4: Prompt user for chromosome selection
+    # Prompt user for chromosome selection
     base_url = "https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV"
     selection, chromosomes = prompt_chromosome_selection()
 
     # logging.info selection and chromosomes
     logging.info(f"You selected option {selection}.")
     logging.info(f"Chromosome(s) to process: {chromosomes}")
-
-    # Step 5: Download files
-    download_files(selection, base_url, chromosomes, onethousandgenomes_seq)
+    
+    # Check for the '--only-index' flag to decide which action to perform.
+    if args.only_index:
+        logging.info("Index-only mode activated. Indexing previously downloaded files.")
+        index_files(chromosomes, onethousandgenomes_seq)
+    else:
+        download_files(base_url, chromosomes, onethousandgenomes_seq)
 
     logging.info("All tasks completed.")
 

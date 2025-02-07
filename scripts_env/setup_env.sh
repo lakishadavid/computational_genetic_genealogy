@@ -12,6 +12,17 @@ set -o pipefail  # Exit on pipe errors
 
 echo "Starting environment setup..."
 
+# Determine the directory of this script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Assume the project root is the parent directory of the scripts_env folder
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+echo "Using project directory: $PROJECT_DIR"
+
+# Change to the project directory so that the files are found
+cd "$PROJECT_DIR" || { echo "Error: Unable to change directory to $PROJECT_DIR"; exit 1; }
+
 # Update system packages
 echo "Updating system packages..."
 sudo apt-get update -y

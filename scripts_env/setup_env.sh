@@ -66,6 +66,7 @@ fi
 # Install Poetry
 echo "Installing Poetry..."
 curl -sSL https://install.python-poetry.org | python3 -
+export PATH="$HOME/.local/bin:$PATH"
 
 # Configure Poetry to install in user space
 poetry config virtualenvs.create true
@@ -77,16 +78,33 @@ if [ -d "$HOME/.cache/poetry" ]; then
     sudo chown -R $USER:$USER "$HOME/.cache/poetry"
 fi
 
-# Install project dependencies
+# Find the computational_genetic_genealogy directory
+REPO_PATH=$(find ~ -maxdepth 3 -type d -name "computational_genetic_genealogy" 2>/dev/null | head -n 1)
+
+# Validate that REPO_PATH was found
+if [ -z "$REPO_PATH" ]; then
+    echo "Error: computational_genetic_genealogy directory not found."
+    exit 1
+fi
+
+echo "Project directory found: $REPO_PATH"
+cd "$REPO_PATH" || { echo "Error: Failed to change directory to $REPO_PATH"; exit 1; }
+
 echo "Installing project dependencies with Poetry..."
-cd ..
+
+if ! command -v poetry &>/dev/null; then
+    echo "Error: Poetry is not installed correctly or is not in PATH."
+    exit 1
+fi
+
+# Ensure we're in the correct project root
 if [ -f "pyproject.toml" ] && [ -f "poetry.lock" ]; then
     poetry install --no-root
 else
-    echo "Warning: pyproject.toml not found in current directory"
+    echo "Warning: pyproject.toml or poetry.lock not found in $(pwd)"
 fi
 
-source ~/.bashrc
+export PATH="$HOME/.local/bin:$PATH"
 
 # Find and run all install scripts in order
 echo "Finding installation scripts..."
@@ -120,12 +138,11 @@ done
 for script in "${INSTALL_SCRIPTS[@]}"; do
     echo "Running $script..."
     
-    # Check if script is executable
     if [[ ! -x "$script" ]]; then
-        echo "Error: $script is not executable. Skipping..."
-        continue
+        echo "Fixing permissions: Making $script executable..."
+        chmod +x "$script"
     fi
-    
+
     # Run the script
     if ! bash "$script"; then
         echo "Error: Script $script failed."

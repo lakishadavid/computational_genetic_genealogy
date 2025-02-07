@@ -65,17 +65,36 @@ fi
 
 # Install Poetry
 echo "Installing Poetry..."
-curl -sSL https://install.python-poetry.org | python3 -
-export PATH="$HOME/.local/bin:$PATH"
 
-# Configure Poetry to install in user space
+# Check if Poetry is already installed
+if command -v poetry &>/dev/null; then
+    echo "Poetry is already installed at $(which poetry)"
+else
+    # Remove conflicting symlink if it exists
+    if [ -L "/usr/local/bin/poetry" ]; then
+        echo "Removing conflicting Poetry symlink..."
+        sudo rm /usr/local/bin/poetry
+    fi
+
+    # Install Poetry in user space
+    curl -sSL https://install.python-poetry.org | python3 - --install-dir "$HOME/.local/bin"
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Ensure Poetry is in the correct location
+if ! command -v poetry &>/dev/null; then
+    echo "Error: Poetry installation failed or is not in PATH."
+    exit 1
+fi
+
+# Configure Poetry to install dependencies in user space
 poetry config virtualenvs.create true
 poetry config virtualenvs.in-project true
 
-poetry --version || { echo "Poetry installation failed"; exit 1; }
-
-if [ -d "$HOME/.cache/poetry" ]; then
-    sudo chown -R $USER:$USER "$HOME/.cache/poetry"
+# Fix Poetry cache permissions only if necessary
+if [ -d "$HOME/.cache/poetry" ] && [ "$(stat -c '%U' "$HOME/.cache/poetry")" != "$USER" ]; then
+    echo "Fixing Poetry cache ownership..."
+    sudo chown -R "$USER:$USER" "$HOME/.cache/poetry"
 fi
 
 # Find the computational_genetic_genealogy directory
@@ -92,6 +111,7 @@ cd "$REPO_PATH" || { echo "Error: Failed to change directory to $REPO_PATH"; exi
 
 echo "Installing project dependencies with Poetry..."
 
+# Ensure Poetry is available before proceeding
 if ! command -v poetry &>/dev/null; then
     echo "Error: Poetry is not installed correctly or is not in PATH."
     exit 1
@@ -104,6 +124,7 @@ else
     echo "Warning: pyproject.toml or poetry.lock not found in $(pwd)"
 fi
 
+# Ensure Poetry’s bin directory is in PATH
 export PATH="$HOME/.local/bin:$PATH"
 
 # Find and run all install scripts in order

@@ -84,9 +84,6 @@ else
     echo "Warning: pyproject.toml not found in current directory"
 fi
 
-echo 'export PATH=$PATH:/home/lakishadavid/computational_genetic_genealogy/utils' >> ~/.bashrc
-source ~/.bashrc
-
 # Find and run all install scripts in order
 echo "Finding installation scripts..."
 
@@ -143,6 +140,6 @@ echo "- Updated system packages"
 echo "- ~/.local/bin added to PATH"
 echo "- System dependencies"
 echo "- Poetry installed and configured"
-echo "- Project dependencies installed (if pyproject.toml exists)"
+echo "- Project dependencies installed"
 echo "- Python kernel installed for Jupyter Notebooks"
 echo "==============================================="

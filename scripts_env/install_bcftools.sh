@@ -76,7 +76,7 @@ fi
 chmod +x "$htslib_dir/bin/tabix"
 
 # Persist path for future sessions
-echo "export PATH=\"$htslib_dir/bin:\$PATH\"" >> ~/.bashrc
+grep -qxF "export PATH=\"$htslib_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$htslib_dir/bin:\$PATH\"" >> ~/.bashrc
 export PATH="$htslib_dir/bin:$PATH"
 
 echo "HTSlib installation completed successfully."
@@ -121,7 +121,7 @@ fi
 chmod +x "$samtools_dir/bin/samtools"
 
 # Persist path for future sessions
-echo "export PATH=\"$samtools_dir/bin:\$PATH\"" >> ~/.bashrc
+grep -qxF "export PATH=\"$samtools_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$samtools_dir/bin:\$PATH\"" >> ~/.bashrc
 export PATH="$samtools_dir/bin:$PATH"
 
 echo "Samtools installation completed successfully."
@@ -159,7 +159,7 @@ fi
 chmod +x "$bcftools_dir/bin/bcftools"
 
 # Persist PATH updates
-echo "export PATH=\"$bcftools_dir/bin:\$PATH\"" >> ~/.bashrc
+grep -qxF "export PATH=\"$bcftools_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$bcftools_dir/bin:\$PATH\"" >> ~/.bashrc
 export PATH="$bcftools_dir/bin:$PATH"
 
 echo "Bcftools installation completed successfully."
@@ -184,3 +184,5 @@ bcftools --version || echo "Bcftools not found on PATH."
 echo
 echo "All installations completed. Make sure /usr/local/bin (or appropriate path) is in your PATH."
 echo "install_samtools_bcftools_htslib.sh: Finished successfully."
+
+cd $base_directory

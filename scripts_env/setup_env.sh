@@ -45,6 +45,10 @@ sudo apt-get install -y --no-install-recommends \
 sudo apt-get clean
 sudo rm -rf /var/lib/apt/lists/*
 
+if [ ! -d "$HOME/.local" ]; then
+    mkdir -p "$HOME/.local"
+fi
+
 # Add ~/.local/bin to PATH only if it's not already in ~/.bashrc
 if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' ~/.bashrc; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
@@ -55,10 +59,6 @@ fi
 
 # Apply path updates immediately
 export PATH="$HOME/.local/bin:$PATH"
-
-if [ ! -d "$HOME/.local" ]; then
-    mkdir -p "$HOME/.local"
-fi
 
 # Ensure the correct ownership only if needed
 CURRENT_USER=$(whoami)

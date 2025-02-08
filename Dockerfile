@@ -19,8 +19,9 @@ RUN groupadd --gid ${USER_GID} ${USERNAME} && \
 USER root
 
 # Update and install necessary dependencies
-RUN apt-get update -y && \
-    apt-get install -y --no-install-recommends \
+RUN apt-get update -y
+
+RUN apt-get install -y --no-install-recommends \
     build-essential \
     g++ \
     gcc \
@@ -28,12 +29,9 @@ RUN apt-get update -y && \
     python3 \
     python3-pip \
     python3-dev \
-    python3.10-dev \
     graphviz \
-    graphviz-dev \
-    libfreetype6-dev \
+    libfreetype-dev \
     pkg-config \
-    libfreetype6-dev \
     libpng-dev \
     zlib1g-dev \
     libbz2-dev \
@@ -47,7 +45,7 @@ RUN apt-get update -y && \
     unzip \
     default-jre \
     gawk \
-    libboost-all-dev
+    libboost-all-dev 
     
 RUN apt-get clean
 RUN rm -rf /var/lib/apt/lists/*
@@ -55,6 +53,20 @@ RUN rm -rf /var/lib/apt/lists/*
 # Set working directory inside the container
 ARG WORKSPACE_DIR=/home/ubuntu
 WORKDIR ${WORKSPACE_DIR}
+
+# Ensure ~/.local exists and
+RUN mkdir -p /home/ubuntu/.local
+
+# Add ~/.local/bin to PATH only if it's not already in ~/.bashrc
+RUN if ! grep -qxF 'export PATH="$HOME/.local/bin:$PATH"' /home/ubuntu/.bashrc; then \
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/ubuntu/.bashrc && \
+        echo "Added ~/.local/bin to PATH in ~/.bashrc"; \
+    else \
+        echo "~/.local/bin is already in PATH in ~/.bashrc"; \
+    fi
+
+# Ensure correct ownership dynamically
+RUN chown -R ${USERNAME}:${USERNAME} /home/${USERNAME}/.local
 
 # Create directories with correct ownership and permissions
 RUN install -d -m 775 -o ${USERNAME} -g ${USERNAME} \
@@ -65,19 +77,33 @@ RUN install -d -m 775 -o ${USERNAME} -g ${USERNAME} \
           ${WORKSPACE_DIR}/utils/__init__.py && \
     chown -R ${USERNAME}:${USERNAME} ${WORKSPACE_DIR}
 
-# Install poetry with hash verification
-ENV POETRY_HOME=/opt/poetry
-ENV POETRY_VERSION=1.8.5
+# Set Poetry installation directory explicitly
+ENV POETRY_HOME=/home/ubuntu/.local
 ENV PATH="${POETRY_HOME}/bin:${PATH}"
-RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/opt/poetry python3 - && \
-    cd /usr/local/bin && \
-    ln -s /opt/poetry/bin/poetry && \
-    poetry config virtualenvs.create false && \
-    chown -R ${USERNAME}:${USERNAME} ${POETRY_HOME}
+
+# Install Poetry only if not already installed
+RUN curl -sSL https://install.python-poetry.org | python3 - && \
+    ln -s ${POETRY_HOME}/bin/poetry /usr/local/bin/poetry
 
 USER ${USERNAME}
 WORKDIR ${WORKSPACE_DIR}
 
+# Set Poetry path explicitly so it is recognized immediately
+ENV PATH="/home/ubuntu/.local/bin:$PATH"
+
+# Use bash shell to ensure correct environment behavior
+SHELL ["/bin/bash", "-c"]
+
+# Ensure Poetry works immediately
+RUN poetry --version && \
+    poetry config virtualenvs.create true && \
+    poetry config virtualenvs.in-project true
+
+# Fix Poetry cache permissions if needed
+RUN if [ -d "/home/ubuntu/.cache/pypoetry" ] && [ "$(stat -c '%U' /home/ubuntu/.cache/pypoetry)" != "ubuntu" ]; then \
+        chown -R ubuntu:ubuntu /home/ubuntu/.cache/pypoetry; \
+    fi
+    
 # Install Python packages as user
 COPY --chown=${USERNAME}:${USERNAME} pyproject.toml poetry.lock ./
 RUN poetry install --no-root
@@ -85,12 +111,76 @@ RUN poetry install --no-root
 # Copy with correct ownership
 COPY --chown=${USERNAME}:${USERNAME} . .
 
-# Ensure .env setup and directory structure before running
-RUN chmod +x /home/ubuntu/setup_docker_env_file.sh
+# Create .env file and populate it with default values
+RUN touch /home/ubuntu/.env && \
+    echo "Creating .env file with default values..." && \
+    echo "PROJECT_UTILS_DIR=/home/ubuntu/utils" >> /home/ubuntu/.env && \
+    echo "PROJECT_RESULTS_DIR=/home/ubuntu/results" >> /home/ubuntu/.env && \
+    echo "PROJECT_DATA_DIR=/home/ubuntu/data" >> /home/ubuntu/.env && \
+    echo "PROJECT_REFERENCES_DIR=/home/ubuntu/references" >> /home/ubuntu/.env && \
+    echo "PROJECT_WORKING_DIR=/home/ubuntu/computational_genetic_genealogy" >> /home/ubuntu/.env && \
+    echo "USER_HOME=/home/ubuntu" >> /home/ubuntu/.env
 
-# Ensure script executes correctly
-ENTRYPOINT ["/bin/bash", "-c", "/home/ubuntu/setup_docker_env_file.sh && exec bash"]
+# Add /home/ubuntu/utils to PATH and ensure persistence
+RUN echo 'export PATH=$PATH:/home/ubuntu/utils' >> /home/ubuntu/.bashrc
+USER root
+RUN echo 'export PATH=$PATH:/home/ubuntu/utils' >> /etc/profile
+USER ${USERNAME}
+
+# Ensure the PATH update applies immediately
+ENV PATH="$PATH:/home/ubuntu/utils"
+
+# Define the directory containing install scripts
+ARG SCRIPTS_DIR=/home/ubuntu/scripts_env
+
+# Define scripts to exclude
+ENV EXCLUDE_SCRIPTS="setup_env.sh install_docker.sh mount_efs.sh install_yhaplo.sh"
+
+# Find and run all install scripts in order
+RUN if [ -d "$SCRIPTS_DIR" ]; then \
+        find "$SCRIPTS_DIR" -maxdepth 1 -type f -name "install_*.sh" | sort | while read script; do \
+            script_name=$(basename "$script"); \
+            if echo "$EXCLUDE_SCRIPTS" | grep -wq "$script_name"; then \
+                echo "Skipping $script_name"; \
+            else \
+                echo "Running $script..."; \
+                chmod +x "$script" && bash "$script" || (echo "Error: $script failed" && exit 1); \
+            fi; \
+        done; \
+    else \
+        echo "No install scripts found, skipping script execution."; \
+    fi
 
 # Stay as user
 USER ${USERNAME}
-CMD ["bash"]
+
+ENTRYPOINT ["/bin/bash", "-c", "source ~/.bashrc && exec bash"]
+
+CMD echo "===============================================" && \
+    echo "✅ Setup completed!" && \
+    echo "Your environment has been configured with:" && \
+    echo "- Updated system packages" && \
+    echo "- ~/.local/bin added to PATH" && \
+    echo "- System dependencies installed" && \
+    echo "- Poetry installed and configured" && \
+    echo "- Project dependencies installed" && \
+    echo "- Python kernel installed for Jupyter Notebooks" && \
+    echo "===============================================" && \
+    echo "" && \
+    echo "📢 To connect VS Code to this running container:" && \
+    echo "1️⃣ Open VS Code." && \
+    echo "2️⃣ Install the 'Remote - Containers' extension (if not already installed)." && \
+    echo "3️⃣ Press **Ctrl+Shift+P** and select: 'Remote-Containers: Attach to Running Container'." && \
+    echo "4️⃣ Choose this container from the list and start coding!" && \
+    echo "" && \
+    echo "📂 To mount local directories for results and references, run:" && \
+    echo "" && \
+    echo "   docker run -it \\" && \
+    echo "   -v \$(pwd)/results:/home/ubuntu/results \\" && \
+    echo "   -v \$(pwd)/references:/home/ubuntu/references \\" && \
+    echo "   lakishadavid/cgg_image:latest" && \
+    echo "" && \
+    echo "   (Replace \$(pwd)/results and \$(pwd)/references with actual local paths)" && \
+    echo "" && \
+    echo "🚀 Your development container is ready!" && \
+    exec bash

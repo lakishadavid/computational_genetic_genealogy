@@ -81,7 +81,7 @@ else
     fi
 
     # Install Poetry in user space
-    curl -sSL https://install.python-poetry.org | python3 - --install-dir "$HOME/.local/bin"
+    curl -sSL https://install.python-poetry.org | python3 -
     export PATH="$HOME/.local/bin:$PATH"
 fi
 

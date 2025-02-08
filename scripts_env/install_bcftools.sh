@@ -5,7 +5,7 @@ echo "install_bcftools.sh: running..."
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
-base_directory="$(pwd)"  # Current directory (computational_genetic_genealogy)
+base_directory="$(realpath "$(dirname "${BASH_SOURCE[0]}")/..")"
 
 # ------------------------------------------------------------------------------
 # 2. Define utils_directory based on base_directory
@@ -32,7 +32,8 @@ echo
 echo "Updating apt-get and installing build dependencies..."
 echo
 sudo apt-get update
-sudo apt-get install -y autoconf automake make gcc libbz2-dev liblzma-dev zlib1g-dev libcurl4-openssl-dev libncurses5-dev libncursesw5-dev
+sudo apt-get install -y autoconf automake make gcc libbz2-dev liblzma-dev zlib1g-dev 
+sudo apt-get install -y libgsl-dev libcurl4-openssl-dev libncurses5-dev libncursesw5-dev
 
 # ------------------------------------------------------------------------------
 # 4. Define versions or branches to install (optional)
@@ -49,6 +50,7 @@ HTSLIB_VERSION="master"
 echo
 echo "Installing HTSlib (branch/tag: $HTSLIB_VERSION)..."
 echo
+
 htslib_dir="$utils_directory/htslib"
 if [ ! -d "$htslib_dir" ]; then
     git clone --recurse-submodules --branch "$HTSLIB_VERSION" https://github.com/samtools/htslib.git "$htslib_dir"
@@ -59,18 +61,25 @@ if [ ! -d "$htslib_dir" ]; then
 fi
 
 cd "$htslib_dir"
-make clean 2>/dev/null
-make
-if [ $? -ne 0 ]; then
-    echo "Error building HTSlib."
-    exit 1
-fi
 
-sudo make install
+# Configure installation path explicitly
+autoreconf -i
+./configure --prefix="$htslib_dir"
+make -j"$(nproc)"
+make install
 if [ $? -ne 0 ]; then
     echo "Error installing HTSlib."
     exit 1
 fi
+
+# Ensure binaries are executable and in the correct location
+chmod +x "$htslib_dir/bin/tabix"
+
+# Persist path for future sessions
+echo "export PATH=\"$htslib_dir/bin:\$PATH\"" >> ~/.bashrc
+export PATH="$htslib_dir/bin:$PATH"
+
+echo "HTSlib installation completed successfully."
 
 # ------------------------------------------------------------------------------
 # 6. Download and install Samtools
@@ -78,6 +87,7 @@ fi
 echo
 echo "Installing Samtools (branch/tag: $SAMTOOLS_VERSION)..."
 echo
+
 samtools_dir="$utils_directory/samtools"
 if [ ! -d "$samtools_dir" ]; then
     git clone --recurse-submodules --branch "$SAMTOOLS_VERSION" https://github.com/samtools/samtools.git "$samtools_dir"
@@ -88,18 +98,33 @@ if [ ! -d "$samtools_dir" ]; then
 fi
 
 cd "$samtools_dir"
-make clean 2>/dev/null
-make
+autoheader
+autoconf -Wno-syntax
+
+# Configure installation path explicitly
+./configure --prefix="$samtools_dir"
+
+# Compile & install
+make -j"$(nproc)"
 if [ $? -ne 0 ]; then
     echo "Error building Samtools."
     exit 1
 fi
 
-sudo make install
+make install
 if [ $? -ne 0 ]; then
     echo "Error installing Samtools."
     exit 1
 fi
+
+# Ensure binaries are executable and in the correct location
+chmod +x "$samtools_dir/bin/samtools"
+
+# Persist path for future sessions
+echo "export PATH=\"$samtools_dir/bin:\$PATH\"" >> ~/.bashrc
+export PATH="$samtools_dir/bin:$PATH"
+
+echo "Samtools installation completed successfully."
 
 # ------------------------------------------------------------------------------
 # 7. Download and install Bcftools
@@ -107,6 +132,7 @@ fi
 echo
 echo "Installing Bcftools (branch/tag: $BCFTOOLS_VERSION)..."
 echo
+
 bcftools_dir="$utils_directory/bcftools"
 if [ ! -d "$bcftools_dir" ]; then
     git clone --recurse-submodules --branch "$BCFTOOLS_VERSION" https://github.com/samtools/bcftools.git "$bcftools_dir"
@@ -117,18 +143,26 @@ if [ ! -d "$bcftools_dir" ]; then
 fi
 
 cd "$bcftools_dir"
-make clean 2>/dev/null
-make
+autoheader 
+autoconf
+
+./configure --enable-libgsl --enable-perl-filters --prefix="$bcftools_dir"
+
+# Compile and install
+make -j"$(nproc)"
 if [ $? -ne 0 ]; then
     echo "Error building Bcftools."
     exit 1
 fi
 
-sudo make install
-if [ $? -ne 0 ]; then
-    echo "Error installing Bcftools."
-    exit 1
-fi
+# Ensure the binary is available
+chmod +x "$bcftools_dir/bin/bcftools"
+
+# Persist PATH updates
+echo "export PATH=\"$bcftools_dir/bin:\$PATH\"" >> ~/.bashrc
+export PATH="$bcftools_dir/bin:$PATH"
+
+echo "Bcftools installation completed successfully."
 
 # ------------------------------------------------------------------------------
 # 8. Validate installations

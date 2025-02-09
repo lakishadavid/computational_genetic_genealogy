@@ -101,7 +101,7 @@ def find_working_directory(custom_path: Optional[str] = None, interactive: bool 
     
     # If no working directory is set, use the default path
     if env_working_dir is None and os.path.exists("/.dockerenv"):
-        env_working_dir = os.getcwd()
+        env_working_dir = os.path.expanduser("~/computational_genetic_genealogy")
          
     if env_working_dir:
         if not interactive or get_user_confirmation(f"Use working directory from environment: {env_working_dir}?"):

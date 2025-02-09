@@ -4,7 +4,10 @@
 __pycache__/
 
 references/
-# data/
+data/*
+!data/class_data/
 results/
-# utils/
+utils/
 .env
+.venv/
+.vscode/

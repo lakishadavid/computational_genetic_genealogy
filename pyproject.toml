@@ -31,6 +31,10 @@ ipywidgets = "^8.1.5"
 notebook = "^7.3.2"
 
 
+[tool.poetry.group.dev.dependencies]
+sklearn-crfsuite = "0.3.6"
+xgboost = "1.1.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

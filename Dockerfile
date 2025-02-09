@@ -125,18 +125,12 @@ RUN touch /home/ubuntu/.env && \
 RUN echo 'export PATH=$PATH:/home/ubuntu/utils' >> /home/ubuntu/.bashrc
 USER root
 RUN echo 'export PATH=$PATH:/home/ubuntu/utils' >> /etc/profile
-USER ${USERNAME}
-
-# Ensure the PATH update applies immediately
-ENV PATH="$PATH:/home/ubuntu/utils"
 
 # Define the directory containing install scripts
 ARG SCRIPTS_DIR=/home/ubuntu/scripts_env
 
 # Define scripts to exclude
 ENV EXCLUDE_SCRIPTS="setup_env.sh install_docker.sh mount_efs.sh install_yhaplo.sh"
-
-# Find and run all install scripts in order
 RUN if [ -d "$SCRIPTS_DIR" ]; then \
         find "$SCRIPTS_DIR" -maxdepth 1 -type f -name "install_*.sh" | sort | while read script; do \
             script_name=$(basename "$script"); \
@@ -144,43 +138,65 @@ RUN if [ -d "$SCRIPTS_DIR" ]; then \
                 echo "Skipping $script_name"; \
             else \
                 echo "Running $script..."; \
-                chmod +x "$script" && bash "$script" || (echo "Error: $script failed" && exit 1); \
+                chmod +x "$script" && \
+                sed -i 's|--prefix="$bcftools_dir"|--prefix="/usr/local"|g' "$script" && \
+                sed -i 's|--prefix="$samtools_dir"|--prefix="/usr/local"|g' "$script" && \
+                sed -i 's|--prefix="$htslib_dir"|--prefix="/usr/local"|g' "$script" && \
+                bash "$script" || (echo "Error: $script failed" && exit 1); \
+                echo "Completed $script_name successfully"; \
             fi; \
         done; \
+        echo "All scripts processing complete."; \
     else \
         echo "No install scripts found, skipping script execution."; \
-    fi
+    fi && \
+    echo "Starting ownership change..." && \
+    chown -R ${USERNAME}:${USERNAME} /home/${USERNAME} && \
+    echo "Build step complete."
 
 # Stay as user
 USER ${USERNAME}
 
-ENTRYPOINT ["/bin/bash", "-c", "source ~/.bashrc && exec bash"]
-
 CMD echo "===============================================" && \
-    echo "✅ Setup completed!" && \
-    echo "Your environment has been configured with:" && \
-    echo "- Updated system packages" && \
-    echo "- ~/.local/bin added to PATH" && \
-    echo "- System dependencies installed" && \
-    echo "- Poetry installed and configured" && \
-    echo "- Project dependencies installed" && \
-    echo "- Python kernel installed for Jupyter Notebooks" && \
-    echo "===============================================" && \
-    echo "" && \
-    echo "📢 To connect VS Code to this running container:" && \
-    echo "1️⃣ Open VS Code." && \
-    echo "2️⃣ Install the 'Remote - Containers' extension (if not already installed)." && \
-    echo "3️⃣ Press **Ctrl+Shift+P** and select: 'Remote-Containers: Attach to Running Container'." && \
-    echo "4️⃣ Choose this container from the list and start coding!" && \
-    echo "" && \
-    echo "📂 To mount local directories for results and references, run:" && \
-    echo "" && \
-    echo "   docker run -it \\" && \
-    echo "   -v \$(pwd)/results:/home/ubuntu/results \\" && \
-    echo "   -v \$(pwd)/references:/home/ubuntu/references \\" && \
-    echo "   lakishadavid/cgg_image:latest" && \
-    echo "" && \
-    echo "   (Replace \$(pwd)/results and \$(pwd)/references with actual local paths)" && \
-    echo "" && \
-    echo "🚀 Your development container is ready!" && \
-    exec bash
+echo "✅ Setup completed!" && \
+echo "Your environment has been configured with:" && \
+echo "- Updated system packages" && \
+echo "- ~/.local/bin added to PATH" && \
+echo "- System dependencies installed" && \
+echo "- Poetry installed and configured" && \
+echo "- Project dependencies installed" && \
+echo "- Python kernel installed for Jupyter Notebooks" && \
+echo "===============================================" && \
+echo "" && \
+echo "🚀 Your development container is ready!" && \
+echo "" && \
+echo "📢 To connect VS Code to this running container:" && \
+echo "1️⃣ Open VS Code." && \
+echo "2️⃣ Install the 'Remote - Containers' extension (if not already installed)." && \
+echo "3️⃣ Open the Command Palette (Ctrl+Shift+P on Windows/Linux or Cmd+Shift+P on macOS, or via the menu: View > Command Palette)" && \
+echo "   and select 'Remote-Containers: Attach to Running Container'." && \
+echo "4️⃣ Choose this container from the list and start coding!" && \
+echo "" && \
+echo "💡 Note: If you wish to run a new container instance, you must first stop the current container." && \
+echo "   To stop the container, type 'exit' or press Ctrl+D. This halts the container while preserving it" && \
+echo "   for later reattachment." && \
+echo "" && \
+echo "💡 To resume your previous session, first locate your container's ID or name by running:" && \
+echo "   docker ps -a" && \
+echo "   Then, restart and attach to the container using:" && \
+echo "   docker start -ai <container_id_or_name>" && \
+echo "   (Data in mounted volumes persists between runs.)" && \
+echo "" && \
+echo "📂 This container leverages Docker volumes to persist your work (e.g., data, references, and results)" && \
+echo "    on your local machine. Using volumes ensures that your data remains intact even if" && \
+echo "    the container is stopped or removed, allowing you to continue your work seamlessly." && \
+echo "    To mount local directories, run:" && \
+echo "" && \
+echo "   docker run -it \\" && \
+echo "   -v \$(pwd)/references:/home/ubuntu/data \\" && \
+echo "   -v \$(pwd)/references:/home/ubuntu/references \\" && \
+echo "   -v \$(pwd)/results:/home/ubuntu/results \\" && \
+echo "   lakishadavid/cgg_image:latest" && \
+echo "" && \
+echo "   (Replace \$(pwd)/results and \$(pwd)/references with your actual local paths)" && \
+exec bash

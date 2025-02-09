@@ -4,6 +4,20 @@
 
 echo "install_ped_sim.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
@@ -27,8 +41,8 @@ echo "Using utils_directory: $utils_directory"
 # Check and install required packages
 if ! dpkg -l | grep -q libboost-all-dev; then
     echo "Installing required packages..."
-    sudo apt-get update
-    sudo apt-get install -y libboost-all-dev make
+    sudo_cmd apt-get update
+    sudo_cmd apt-get install -y libboost-all-dev make
     if [ $? -ne 0 ]; then
         echo "Failed to install required packages."
         exit 1

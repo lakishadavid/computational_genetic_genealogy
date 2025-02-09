@@ -12,11 +12,25 @@ set -o pipefail  # Exit on pipe errors
 
 echo "Starting environment setup..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo_cmd based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # Update system packages
 echo "Updating system packages..."
-sudo apt-get update -y
+sudo_cmd apt-get update -y
 
-sudo apt-get install -y --no-install-recommends \
+sudo_cmd apt-get install -y --no-install-recommends \
     build-essential \
     g++ \
     gcc \
@@ -42,8 +56,8 @@ sudo apt-get install -y --no-install-recommends \
     gawk \
     libboost-all-dev 
 
-sudo apt-get clean
-sudo rm -rf /var/lib/apt/lists/*
+sudo_cmd apt-get clean
+sudo_cmd rm -rf /var/lib/apt/lists/*
 
 if [ ! -d "$HOME/.local" ]; then
     mkdir -p "$HOME/.local"
@@ -64,7 +78,7 @@ export PATH="$HOME/.local/bin:$PATH"
 CURRENT_USER=$(whoami)
 if [ "$(stat -c '%U' "$HOME/.local")" != "$CURRENT_USER" ]; then
     echo "Fixing ownership of $HOME/.local..."
-    sudo chown -R "$CURRENT_USER:$CURRENT_USER" "$HOME/.local"
+    sudo_cmd chown -R "$CURRENT_USER:$CURRENT_USER" "$HOME/.local"
 fi
 
 # Install Poetry
@@ -77,7 +91,7 @@ else
     # Remove conflicting symlink if it exists
     if [ -L "/usr/local/bin/poetry" ]; then
         echo "Removing conflicting Poetry symlink..."
-        sudo rm /usr/local/bin/poetry
+        sudo_cmd rm /usr/local/bin/poetry
     fi
 
     # Install Poetry in user space
@@ -98,7 +112,7 @@ poetry config virtualenvs.in-project true
 # Fix Poetry cache permissions only if necessary
 if [ -d "$HOME/.cache/poetry" ] && [ "$(stat -c '%U' "$HOME/.cache/poetry")" != "$USER" ]; then
     echo "Fixing Poetry cache ownership..."
-    sudo chown -R "$USER:$USER" "$HOME/.cache/poetry"
+    sudo_cmd chown -R "$USER:$USER" "$HOME/.cache/poetry"
 fi
 
 # Find the computational_genetic_genealogy directory
@@ -131,14 +145,11 @@ fi
 # Ensure Poetry’s bin directory is in PATH
 export PATH="$HOME/.local/bin:$PATH"
 
-# Find and run all install scripts in order
-echo "Finding installation scripts..."
-
 # Directory containing the install scripts
 SCRIPTS_DIR="scripts_env"
 
 # Scripts to exclude
-EXCLUDE_SCRIPTS=("setup_env.sh" "install_docker.sh" "mount_efs.sh" "install_yhaplo.sh")
+EXCLUDE_SCRIPTS=("install_docker.sh" "install_yhaplo.sh")
 
 # Function to check if a script should be excluded
 should_exclude() {
@@ -151,13 +162,19 @@ should_exclude() {
     return 1  # false, should not exclude
 }
 
-# Find and sort install scripts
+# Find all install scripts except excluded ones
 INSTALL_SCRIPTS=()
 for script in "$SCRIPTS_DIR"/install_*.sh; do
     if [[ -f "$script" ]] && ! should_exclude "$script"; then
         INSTALL_SCRIPTS+=("$script")
     fi
 done
+
+# Ensure install scripts were found
+if [[ ${#INSTALL_SCRIPTS[@]} -eq 0 ]]; then
+    echo "No installation scripts found in $SCRIPTS_DIR."
+    exit 1
+fi
 
 # Run each script
 for script in "${INSTALL_SCRIPTS[@]}"; do
@@ -178,14 +195,22 @@ done
 echo "All installation scripts executed successfully."
 
 echo
-echo
 echo "==============================================="
-echo "Setup completed!"
+echo "✅ Setup completed!"
 echo "Your environment has been configured with:"
 echo "- Updated system packages"
 echo "- ~/.local/bin added to PATH"
-echo "- System dependencies"
+echo "- System dependencies installed"
 echo "- Poetry installed and configured"
 echo "- Project dependencies installed"
 echo "- Python kernel installed for Jupyter Notebooks"
 echo "==============================================="
+echo ""
+echo ""
+echo "==============================================="
+echo "Now launching interactive directory setup..."
+echo "Please follow the prompts to configure your directories."
+echo "==============================================="
+
+# Pass control to the directory setup script interactively.
+exec poetry run python -m scripts_env.directory_setup < /dev/tty

@@ -8,38 +8,52 @@ set -o pipefail  # Exit on pipe errors
 
 echo "Starting Docker installation on Ubuntu..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # Update system
-sudo apt-get update -y
+sudo_cmd apt-get update -y
 
 # Install prerequisites
-sudo apt-get install -y ca-certificates curl
+sudo_cmd apt-get install -y ca-certificates curl
 
 # Set up Docker repository
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
+sudo_cmd install -m 0755 -d /etc/apt/keyrings
+sudo_cmd curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo_cmd chmod a+r /etc/apt/keyrings/docker.asc
 
 # Add Docker repository
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
   $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo_cmd tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Update and install Docker
-sudo apt-get update -y
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo_cmd apt-get update -y
+sudo_cmd apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
 # Set up permissions
 if getent group docker > /dev/null 2>&1; then
     echo "Docker group exists"
 else
-    sudo groupadd docker
+    sudo_cmd groupadd docker
 fi
 
-sudo usermod -aG docker $USER
+sudo_cmd usermod -aG docker $USER
 
 # Restart Docker daemon
-sudo systemctl enable docker
-sudo systemctl restart docker
+sudo_cmd systemctl enable docker
+sudo_cmd systemctl restart docker
 echo
 echo
 echo "==============================================="

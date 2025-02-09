@@ -2,6 +2,20 @@
 
 echo "install_java.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
@@ -19,11 +33,11 @@ fi
 
 # Update the package list
 echo "Updating package list..."
-sudo apt-get update -y
+sudo_cmd apt-get update -y
 
 # Install Java
 echo "Installing Java (default-jdk)..."
-sudo apt-get install -y default-jdk
+sudo_cmd apt-get install -y default-jdk
 
 # Verify installation
 if command -v java &> /dev/null; then

@@ -91,7 +91,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ensure binaries are executable and in the correct location
-chmod +x "/usr/local/bin/tabix"
+sudo_cmd chmod +x "/usr/local/bin/tabix"
 
 echo "HTSlib installation completed successfully."
 
@@ -132,7 +132,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ensure binaries are executable and in the correct location
-chmod +x "/usr/local/bin/samtools"
+sudo_cmd chmod +x "/usr/local/bin/samtools"
 
 echo "Samtools installation completed successfully."
 

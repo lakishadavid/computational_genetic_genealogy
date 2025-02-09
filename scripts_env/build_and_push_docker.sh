@@ -4,7 +4,7 @@
 # Before running this script, ensure you are logged in:
 #   docker login
 #
-# Usage: bash scripts_support/build_and_push_docker.sh [docker_username] [image_name] [image_tag] [dockerfile_dir] [build_only]
+# Usage: bash scripts_env/build_and_push_docker.sh [docker_username] [image_name] [image_tag] [dockerfile_dir] [build_only]
 # Defaults:
 #   docker_username: lakishadavid
 #   image_name: cgg_image
@@ -12,10 +12,10 @@
 #   dockerfile_dir: .
 #   build_only: false
 #
-# Example: bash scripts_support/build_and_push_docker.sh
-# Example (build only): bash scripts_support/build_and_push_docker.sh lakishadavid cgg_image latest . true
+# Example: bash scripts_env/build_and_push_docker.sh
+# Example (build only): bash scripts_env/build_and_push_docker.sh lakishadavid cgg_image latest . true
 # Example (push built image): docker push lakishadavid/cgg_image:latest
-#
+# Example (run built image): docker run -it lakishadavid/cgg_image:latest bash
 # To rerun the container with the same state: docker start -ai <container_id>
 # docker rm -f $(docker ps -a -q)
 # docker rmi -f $(docker images -q)

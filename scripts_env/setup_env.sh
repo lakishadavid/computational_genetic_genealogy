@@ -115,18 +115,6 @@ if [ -d "$HOME/.cache/poetry" ] && [ "$(stat -c '%U' "$HOME/.cache/poetry")" != 
     sudo_cmd chown -R "$USER:$USER" "$HOME/.cache/poetry"
 fi
 
-# Find the computational_genetic_genealogy directory
-REPO_PATH=$(find ~ -maxdepth 3 -type d -name "computational_genetic_genealogy" 2>/dev/null | head -n 1)
-
-# Validate that REPO_PATH was found
-if [ -z "$REPO_PATH" ]; then
-    echo "Error: computational_genetic_genealogy directory not found."
-    exit 1
-fi
-
-echo "Project directory found: $REPO_PATH"
-cd "$REPO_PATH" || { echo "Error: Failed to change directory to $REPO_PATH"; exit 1; }
-
 echo "Installing project dependencies with Poetry..."
 
 # Ensure Poetry is available before proceeding

@@ -3,10 +3,9 @@ import json
 import logging
 import sys
 import argparse
-from pathlib import Path
+import shutil
 from typing import Dict, Optional
 from decouple import config
-from pathlib import Path
 
 def load_env_directories() -> Dict[str, str]:
     """Load directory paths from .env file if they exist."""
@@ -301,6 +300,68 @@ def setup_directories(
         logging.error(f"Error configuring directories: {e}")
         raise
 
+def post_process(directories: Dict[str, str], repo_path: str) -> None:
+    """
+    After directory setup is complete, update ~/.bashrc with the utilities directory and,
+    if the user-defined data directory is different from the default, copy the repository's
+    Data directory to the user-defined data directory.
+    """
+    # Update ~/.bashrc with the utilities directory if not already present.
+    bashrc_path = os.path.expanduser("~/.bashrc")
+    utils_dir = directories.get('utils_directory')
+    export_line = f'export PATH=$PATH:{utils_dir}'
+    try:
+        with open(bashrc_path, 'r') as f:
+            bashrc_content = f.read()
+    except FileNotFoundError:
+        bashrc_content = ""
+    if export_line not in bashrc_content:
+        with open(bashrc_path, 'a') as f:
+            f.write(f'\n{export_line}\n')
+        print(f"Updated {bashrc_path} to include the utilities directory: {utils_dir}")
+    else:
+        print("Utilities directory already present in ~/.bashrc")
+    
+    # Define the default data directory and compare with the user-defined data directory.
+    default_data_dir = os.path.realpath(os.path.expanduser("~/computational_genetic_genealogy/data"))
+    user_data_dir = os.path.realpath(directories.get('data_directory'))
+    
+    if user_data_dir != default_data_dir:
+        if os.path.exists(user_data_dir):
+            try:
+                copy_directory = os.path.join(default_data_dir, "class_data")
+                paste_direcotry = os.path.join(user_data_dir, "class_data")
+                # Create the directory if it doesn't exist
+                if not os.path.exists(paste_direcotry):
+                    os.makedirs(paste_direcotry)
+                shutil.copytree(copy_directory, paste_direcotry, dirs_exist_ok=True)
+                print(f"Data successfully copied from {copy_directory} to {paste_direcotry}.")
+            except Exception as e:
+                print(f"Error copying data: {e}")
+        else:
+            print(f"Warning: The directory {paste_direcotry} was not found, but you can still find the data in ~/computational_genetic_genealogy/data.")
+    else:
+        print("Data directory is the default; skipping data copy block.")
+        
+def print_environment_ready_message():
+    print("\n")
+    print("=" * 60 + "\n")
+    print("🚀 Your development environment is ready!\n")
+    print("=" * 60 + "\n")
+    print("📢 Begin coding in your configured environment!\n")
+
+    if shutil.which("code"):
+        print("📢 To start working with VS Code, simply enter the following command in this terminal window:")
+        print("\n")
+        print("    code .")
+    else:
+        print("⚠️  The 'code' command is not available in your PATH.")
+        print("Please ensure Visual Studio Code is installed and its command line tools are set up.")
+        print("For instructions, see: https://code.visualstudio.com/docs/setup/setup-overview")
+    
+    print("\n")
+    print("=" * 60 + "\n")
+        
 def main():
     """Command-line interface for directory setup."""
     logging.basicConfig(
@@ -359,6 +420,14 @@ def main():
         )
         print("\nConfigured directories:")
         print(json.dumps(directories, indent=2))
+        
+        # Use the working directory as the repository path (adjust if needed)
+        repo_path = directories.get('working_directory')
+        post_process(directories, repo_path)
+        
+        # Call the function to display the message
+        print_environment_ready_message()
+        
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -381,25 +450,3 @@ if __name__ == "__main__":
     #     --references-dir references \
     #     --non-interactive
     main()
-
-"""
-# In other scripts:
-from directory_setup import verify_directories
-from decouple import config
-
-try:
-    # First try to get directories from .env
-    data_dir = config('PROJECT_DATA_DIR', default=None)
-    references_dir = config('PROJECT_REFERENCES_DIR', default=None)
-    
-    if not all([data_dir, references_dir]):
-        # If any required directories are missing, run verification
-        directories = verify_directories()
-        data_dir = directories['data_directory']
-        references_dir = directories['references_directory']
-    
-    # Continue with script...
-except Exception as e:
-    print(f"Error verifying directories: {e}")
-    sys.exit(1)
-"""

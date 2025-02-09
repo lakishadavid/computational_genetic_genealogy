@@ -3,6 +3,20 @@
 
 echo "install_beagle.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo_cmd based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------

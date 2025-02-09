@@ -5,6 +5,20 @@ set -x
 
 echo "install_yhaplo.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
@@ -33,8 +47,8 @@ yhaplo_directory="$utils_directory/yhaplo"
 # Try installing Poetry using apt-get first
 if ! command -v poetry &> /dev/null; then
     echo "Poetry not found. Trying to install using apt-get..."
-    sudo apt-get update -y
-    sudo apt-get install -y python3-poetry
+    sudo_cmd apt-get update -y
+    sudo_cmd apt-get install -y python3-poetry
 
     # If apt-get fails, fallback to curl
     if ! command -v poetry &> /dev/null; then

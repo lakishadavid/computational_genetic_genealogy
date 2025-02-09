@@ -3,6 +3,20 @@
 
 echo "install_rfmix2.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
@@ -28,7 +42,7 @@ rfmix2_dir="$utils_directory/rfmix2"
 for tool in autoconf make gcc; do
     if ! command -v $tool &> /dev/null; then
         echo "$tool not found. Installing..."
-        sudo apt-get update -y && sudo apt-get install -y $tool || {
+        sudo_cmd apt-get update -y && sudo_cmd apt-get install -y $tool || {
             echo "Failed to install $tool. Exiting."
             exit 1
         }

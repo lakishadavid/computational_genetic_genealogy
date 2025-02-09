@@ -2,6 +2,20 @@
 
 echo "install_bcftools.sh: running..."
 
+# Function to determine if we're running in a Docker container
+in_docker() {
+    [ -f /.dockerenv ] || grep -Eq '(lxc|docker)' /proc/1/cgroup
+}
+
+# Function to handle sudo based on environment
+sudo_cmd() {
+    if in_docker; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
+
 # ------------------------------------------------------------------------------
 # 1. Define directories relative to current location
 # ------------------------------------------------------------------------------
@@ -23,7 +37,11 @@ fi
 
 echo "Using base_directory: $base_directory"
 echo "Using utils_directory: $utils_directory"
+INSTALL_PREFIX="$HOME/.local"
 
+git config --global --add safe.directory "*"
+git config --global --add safe.directory "/home/ubuntu/utils/htslib"
+git config --global --add safe.directory "/home/ubuntu/utils/htslib/htscodecs"
 # ------------------------------------------------------------------------------
 # 3. Install required build dependencies (Ubuntu/Debian)
 #    If these are already installed, it won't harm to run again.
@@ -31,9 +49,9 @@ echo "Using utils_directory: $utils_directory"
 echo
 echo "Updating apt-get and installing build dependencies..."
 echo
-sudo apt-get update
-sudo apt-get install -y autoconf automake make gcc libbz2-dev liblzma-dev zlib1g-dev 
-sudo apt-get install -y libgsl-dev libcurl4-openssl-dev libncurses5-dev libncursesw5-dev
+sudo_cmd apt-get update
+sudo_cmd apt-get install -y autoconf automake make gcc libbz2-dev liblzma-dev zlib1g-dev 
+sudo_cmd apt-get install -y libgsl-dev libcurl4-openssl-dev libncurses5-dev libncursesw5-dev
 
 # ------------------------------------------------------------------------------
 # 4. Define versions or branches to install (optional)
@@ -53,7 +71,7 @@ echo
 
 htslib_dir="$utils_directory/htslib"
 if [ ! -d "$htslib_dir" ]; then
-    git clone --recurse-submodules --branch "$HTSLIB_VERSION" https://github.com/samtools/htslib.git "$htslib_dir"
+    git -c safe.directory='*' clone --recurse-submodules --branch "$HTSLIB_VERSION" https://github.com/samtools/htslib.git "$htslib_dir"
     if [ $? -ne 0 ]; then
         echo "Error cloning HTSlib repository."
         exit 1
@@ -64,7 +82,7 @@ cd "$htslib_dir"
 
 # Configure installation path explicitly
 autoreconf -i
-./configure --prefix="$htslib_dir"
+./configure --prefix="$INSTALL_PREFIX"
 make -j"$(nproc)"
 make install
 if [ $? -ne 0 ]; then
@@ -73,11 +91,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ensure binaries are executable and in the correct location
-chmod +x "$htslib_dir/bin/tabix"
-
-# Persist path for future sessions
-grep -qxF "export PATH=\"$htslib_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$htslib_dir/bin:\$PATH\"" >> ~/.bashrc
-export PATH="$htslib_dir/bin:$PATH"
+chmod +x "/usr/local/bin/tabix"
 
 echo "HTSlib installation completed successfully."
 
@@ -90,7 +104,7 @@ echo
 
 samtools_dir="$utils_directory/samtools"
 if [ ! -d "$samtools_dir" ]; then
-    git clone --recurse-submodules --branch "$SAMTOOLS_VERSION" https://github.com/samtools/samtools.git "$samtools_dir"
+    git -c safe.directory='*' clone --recurse-submodules --branch "$SAMTOOLS_VERSION" https://github.com/samtools/samtools.git "$samtools_dir"
     if [ $? -ne 0 ]; then
         echo "Error cloning Samtools repository."
         exit 1
@@ -102,7 +116,7 @@ autoheader
 autoconf -Wno-syntax
 
 # Configure installation path explicitly
-./configure --prefix="$samtools_dir"
+./configure --prefix="$INSTALL_PREFIX"
 
 # Compile & install
 make -j"$(nproc)"
@@ -118,11 +132,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Ensure binaries are executable and in the correct location
-chmod +x "$samtools_dir/bin/samtools"
-
-# Persist path for future sessions
-grep -qxF "export PATH=\"$samtools_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$samtools_dir/bin:\$PATH\"" >> ~/.bashrc
-export PATH="$samtools_dir/bin:$PATH"
+chmod +x "/usr/local/bin/samtools"
 
 echo "Samtools installation completed successfully."
 
@@ -135,7 +145,7 @@ echo
 
 bcftools_dir="$utils_directory/bcftools"
 if [ ! -d "$bcftools_dir" ]; then
-    git clone --recurse-submodules --branch "$BCFTOOLS_VERSION" https://github.com/samtools/bcftools.git "$bcftools_dir"
+    git -c safe.directory='*' clone --recurse-submodules --branch "$BCFTOOLS_VERSION" https://github.com/samtools/bcftools.git "$bcftools_dir"
     if [ $? -ne 0 ]; then
         echo "Error cloning Bcftools repository."
         exit 1
@@ -143,24 +153,29 @@ if [ ! -d "$bcftools_dir" ]; then
 fi
 
 cd "$bcftools_dir"
-autoheader 
-autoconf
 
-./configure --enable-libgsl --enable-perl-filters --prefix="$bcftools_dir"
-
-# Compile and install
+# Simple build process following documentation
+# Remove the autoheader and complex configure steps
+./configure prefix="$INSTALL_PREFIX" --enable-libgsl
 make -j"$(nproc)"
 if [ $? -ne 0 ]; then
     echo "Error building Bcftools."
     exit 1
 fi
 
-# Ensure the binary is available
-chmod +x "$bcftools_dir/bin/bcftools"
+make install
+if [ $? -ne 0 ]; then
+    echo "Error installing Bcftools."
+    exit 1
+fi
 
-# Persist PATH updates
-grep -qxF "export PATH=\"$bcftools_dir/bin:\$PATH\"" ~/.bashrc || echo "export PATH=\"$bcftools_dir/bin:\$PATH\"" >> ~/.bashrc
-export PATH="$bcftools_dir/bin:$PATH"
+# Set up plugins
+echo "export BCFTOOLS_PLUGINS=$bcftools_dir/plugins" >> ~/.bashrc
+export BCFTOOLS_PLUGINS="$bcftools_dir/plugins"
+
+# Ensure binaries are in PATH
+echo "export PATH=$INSTALL_PREFIX/bin:\$PATH" >> ~/.bashrc
+export PATH="$INSTALL_PREFIX/bin:$PATH"
 
 echo "Bcftools installation completed successfully."
 

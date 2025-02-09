@@ -14,18 +14,13 @@
 #
 # Example: bash scripts_support/build_and_push_docker.sh
 # Example (build only): bash scripts_support/build_and_push_docker.sh lakishadavid cgg_image latest . true
+# Example (push built image): docker push lakishadavid/cgg_image:latest
 #
-# An Ubuntu container for testing: docker pull ubuntu:22.04
-# Run the container: docker run -it --rm ubuntu:22.04
-# Exit the container: exit
-# To rerun the container fresh: docker run -it --rm ubuntu:22.04
 # To rerun the container with the same state: docker start -ai <container_id>
-# To run course material in container, command 1: apt update && apt install -y git
-# To run course material in container, command 2: git config --global user.name "LaKisha David"
-# To run course material in container, command 3: git config --global user.email "lakishatdavid@gmail.com"
-# To run course material in container, command 4: git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
-# To run course material in container, command 5: cd computational_genetic_genealogy
-# To run course material in container, command 6: bash scripts_env/setup_env.sh
+# docker rm -f $(docker ps -a -q)
+# docker rmi -f $(docker images -q)
+
+
 
 # Assign variables with defaults if not provided
 DOCKER_USERNAME="${1:-lakishadavid}"

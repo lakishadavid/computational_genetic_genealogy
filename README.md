@@ -6,6 +6,7 @@
 
 To set up directly on Ubuntu:
 ```
+git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
 cd computational_genetic_genealogy
 bash scripts_env/setup_env.sh
 ```
@@ -15,20 +16,22 @@ The setup script:
 - Installs system dependencies
 - Installs and configures Python kernel for Jupyter Notebooks in VSCode
 - Installs Poetry and Python packages
-- Sets up various utilities
 - Creates an `.env` file with your file paths
-- Adds `utils_directory` to PATH
-- Copies data directory if needed
+- Installs various utilities and adds the directory to PATH
+- Copies the project data to your custom data directory
+
+You can then open VS Code and begin the tutorials, or run the scripts in your terminal window.
 
 ## Docker Setup 
 
 ### Run the Container
 
-To launch an interactive session, run:
+Launch a terminal window and run:
 ```
-docker run -it lakishadavid/cgg_image:latest
+docker pull lakishadavid/cgg_image:latest
+docker run -it lakishadavid/cgg_image:latest bash
 ```
-When started, the container displays setup confirmation and useful instructions.
+You can then open and connect VS Code to the container, and begin the tutorials or run the scripts in the container terminal window.
 
 ## Using VS Code
 
@@ -36,8 +39,7 @@ When started, the container displays setup confirmation and useful instructions.
 1. **Open VS Code**
 2. **Install the Python extension** 
 3. **Select Python Interpreter**:
-   - Windows/Linux: `Ctrl+Shift+P`
-   - macOS: `Cmd+Shift+P`
+   - Windows/Linux: `Ctrl+Shift+P` | macOS: `Cmd+Shift+P` | via **View > Command Palette**
    - Select "Python: Select Interpreter"
    - Choose the environment created by setup script
 
@@ -45,10 +47,13 @@ When started, the container displays setup confirmation and useful instructions.
 1. **Open VS Code**
 2. **Install the "Remote - Containers" extension** if you haven't already
 3. **Open the Command Palette**:
-   - Windows/Linux: `Ctrl+Shift+P`
-   - macOS: `Cmd+Shift+P`
-   - Alternatively, via **View > Command Palette**
+   - Windows/Linux: `Ctrl+Shift+P` | macOS: `Cmd+Shift+P` | via **View > Command Palette**
 4. **Select** `Remote-Containers: Attach to Running Container` and choose the container
+5. **Install the Python extension** 
+6. **Select Python Interpreter**:
+   - Windows/Linux: `Ctrl+Shift+P` | macOS: `Cmd+Shift+P` | via **View > Command Palette**
+   - Select "Python: Select Interpreter"
+   - Choose the environment created by setup script
 
 ## Data Management
 
@@ -58,9 +63,12 @@ The setup script configures your directories and paths in the `.env` file:
 - `references/`
 - `results/`
 
+If you your data directory is something other than ~/computational_genetic_genealogy/data, the script will copy
+the project data into your specified data directory.
+
 ### For Docker Setup: Data Persistence with Volumes
 
-This image leverages Docker volumes to ensure your work (data, references, and results) is preserved even if the container stops or is removed.
+Use Docker volumes to ensure your work (data, references, and results) is preserved even if the container stops or is removed.
 
 To mount local directories, run:
 ```
@@ -72,9 +80,9 @@ lakishadavid/cgg_image:latest
 ```
 *(Replace `$(pwd)/data`, `$(pwd)/references`, and `$(pwd)/results` with your actual local paths.)*
 
-For example, if your home directory was `mynewsystem`, you created a subdirectory there called `ANTHprojects`,
-and you created multiple subdirectories there called `genetic_data`, `genetic_refs`, and `genetic_results`, 
-you would enter the following:
+For example, if your home directory was `mynewsystem`, you created a subdirectory in `mynewsystem` called `ANTHprojects`,
+and you created multiple subdirectories in `ANTHprojects` called `genetic_data`, `genetic_refs`, and `genetic_results`, 
+you would enter the following to map your directories to the container directories:
 
 ```
 docker run -it 

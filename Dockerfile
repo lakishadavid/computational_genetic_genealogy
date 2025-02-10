@@ -58,13 +58,13 @@ RUN chmod -R +x ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/
 
 # Run installations
 WORKDIR ${WORKSPACE_DIR}/computational_genetic_genealogy
-USER root
-RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/system/packages.sh
+RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/system/packages.sh && \
+    bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/run_install_scripts.sh
+
 USER ${USERNAME}
-RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/path_setup.sh
-RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/poetry_setup.sh
-USER root
-RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/run_install_scripts.sh
+WORKDIR ${WORKSPACE_DIR}/computational_genetic_genealogy
+RUN bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/path_setup.sh && \
+    bash ${WORKSPACE_DIR}/computational_genetic_genealogy/scripts_env/user/poetry_setup.sh
 
 ###############################################################################
 # Volume Configuration

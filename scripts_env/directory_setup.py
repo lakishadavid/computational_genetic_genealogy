@@ -348,25 +348,6 @@ def post_process(directories: Dict[str, str], repo_path: str) -> None:
     else:
         print("Data directory is the default; skipping data copy block.")
         
-def print_environment_ready_message():
-    print("\n")
-    print("=" * 60 + "\n")
-    print("🚀 Your development environment is ready!\n")
-    print("=" * 60 + "\n")
-    print("📢 Begin coding in your configured environment!\n")
-
-    if shutil.which("code"):
-        print("📢 To start working with VS Code, simply enter the following command in this terminal window:")
-        print("\n")
-        print("    code .")
-    else:
-        print("⚠️  The 'code' command is not available in your PATH.")
-        print("Please ensure Visual Studio Code is installed and its command line tools are set up.")
-        print("For instructions, see: https://code.visualstudio.com/docs/setup/setup-overview")
-    
-    print("\n")
-    print("=" * 60 + "\n")
-        
 def main():
     """Command-line interface for directory setup."""
     logging.basicConfig(
@@ -429,9 +410,6 @@ def main():
         # Use the working directory as the repository path (adjust if needed)
         repo_path = directories.get('working_directory')
         post_process(directories, repo_path)
-        
-        # Call the function to display the message
-        print_environment_ready_message()
         
     except Exception as e:
         print(f"Error: {e}", file=sys.stderr)

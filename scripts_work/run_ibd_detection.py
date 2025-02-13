@@ -9,12 +9,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from IPython.display import display, HTML
 import IPython
-from decouple import config
-
-import matplotlib
-matplotlib.use('Agg')  # Use the Agg backend for rendering plots without a display
-
-sns.set(style="whitegrid")
+from dotenv import load_dotenv
+notebook_dir = os.getcwd()
+project_root = os.path.dirname(notebook_dir)
+env_path = os.path.join(project_root, '.env')
+load_dotenv(env_path, override=True)
 
 def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO"):
     """
@@ -880,24 +879,15 @@ def main(results_directory, references_directory, utils_directory):
             )
     else:
         raise ValueError("Unsupported algorithm. Choose 'IBIS' or 'HAP-IBD'")
-    
-
-
-    if hap_ibd_completion == True:
-        pass
-        
-
-
 
 if __name__ == "__main__":
     
     try:
-        subprocess.run(['poetry', 'run', 'python', '-m', 'scripts_support.directory_setup'], check=True)
-        working_directory = config('PROJECT_WORKING_DIR', default=None)
-        data_directory = config('PROJECT_DATA_DIR', default=None)
-        references_directory = config('PROJECT_REFERENCES_DIR', default=None)
-        results_directory = config('PROJECT_RESULTS_DIR', default=None)
-        utils_directory = config('PROJECT_UTILS_DIR', default=None)
+        working_directory = os.getenv('PROJECT_WORKING_DIR', default=None)
+        data_directory = os.getenv('PROJECT_DATA_DIR', default=None)
+        references_directory = os.getenv('PROJECT_REFERENCES_DIR', default=None)
+        results_directory = os.getenv('PROJECT_RESULTS_DIR', default=None)
+        utils_directory = os.getenv('PROJECT_UTILS_DIR', default=None)
 
         if not all([working_directory, data_directory, references_directory, 
                    results_directory, utils_directory]):

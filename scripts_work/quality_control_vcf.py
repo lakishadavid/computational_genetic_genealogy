@@ -507,8 +507,13 @@ def main(working_directory, utils_directory, results_directory):
     determined_sex_file = args.determined_sex_file
     failed_sex = args.failed_sex
 
-    # beagle_jar = check_dependencies(working_directory, utils_directory)
-    beagle_jar = "beagle.17Dec24.224.jar"
+    # Check dependencies - find Beagle jar and Plink2
+    beagle_jar = check_dependencies(working_directory, utils_directory)
+    plink2_path = os.path.join(utils_directory, "plink2")
+    if not os.path.exists(plink2_path):
+        logging.info("Plink2 not found. Installing Plink2...")
+        subprocess.run(["bash", "scripts_env/install_plink2.sh"], check=True)
+    logging.info("Dependencies checked.")
 
     if os.path.exists(vcf_path):
         logging.info(f"Validating merged VCF: {vcf_path}")
@@ -523,20 +528,8 @@ def main(working_directory, utils_directory, results_directory):
             sex_update_file = f"{base_name}_update_sex.txt"
             write_sex_files(sex_mapping, sample_ids, psam_file_all, psam_file_Y, sex_update_file)
 
-
         if (num_samples > 0) and (num_snps > 0) and len(chromosomes) > 0:
             logging.info(f"Validation successful for {vcf_path}.")
-            
-            plink2_path = os.path.join(utils_directory, "plink2")
-            print("************************************************************")
-            print("************************************************************")
-            print(f"This is the plink2_path: {plink2_path}. ***************************")
-            print("************************************************************")
-            print("************************************************************")
-            if not os.path.exists(plink2_path):
-                logging.info("Plink2 not found. Installing Plink2...")
-                subprocess.run(["bash", "scripts_env/install_plink2.sh"], check=True)
-            logging.info("Dependencies checked.")
 
             sample_file = os.path.basename(vcf_path).split('.')[0]
             step1_output_prefix = os.path.join(results_directory, f"{sample_file}_autosomes_step1")

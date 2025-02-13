@@ -111,13 +111,6 @@ def parse_arguments():
 
 
 def check_dependencies(working_directory, utils_directory):
-    """Ensure required tools are installed."""
-    tools = ["bcftools", "bgzip", "plink2"]
-    for tool in tools:
-        if not shutil.which(tool):
-            logging.error(f"Missing dependency: {tool}. Please install it.")
-            sys.exit(1)
-
     # Find the Beagle jar file dynamically
     beagle_pattern = os.path.join(utils_directory, "beagle.*.jar")
     beagle_files = glob(beagle_pattern)

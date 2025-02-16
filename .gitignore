@@ -179,11 +179,11 @@ utils/*
 
 data/class_data/converted_vcf_files/*
 data/class_data/parsed_tsv_files/*
-data/merged_opensnps_data.vcf.gz
-data/merged_opensnps_data.vcf.gz.tbi
 data/class_data/determined_sex.txt
 data/class_data/failed_sex.txt
 .bashrc
 data/class_data/determined_sex_all.psam
 data/class_data/determined_sex_update_sex.txt
 data/class_data/determined_sex_Y.psam
+data/class_data/merged_opensnps_data.vcf.gz
+data/class_data/merged_opensnps_data.vcf.gz.tbi

@@ -29,6 +29,7 @@ python-dotenv = "^1.0.1"
 ipykernel = "^6.29.5"
 ipywidgets = "^8.1.5"
 notebook = "^7.3.2"
+nbconvert = "^7.16.6"
 
 
 [tool.poetry.group.dev.dependencies]

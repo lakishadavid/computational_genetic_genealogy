@@ -103,7 +103,7 @@ fi
 
 
 # Derive the user's home directory from base_directory
-user_home="${base_directory%/bagg_analysis}"
+user_home="${base_directory%/computational_genetic_genealogy}"
 echo "Derived user home directory: $user_home"
 
 # Add utils_directory to PATH

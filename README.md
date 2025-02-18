@@ -24,7 +24,9 @@ pipx ensurepath
 ```
 ✅ Open a New Terminal Window
 Since `pipx` modified your PATH, close the current terminal and open a new one to apply the changes.
-✅ Verify pipx Works
+
+✅ Verify pipx Works.
+
 Enter:
 ```
 pipx --version

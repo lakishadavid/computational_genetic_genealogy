@@ -185,5 +185,5 @@ data/class_data/failed_sex.txt
 data/class_data/determined_sex_all.psam
 data/class_data/determined_sex_update_sex.txt
 data/class_data/determined_sex_Y.psam
-data/class_data/merged_opensnps_data.vcf.gz
-data/class_data/merged_opensnps_data.vcf.gz.tbi
+# data/class_data/merged_opensnps_data.vcf.gz
+# data/class_data/merged_opensnps_data.vcf.gz.tbi

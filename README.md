@@ -1,26 +1,58 @@
 # cgg_image
 
-**cgg_image** is a Docker image or Ubuntu setup that creates a complete development environment. Choose your preferred setup method below.
+**cgg_image** is an Ubuntu setup and Docker image code base that creates a complete development environment. Choose your preferred setup method below.
 
 ## Ubuntu Setup (Non-Docker)
 
 To set up directly on Ubuntu:
+
+In your Ubuntu terminal window, enter the following commands:
 ```
 git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
-cd computational_genetic_genealogy
-bash scripts_env/setup_env.sh
+sudo apt update && sudo apt upgrade -y
+sudo apt install python3-pip -y
+pip3 --version
 ```
-The setup script:
-- Updates system packages
-- Adds `~/.local/bin` to PATH
-- Installs system dependencies
-- Installs and configures Python kernel for Jupyter Notebooks in VSCode
-- Installs Poetry and Python packages
-- Creates an `.env` file with your file paths
-- Installs various utilities and adds the directory to PATH
-- Copies the project data to your custom data directory
+This should output something like:
+```
+pip 24.0 from /usr/lib/python3/dist-packages/pip (python 3.12)
+```
+Continue to enter commands in your Ubuntu terminal window:
+```
+sudo apt install pipx -y
+pipx ensurepath
+```
+✅ Open a New Terminal Window
+Since `pipx` modified your PATH, close the current terminal and open a new one to apply the changes.
+✅ Verify pipx Works
+Enter:
+```
+pipx --version
+```
+Your output should be something like `1.4.3`, indicating the `pipx` version number.
 
-You can then open VS Code and begin the tutorials, or run the scripts in your terminal window.
+Now, use `pipx` to install `poetry`.
+```
+pipx install poetry
+```
+The output should let you know what `poetry` version was installed, but you can check by running `poetry --version`.
+
+Congure `poetry` by entering:
+```
+poetry config virtualenvs.in-project true
+```
+
+Now, navigate into the course directory `computational_genetic_genealogy` and install the needed Python packages by using the following commands:
+```
+cd computational_genetic_genealogy
+poetry install --no-root
+```
+You can now open VS Code and begin the labs. The labs are in the `instructions` directory. Start with `Lab0_Code_Environment.ipynb` to finish setting up your code environment. After this, you won't need to rerun `Lab0_Code_Environment.ipynb` for any lab, even if you restart your computer. To launch VS Code, enter the following in your terminal window:
+```
+code .
+```
+
+Run `Lab0_Code_Environment.ipynb` in the `instructions` directory.
 
 ## Docker Setup 
 

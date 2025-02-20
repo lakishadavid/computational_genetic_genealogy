@@ -5,17 +5,24 @@ import sys
 import argparse
 import shutil
 from typing import Dict, Optional
-from decouple import config
+from pathlib import Path
+from dotenv import load_dotenv
+
+script_dir = Path(__file__).parent
+project_root = script_dir.parent
+env_path = project_root / '.env'
+print(env_path)
+load_dotenv(env_path, override=True)
 
 def load_env_directories() -> Dict[str, str]:
     """Load directory paths from .env file if they exist."""
     env_vars = {
-        'PROJECT_WORKING_DIR': config('PROJECT_WORKING_DIR', default=None),
-        'PROJECT_UTILS_DIR': config('PROJECT_UTILS_DIR', default=None),
-        'PROJECT_RESULTS_DIR': config('PROJECT_RESULTS_DIR', default=None),
-        'PROJECT_DATA_DIR': config('PROJECT_DATA_DIR', default=None),
-        'PROJECT_REFERENCES_DIR': config('PROJECT_REFERENCES_DIR', default=None),
-        'USER_HOME': config('USER_HOME', default=None)
+        'PROJECT_WORKING_DIR': os.getenv('PROJECT_WORKING_DIR', default=None),
+        'PROJECT_UTILS_DIR': os.getenv('PROJECT_UTILS_DIR', default=None),
+        'PROJECT_RESULTS_DIR': os.getenv('PROJECT_RESULTS_DIR', default=None),
+        'PROJECT_DATA_DIR': os.getenv('PROJECT_DATA_DIR', default=None),
+        'PROJECT_REFERENCES_DIR': os.getenv('PROJECT_REFERENCES_DIR', default=None),
+        'USER_HOME': os.getenv('USER_HOME', default=None)
     }
     return env_vars
 
@@ -315,11 +322,13 @@ def post_process(directories: Dict[str, str], repo_path: str) -> None:
     bashrc_path = os.path.expanduser("~/.bashrc")
     utils_dir = directories.get('utils_directory')
     export_line = f'export PATH=$PATH:{utils_dir}'
+    
     try:
         with open(bashrc_path, 'r') as f:
             bashrc_content = f.read()
     except FileNotFoundError:
         bashrc_content = ""
+        
     if export_line not in bashrc_content:
         with open(bashrc_path, 'a') as f:
             f.write(f'\n{export_line}\n')
@@ -332,19 +341,24 @@ def post_process(directories: Dict[str, str], repo_path: str) -> None:
     user_data_dir = os.path.realpath(directories.get('data_directory'))
     
     if user_data_dir != default_data_dir:
-        if os.path.exists(user_data_dir):
+        # Source directory to copy from (within the default data directory)
+        source_directory = os.path.join(default_data_dir, "class_data")
+        # Destination directory (within user-specified data directory)
+        destination_directory = os.path.join(user_data_dir, "class_data")
+        
+        if os.path.exists(source_directory):  # Check if source exists
             try:
-                copy_directory = os.path.join(default_data_dir, "class_data")
-                paste_direcotry = os.path.join(user_data_dir, "class_data")
-                # Create the directory if it doesn't exist
-                if not os.path.exists(paste_direcotry):
-                    os.makedirs(paste_direcotry)
-                shutil.copytree(copy_directory, paste_direcotry, dirs_exist_ok=True)
-                print(f"Data successfully copied from {copy_directory} to {paste_direcotry}.")
+                # Create the parent directory if it doesn't exist
+                if not os.path.exists(user_data_dir):
+                    os.makedirs(user_data_dir)
+                    
+                # Now copy the directory
+                shutil.copytree(source_directory, destination_directory, dirs_exist_ok=True)
+                print(f"Data successfully copied from {source_directory} to {destination_directory}.")
             except Exception as e:
                 print(f"Error copying data: {e}")
         else:
-            print(f"Warning: The directory {paste_direcotry} was not found, but you can still find the data in ~/computational_genetic_genealogy/data.")
+            print(f"Warning: Source directory {source_directory} not found")
     else:
         print("Data directory is the default; skipping data copy block.")
         

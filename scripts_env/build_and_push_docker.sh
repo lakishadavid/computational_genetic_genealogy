@@ -13,7 +13,7 @@
 #   build_only: false
 #
 # Example: bash scripts_env/build_and_push_docker.sh
-# Example (build only): bash scripts_env/build_and_push_docker.sh lakishadavid cgg_image latest . true
+# Example (build only): docker build -t lakishadavid/cgg_image:latest .
 # Example (push built image): docker push lakishadavid/cgg_image:latest
 # Example (run built image): docker run -it lakishadavid/cgg_image:latest bash
 # To rerun the container with the same state: docker start -ai <container_id>
@@ -50,7 +50,7 @@ fi
 
 # Build the Docker image
 echo "Step 3: Building Docker image..." | tee -a "${LOG_FILE}"
-docker build -t "${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}" "${DOCKERFILE_DIR}" 2>&1 | tee -a "${LOG_FILE}"
+docker build --no-cache -t "${DOCKER_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}" "${DOCKERFILE_DIR}" 2>&1 | tee -a "${LOG_FILE}"
 
 # Push the Docker image to Docker Hub if build_only is false
 if [ "${BUILD_ONLY}" != "true" ]; then

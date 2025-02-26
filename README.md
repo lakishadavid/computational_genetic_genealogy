@@ -1,7 +1,5 @@
 # cgg_image
 
-Hello, McKenzie.
-
 **cgg_image** is an Ubuntu setup and Docker image code base that creates a complete development environment. Choose your preferred setup method below.
 
 ## Ubuntu Setup (Non-Docker)

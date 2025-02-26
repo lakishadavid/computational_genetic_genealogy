@@ -407,7 +407,7 @@ RUN if [ -f "${RFMIX2_DIR}/rfmix" ]; then \
 ###############################################################################
 # Volume Configuration
 ###############################################################################
-VOLUME ["${WORKSPACE_DIR}/data", "${WORKSPACE_DIR}/references", "${WORKSPACE_DIR}/results"]
+VOLUME ["${WORKSPACE_DIR}/computational_genetic_genealogy/data", "${WORKSPACE_DIR}/computational_genetic_genealogy/references", "${WORKSPACE_DIR}/computational_genetic_genealogy/results"]
 
 ###############################################################################
 # Container Startup
@@ -451,9 +451,9 @@ echo '    the container is stopped or removed, allowing you to continue your wor
 echo '    To mount local directories, run:' && \
 echo '' && \
 echo '   docker run -it \\ ' && \
-echo '   -v $(pwd)/data:/home/ubuntu/data \\ ' && \
-echo '   -v $(pwd)/references:/home/ubuntu/references \\ ' && \
-echo '   -v $(pwd)/results:/home/ubuntu/results \\ ' && \
+echo '   -v $(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data \\ ' && \
+echo '   -v $(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references \\ ' && \
+echo '   -v $(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results \\ ' && \
 echo '   lakishadavid/cgg_image:latest' && \
 echo '' && \
 echo '   (Replace $(pwd)/results and $(pwd)/references with your actual local paths)' && \

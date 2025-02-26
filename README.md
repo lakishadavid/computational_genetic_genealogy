@@ -106,11 +106,11 @@ Use Docker volumes to ensure your work (data, references, and results) is preser
 
 To mount local directories, run:
 ```
-docker run -it 
--v $(pwd)/data:/home/ubuntu/data 
--v $(pwd)/references:/home/ubuntu/references 
--v $(pwd)/results:/home/ubuntu/results 
-lakishadavid/cgg_image:latest
+docker run -it \
+   -v $(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data \
+   -v $(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references \
+   -v $(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results \
+   lakishadavid/cgg_image:latest
 ```
 *(Replace `$(pwd)/data`, `$(pwd)/references`, and `$(pwd)/results` with your actual local paths.)*
 
@@ -119,11 +119,11 @@ and you created multiple subdirectories in `ANTHprojects` called `genetic_data`,
 you would enter the following to map your directories to the container directories:
 
 ```
-docker run -it 
--v /home/mynewsystem/ANTHprojects/genetic_data:/home/ubuntu/data 
--v /home/mynewsystem/ANTHprojects/genetic_refs:/home/ubuntu/references 
--v /home/mynewsystem/ANTHprojects/genetic_results:/home/ubuntu/results 
-lakishadavid/cgg_image:latest
+docker run -it \
+   -v /home/mynewsystem/ANTHprojects/genetic_data:/home/ubuntu/computational_genetic_genealogy/data \
+   -v /home/mynewsystem/ANTHprojects/genetic_refs:/home/ubuntu/computational_genetic_genealogy/references \
+   -v /home/mynewsystem/ANTHprojects/genetic_results:/home/ubuntu/computational_genetic_genealogy/results \
+   lakishadavid/cgg_image:latest
 ```
 
 Keep the paths on the right as they are (e.g., `/home/ubuntu/...`). These are the file paths within the container.

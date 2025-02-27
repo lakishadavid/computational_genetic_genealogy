@@ -126,6 +126,13 @@ RUN poetry config virtualenvs.in-project true && poetry install --no-root
 ###############################################################################
 # Update package lists and install dependencies
 USER root
+
+RUN apt update -y && apt install -y --no-install-recommends \
+    r-base \
+    libtirpc-dev
+RUN R --version
+
+
 RUN apt update -y && apt install -y --no-install-recommends \
     libbz2-dev \
     liblzma-dev \

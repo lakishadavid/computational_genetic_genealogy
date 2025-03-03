@@ -4,53 +4,15 @@
 
 ## Ubuntu Setup (Non-Docker)
 
-To set up directly on Ubuntu:
-
-In your Ubuntu terminal window, enter the following commands:
+In your Ubuntu terminal window on your computer, enter the following commands:
 ```
 git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
-sudo apt update && sudo apt upgrade -y
-sudo apt install python3-pip -y
-pip3 --version
 ```
-This should output something like:
-```
-pip 24.0 from /usr/lib/python3/dist-packages/pip (python 3.12)
-```
-Continue to enter commands in your Ubuntu terminal window:
-```
-sudo apt install pipx -y
-pipx ensurepath
-```
-✅ Open a New Terminal Window
-Since `pipx` modified your PATH, close the current terminal and open a new one to apply the changes.
+You can now open VS Code and begin the labs. The labs are in the `instructions` directory. Start with `Lab0_Code_Environment.ipynb` to finish setting up your code environment. After this, you won't need to rerun `Lab0_Code_Environment.ipynb` for any lab, even if you restart your computer. 
 
-✅ Verify pipx Works.
-
-Enter:
-```
-pipx --version
-```
-Your output should be something like `1.4.3`, indicating the `pipx` version number.
-
-Now, use `pipx` to install `poetry`.
-```
-pipx install poetry
-```
-The output should let you know what `poetry` version was installed, but you can check by running `poetry --version`.
-
-Congure `poetry` by entering:
-```
-poetry config virtualenvs.in-project true
-```
-
-Now, navigate into the course directory `computational_genetic_genealogy` and install the needed Python packages by using the following commands:
+To launch VS Code, enter the following in your terminal window:
 ```
 cd computational_genetic_genealogy
-poetry install --no-root
-```
-You can now open VS Code and begin the labs. The labs are in the `instructions` directory. Start with `Lab0_Code_Environment.ipynb` to finish setting up your code environment. After this, you won't need to rerun `Lab0_Code_Environment.ipynb` for any lab, even if you restart your computer. To launch VS Code, enter the following in your terminal window:
-```
 code .
 ```
 

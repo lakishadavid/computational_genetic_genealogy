@@ -187,3 +187,11 @@ data/class_data/determined_sex_update_sex.txt
 data/class_data/determined_sex_Y.psam
 # data/class_data/merged_opensnps_data.vcf.gz
 # data/class_data/merged_opensnps_data.vcf.gz.tbi
+dataset_unrelated.bed
+dataset_unrelated.bim
+dataset_unrelated.fam
+dataset_unrelated.king.cutoff.in.id
+dataset_unrelated.king.cutoff.out.id
+dataset.bed
+dataset.bim
+dataset.fam

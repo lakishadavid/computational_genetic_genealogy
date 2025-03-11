@@ -31,8 +31,7 @@ from pathlib import Path
 from time import process_time
 import math
 from collections import Counter, defaultdict
-
-# Third-party imports
+import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -41,6 +40,7 @@ import networkx as nx
 import msprime
 import stdpopsim
 import tskit
+import pysam
 
 
 def parse_arguments():
@@ -442,176 +442,71 @@ def draw_pedigree(pedigree, output_file):
     
     return G
 
-
-def determine_relationship(tree, node1, node2):
+def convert_ts_to_vcf(ts, output_filename, conversion_dict, txt_ped_to_tskit_key, replicate_index):
     """
-    Determine the genetic relationship between two nodes
-    """
-    mrca = tree.mrca(node1, node2)
-    if mrca == tskit.NULL:
-        return "unrelated"
+    Convert a tree sequence to a VCF file with adjusted chromosome and local base positions.
     
-    # Get path lengths from each node to MRCA
-    path_length1 = 0
-    current = node1
-    while current != mrca and current != tskit.NULL:
-        path_length1 += 1
-        current = tree.parent(current)
-    
-    path_length2 = 0
-    current = node2
-    while current != mrca and current != tskit.NULL:
-        path_length2 += 1
-        current = tree.parent(current)
-    
-    # Classify relationship based on path lengths
-    if path_length1 == 1 and path_length2 == 1:
-        return "siblings"
-    elif path_length1 == 1 and path_length2 == 2:
-        return "parent-grandchild"
-    elif path_length1 == 2 and path_length2 == 1:
-        return "parent-grandchild"
-    elif path_length1 == 2 and path_length2 == 2:
-        return "cousins"
-    elif path_length1 == 0 or path_length2 == 0:
-        return "same_individual"
-    elif path_length1 == 1 or path_length2 == 1:
-        return "parent-child"
-    else:
-        return f"distant_relatives_{path_length1}_{path_length2}"
-
-
-def calculate_kinship(tree, node1, node2):
-    """
-    Calculate the kinship coefficient between two nodes
-    """
-    if node1 == node2:
-        return 0.5
-    
-    mrca = tree.mrca(node1, node2)
-    if mrca == tskit.NULL:
-        return 0.0
-    
-    # Calculate generation distance to MRCA
-    gen_to_mrca1 = 0
-    current = node1
-    while current != mrca and current != tskit.NULL:
-        gen_to_mrca1 += 1
-        current = tree.parent(current)
-    
-    gen_to_mrca2 = 0
-    current = node2
-    while current != mrca and current != tskit.NULL:
-        gen_to_mrca2 += 1
-        current = tree.parent(current)
-    
-    # Kinship coefficient calculation (simplified)
-    return 0.5 ** (gen_to_mrca1 + gen_to_mrca2)
-
-
-def analyze_tree_sequences(ts_list, output_prefix="results", min_span=3e6, max_time=25):
-    """
-    Analyze multiple tree sequences and extract relationship data
-    
-    Parameters:
-        ts_list -- List of tree sequence objects or paths to tree sequence files
-        output_prefix -- Prefix for output files
-        min_span -- Minimum IBD segment length in bp
-        max_time -- Maximum time to look back for IBD segments
-    """
-    # Create empty lists to store our data
-    pair_summaries = []
-    segment_details = []
-    relationship_data = []
-    
-    # Handle both tree sequence objects and file paths
-    ts_objects = []
-    for ts_item in ts_list:
-        if isinstance(ts_item, str):
-            ts_objects.append(tskit.load(ts_item))
-        else:
-            ts_objects.append(ts_item)
-    
-    for ts_idx, ts in enumerate(ts_objects):
-        print(f"Analyzing tree sequence {ts_idx+1}/{len(ts_objects)}")
+    Args:
+        ts: The tree sequence object.
+        output_filename: Path to the output VCF file.
+        conversion_dict: Dictionary mapping global position intervals (tuples) to chromosome numbers.
+        txt_ped_to_tskit_key: Dictionary mapping text pedigree IDs (names) to msprime individual IDs.
+        replicate_index: Integer replicate index to append to sample names.
         
-        # Get IBD segments
-        ibd_segments = ts.ibd_segments(
-            min_span=min_span,
-            max_time=max_time,
-            store_pairs=True,
-            store_segments=True
-        )
+    Sample names will be formatted as: "indXX_repY"
+    """
+    # Invert the mapping so that msprime individual IDs map back to original names
+    ind_mapping = {v: k for k, v in txt_ped_to_tskit_key.items()}
+
+    # Determine sample names from the tree sequence, appending replicate index
+    sample_names = []
+    for sample in ts.samples():
+        node = ts.node(sample)
+        ind_id = node.individual
+        sample_name = ind_mapping.get(ind_id, f"ind{ind_id}")  # Default name if not found
+        sample_name = f"{sample_name}_rep{replicate_index}"  # Append replicate index
+        sample_names.append(sample_name)
+
+    with open(output_filename, "w") as vcf:
+        # Write VCF header lines
+        vcf.write("##fileformat=VCFv4.2\n")
+        vcf.write("##source=msprime_simulation\n")
+        vcf.write("##INFO=<ID=TMRC,Number=1,Type=Float,Description=\"TMRCA at variant site (if computed)\">\n")
+        header_cols = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"] + sample_names
+        vcf.write("\t".join(header_cols) + "\n")
         
-        # Analyze each pair of samples that shares IBD segments
-        for node_pair, segment_list in ibd_segments.items():
-            node1, node2 = node_pair
+        # Process each variant in the tree sequence
+        for variant in ts.variants():
+            pos = variant.position
+            chrom, chrom_start = None, None
+            for (start, end), chrom_num in conversion_dict.items():
+                if start <= pos < end:
+                    chrom = chrom_num
+                    chrom_start = start
+                    break
+            if chrom is None:
+                continue
             
-            # Calculate summary statistics for this pair
-            total_ibd_length = sum(segment.span for segment in segment_list)
-            num_segments = len(segment_list)
-            
-            # Get genetic relationship information using the first tree
-            tree = ts.first()
-            mrca_node = tree.mrca(node1, node2)
-            
-            if mrca_node != tskit.NULL:
-                tmrca = tree.time(mrca_node)
-                
-                # Determine relationship type
-                relationship_type = determine_relationship(tree, node1, node2)
-                
-                # Add pair summary
-                pair_summaries.append({
-                    'ts_idx': ts_idx,
-                    'node1': node1,
-                    'node2': node2,
-                    'mrca_node': mrca_node,
-                    'tmrca': tmrca,
-                    'relationship': relationship_type,
-                    'total_shared_length_mbp': round(total_ibd_length / 1e6, 2),
-                    'num_segments': num_segments
-                })
-                
-                # Add relationship data
-                relationship_data.append({
-                    'ts_idx': ts_idx,
-                    'node1': node1,
-                    'node2': node2,
-                    'relationship': relationship_type,
-                    'kinship_coefficient': calculate_kinship(tree, node1, node2),
-                    'generations_to_mrca': int(tmrca)
-                })
-                
-                # Add segment details
-                for segment in segment_list:
-                    # Get MRCA specifically for this segment
-                    seg_tree = ts.at(segment.left)
-                    seg_mrca = seg_tree.mrca(node1, node2)
-                    seg_tmrca = seg_tree.time(seg_mrca) if seg_mrca != tskit.NULL else None
-                    
-                    segment_details.append({
-                        'ts_idx': ts_idx,
-                        'node1': node1,
-                        'node2': node2,
-                        'left': segment.left,
-                        'right': segment.right,
-                        'span_mbp': round(segment.span / 1e6, 2),
-                        'segment_mrca': seg_mrca,
-                        'segment_tmrca': seg_tmrca
-                    })
-    
-    # Convert to DataFrames
-    pair_df = pd.DataFrame(pair_summaries)
-    segment_df = pd.DataFrame(segment_details)
-    relationship_df = pd.DataFrame(relationship_data)
-    
-    # Save the DataFrames
-    pair_df.to_csv(f"{output_prefix}_pair_summaries.csv", index=False)
-    segment_df.to_csv(f"{output_prefix}_segment_details.csv", index=False)
-    relationship_df.to_csv(f"{output_prefix}_relationships.csv", index=False)
-    
-    return pair_df, segment_df, relationship_df
+            # Calculate the local position (VCF is 1-indexed)
+            local_pos = int(pos - chrom_start + 1)
+
+            # Set VCF fields
+            var_id = "."
+            ref = variant.alleles[0]
+            alt = ",".join(variant.alleles[1:]) if len(variant.alleles) > 1 else "."
+            qual = "."
+            filt = "PASS"
+            info = "."
+            fmt = "GT"
+
+            # Convert genotype data
+            genotypes = [str(gt) for gt in variant.genotypes]
+
+            # Write VCF record
+            record = [str(chrom), str(local_pos), var_id, ref, alt, qual, filt, info, fmt] + genotypes
+            vcf.write("\t".join(record) + "\n")
+
+    print(f"VCF file written to {output_filename}")
 
 
 def main():
@@ -684,6 +579,11 @@ def main():
         
         # Build out the pedigree using input text pedigree
         pb, txt_ped_to_tskit_key = add_individuals_to_pedigree(pb, text_pedigree)
+        txt_ped_to_tskit_key_conv = {int(k): v for k, v in txt_ped_to_tskit_key.items()}
+        output_path_tskit_key = os.path.join(results_directory, "pedigree_key.json")
+        with open(output_path_tskit_key, "w") as f:
+            json.dump(txt_ped_to_tskit_key_conv, f, indent=4)
+        logging.info(f"Pedigree key saved to {output_path_tskit_key}")
         
         # Set the initial state of tree sequence
         pedigree = pb.finalise(sequence_length=assembly_len_maps)
@@ -737,16 +637,9 @@ def main():
             
             print(f"Checkpoint 3: Saved replicate {replicate_index}")
         
-        # Run analysis if requested
-        if args.analyze and ts_filenames:
-            print("Running analysis on tree sequences...")
+            output_filename_vcf = os.path.join(results_directory, f"msprime_replicate_{replicate_index}.vcf")
+            convert_ts_to_vcf(ts, output_filename_vcf, conversion_dict, txt_ped_to_tskit_key, replicate_index)
             
-            analyze_tree_sequences(
-                ts_filenames,
-                output_prefix=os.path.join(results_directory, "genetic_data"),
-                min_span=args.min_span,
-                max_time=args.max_time
-            )
     else:
         logging.error(f"Pedigree file not found at {pedigree_path}")
         print(f"Error: Pedigree file not found at {pedigree_path}")
@@ -759,6 +652,17 @@ def main():
     minutes = (runtime % 3600) // 60
     seconds = (runtime % 3600) % 60
     print(f"Runtime: {hours:.0f}:{minutes:.0f}:{seconds:.0f}")
+    
+    vcf_files = [f"{results_directory}/msprime_replicate_{i}.vcf" for i in range(args.num_replicates)]
+    output_vcf = os.path.join(results_directory, "merged_replicates.vcf")
+
+    with pysam.VariantFile(output_vcf, "w") as outfile:
+        for vcf_file in vcf_files:
+            with pysam.VariantFile(vcf_file) as infile:
+                for rec in infile:
+                    outfile.write(rec)
+
+    print(f"Merged VCF file saved to {output_vcf}")
 
 
 if __name__ == "__main__":

@@ -40,7 +40,7 @@ import networkx as nx
 import msprime
 import stdpopsim
 import tskit
-import pysam
+import subprocess
 
 
 def parse_arguments():
@@ -442,71 +442,32 @@ def draw_pedigree(pedigree, output_file):
     
     return G
 
-def convert_ts_to_vcf(ts, output_filename, conversion_dict, txt_ped_to_tskit_key, replicate_index):
+# Prepare unique sample names with replicate index using the inverted pedigree mapping.
+def get_sample_names(ts, txt_ped_to_tskit_key, replicate_index):
     """
-    Convert a tree sequence to a VCF file with adjusted chromosome and local base positions.
+    Generate unique sample names by mapping msprime individual IDs to text pedigree IDs,
+    appending the replicate index.
     
     Args:
         ts: The tree sequence object.
-        output_filename: Path to the output VCF file.
-        conversion_dict: Dictionary mapping global position intervals (tuples) to chromosome numbers.
         txt_ped_to_tskit_key: Dictionary mapping text pedigree IDs (names) to msprime individual IDs.
-        replicate_index: Integer replicate index to append to sample names.
+        replicate_index: Integer replicate index.
         
-    Sample names will be formatted as: "indXX_repY"
+    Returns:
+        List of unique sample names.
     """
-    # Invert the mapping so that msprime individual IDs map back to original names
+    # Invert the mapping: now keys are msprime individual IDs and values are text pedigree names.
     ind_mapping = {v: k for k, v in txt_ped_to_tskit_key.items()}
-
-    # Determine sample names from the tree sequence, appending replicate index
+    
     sample_names = []
-    for sample in ts.samples():
-        node = ts.node(sample)
-        ind_id = node.individual
-        sample_name = ind_mapping.get(ind_id, f"ind{ind_id}")  # Default name if not found
-        sample_name = f"{sample_name}_rep{replicate_index}"  # Append replicate index
+    # Iterate over all individuals in the tree sequence.
+    for individual in ts.individuals():
+        ind_id = individual.id
+        # Use the mapped name if available; otherwise, default to "ind{ind_id}"
+        base_name = ind_mapping.get(ind_id, f"ind{ind_id}")
+        sample_name = f"{base_name}_rep{replicate_index}"
         sample_names.append(sample_name)
-
-    with open(output_filename, "w") as vcf:
-        # Write VCF header lines
-        vcf.write("##fileformat=VCFv4.2\n")
-        vcf.write("##source=msprime_simulation\n")
-        vcf.write("##INFO=<ID=TMRC,Number=1,Type=Float,Description=\"TMRCA at variant site (if computed)\">\n")
-        header_cols = ["#CHROM", "POS", "ID", "REF", "ALT", "QUAL", "FILTER", "INFO", "FORMAT"] + sample_names
-        vcf.write("\t".join(header_cols) + "\n")
-        
-        # Process each variant in the tree sequence
-        for variant in ts.variants():
-            pos = variant.position
-            chrom, chrom_start = None, None
-            for (start, end), chrom_num in conversion_dict.items():
-                if start <= pos < end:
-                    chrom = chrom_num
-                    chrom_start = start
-                    break
-            if chrom is None:
-                continue
-            
-            # Calculate the local position (VCF is 1-indexed)
-            local_pos = int(pos - chrom_start + 1)
-
-            # Set VCF fields
-            var_id = "."
-            ref = variant.alleles[0]
-            alt = ",".join(variant.alleles[1:]) if len(variant.alleles) > 1 else "."
-            qual = "."
-            filt = "PASS"
-            info = "."
-            fmt = "GT"
-
-            # Convert genotype data
-            genotypes = [str(gt) for gt in variant.genotypes]
-
-            # Write VCF record
-            record = [str(chrom), str(local_pos), var_id, ref, alt, qual, filt, info, fmt] + genotypes
-            vcf.write("\t".join(record) + "\n")
-
-    print(f"VCF file written to {output_filename}")
+    return sample_names
 
 
 def main():
@@ -638,7 +599,15 @@ def main():
             print(f"Checkpoint 3: Saved replicate {replicate_index}")
         
             output_filename_vcf = os.path.join(results_directory, f"msprime_replicate_{replicate_index}.vcf")
-            convert_ts_to_vcf(ts, output_filename_vcf, conversion_dict, txt_ped_to_tskit_key, replicate_index)
+            sample_names = get_sample_names(ts, txt_ped_to_tskit_key, replicate_index)
+            
+            # mutated_ts.write_vcf(
+            #     output_filename_vcf,
+            #     individual_names=sample_names
+            # )
+            # mutated_ts.write_vcf(
+            #     output_filename_vcf
+            # )
             
     else:
         logging.error(f"Pedigree file not found at {pedigree_path}")
@@ -653,16 +622,18 @@ def main():
     seconds = (runtime % 3600) % 60
     print(f"Runtime: {hours:.0f}:{minutes:.0f}:{seconds:.0f}")
     
-    vcf_files = [f"{results_directory}/msprime_replicate_{i}.vcf" for i in range(args.num_replicates)]
-    output_vcf = os.path.join(results_directory, "merged_replicates.vcf")
+    # vcf_files = [f"{results_directory}/msprime_replicate_{i}.vcf" for i in range(args.num_replicates)]
+    # output_vcf = os.path.join(results_directory, "merged_replicates.vcf")
 
-    with pysam.VariantFile(output_vcf, "w") as outfile:
-        for vcf_file in vcf_files:
-            with pysam.VariantFile(vcf_file) as infile:
-                for rec in infile:
-                    outfile.write(rec)
+    # merge_cmd = ["bcftools", "merge", "-o", output_vcf, "-O", "v"] + vcf_files
 
-    print(f"Merged VCF file saved to {output_vcf}")
+    # try:
+    #     subprocess.run(merge_cmd, check=True)
+    #     print(f"Merged VCF file saved to {output_vcf}")
+    # except subprocess.CalledProcessError as e:
+    #     print(f"Error merging VCF files: {e}")
+
+    # print(f"Merged VCF file saved to {output_vcf}")
 
 
 if __name__ == "__main__":

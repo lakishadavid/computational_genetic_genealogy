@@ -442,7 +442,7 @@ def draw_pedigree(pedigree, output_file):
     
     return G
 
-def extract_ibd_segments(ts, min_segment_length_cm, max_time, conversion_dict, genetic_map_name):
+def extract_ibd_segments(ts, min_segment_length_cm, max_time, conversion_dict, genetic_map_name, replicate_index):
     """
     Extract IBD segments from a tree sequence with proper chromosome coordinates.
     
@@ -499,7 +499,7 @@ def extract_ibd_segments(ts, min_segment_length_cm, max_time, conversion_dict, g
             cm_length = bp_length * mean_rate * 100
             return cm_length
         except Exception as e:
-            print(f"Error getting recombination rate for chromosome {chrom_num}: {e}")
+            logging.info(f"Error getting recombination rate for chromosome {chrom_num}: {e}")
             # Fallback to standard approximation: 1cM ≈ 1Mb
             return bp_length / 1e6
     
@@ -540,16 +540,16 @@ def extract_ibd_segments(ts, min_segment_length_cm, max_time, conversion_dict, g
             
             # Add to results
             segment_data.append({
-                'individual1_id': int(ind1_id),
+                'individual1_id': f"{int(ind1_id)}_rep{replicate_index}",  # Add replicate suffix
                 'node1': int(node1),
-                'individual2_id': int(ind2_id),
+                'individual2_id': f"{int(ind2_id)}_rep{replicate_index}",  # Add replicate suffix
                 'node2': int(node2),
                 'chromosome': chrom,
                 'start_bp': int(local_left),
                 'end_bp': int(local_right),
                 'length_bp': int(local_span),
                 'length_cm': float(span_cm),
-                'mrca_individual_id': int(mrca_individual_id),
+                'mrca_individual_id': f"{int(mrca_individual_id)}_rep{replicate_index}",
                 'mrca_node': int(mrca_node) if mrca_node != tskit.NULL else -1,
                 'tmrca': float(tmrca) if not np.isnan(tmrca) else -1
             })
@@ -586,6 +586,65 @@ def write_multi_chrom_vcf(ts, vcf_file, conversion_dict, replicate_index, txt_pe
         vcf_file: Path to the created VCF file
         sample_names: List of sample names used in the VCF
     """
+    
+    # Add at the beginning of write_multi_chrom_vcf
+    logging.info(f"Tree sequence stats: {ts.num_samples} samples, {ts.num_trees} trees, {ts.num_mutations} mutations")
+
+    # Test direct variant access
+    variant_count = 0
+    for variant in ts.variants():
+        variant_count += 1
+        if variant_count <= 5:
+            logging.info(f"Direct variant access - Variant {variant_count}: pos={variant.position}, alleles={variant.alleles}")
+    logging.info(f"Total variants accessed directly: {variant_count}")
+    
+    # Add this debugging section near the beginning of write_multi_chrom_vcf
+    logging.info(f"Conversion dictionary contains {len(conversion_dict)} chromosome mappings:")
+    for (start, end), chrom in conversion_dict.items():
+        logging.info(f"  Range {start}-{end} maps to chromosome {chrom}")
+
+    # Track chromosome assignments during variant processing
+    assigned_chroms = {}
+    unassigned_count = 0
+    for variant in ts.variants():
+        pos = int(variant.position)
+        
+        # Find which chromosome this position belongs to
+        chrom = None
+        for (start, end), chromosome in conversion_dict.items():
+            if start <= pos < end:
+                chrom = chromosome
+                if chrom not in assigned_chroms:
+                    assigned_chroms[chrom] = 0
+                assigned_chroms[chrom] += 1
+                break
+        
+        if chrom is None:
+            unassigned_count += 1
+
+    logging.info(f"Variant chromosome assignments: {assigned_chroms}")
+    logging.info(f"Unassigned variants: {unassigned_count}")
+    
+    # Add this near the beginning of write_multi_chrom_vcf
+    logging.info("Examining the first 5 variants from the tree sequence:")
+    for i, variant in enumerate(ts.variants()):
+        if i >= 5:
+            break
+        pos = int(variant.position)
+        logging.info(f"Variant {i}: position={pos}, alleles={variant.alleles}")
+        # Check which chromosome this belongs to
+        assigned_chrom = None
+        for (start, end), chrom in conversion_dict.items():
+            if start <= pos < end:
+                assigned_chrom = chrom
+                local_pos = pos - start
+                logging.info(f"  Assigned to chromosome {chrom} at local position {local_pos}")
+                break
+        if assigned_chrom is None:
+            logging.info("  Not assigned to any chromosome!")
+            
+    ##################################################################
+    
     # Create a reverse mapping from tskit IDs to text pedigree IDs
     tskit_to_txt_ped = {v: k for k, v in txt_ped_to_tskit_key.items()}
     
@@ -672,7 +731,7 @@ def write_multi_chrom_vcf(ts, vcf_file, conversion_dict, replicate_index, txt_pe
             })
             variant_count += 1
     
-    print(f"Found {variant_count} variants across {len(variants_by_chrom)} chromosomes")
+    logging.info(f"Found {variant_count} variants across {len(variants_by_chrom)} chromosomes")
     
     # Create VCF file
     with open(vcf_file, 'w') as f:
@@ -754,7 +813,7 @@ def write_multi_chrom_vcf(ts, vcf_file, conversion_dict, replicate_index, txt_pe
     
     return vcf_file, sample_names
 
-def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segments_df=None, node_to_individual=None):
+def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segments_df=None, node_to_individual=None, replicate_index=None):
     """
     Calculate all distinct MRCAs for each pair of samples from IBD segments.
     
@@ -763,6 +822,7 @@ def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segmen
         ibd_segments_file: Path to CSV file with IBD segments (optional)
         ibd_segments_df: DataFrame with IBD segments (optional)
         node_to_individual: Mapping from node IDs to individual IDs (optional)
+        replicate_index: Index of the current replicate for ID suffixing
         
     Returns:
         DataFrame with comprehensive pairwise MRCA information
@@ -777,7 +837,7 @@ def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segmen
         if ibd_segments_df is None and ibd_segments_file is not None:
             ibd_segments_df = pd.read_csv(ibd_segments_file)
         elif ibd_segments_df is None:
-            print("Either ibd_segments_df or ibd_segments_file must be provided")
+            logging.info("Either ibd_segments_df or ibd_segments_file must be provided")
             return pd.DataFrame(columns=[
                 'individual1_id', 'node1', 'individual2_id', 'node2',
                 'mrca_individual_id', 'mrca_node', 'tmrca', 
@@ -818,11 +878,20 @@ def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segmen
             # Store individual information
             if pair not in pair_info:
                 if 'individual1_id' in segment:
+                    # Use the IDs from the segment, which might already have replicate suffix
                     ind1_id = segment['individual1_id']
                     ind2_id = segment['individual2_id']
                 else:
+                    # Get IDs from node_to_individual mapping
                     ind1_id = node_to_individual.get(node1, -1)
                     ind2_id = node_to_individual.get(node2, -1)
+                    
+                    # Add replicate suffix if provided and if IDs don't already have it
+                    if replicate_index is not None:
+                        if isinstance(ind1_id, (int, float)):
+                            ind1_id = f"{int(ind1_id)}_rep{replicate_index}"
+                        if isinstance(ind2_id, (int, float)):
+                            ind2_id = f"{int(ind2_id)}_rep{replicate_index}"
                 
                 pair_info[pair] = {
                     'individual1_id': ind1_id,
@@ -914,6 +983,10 @@ def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segmen
                     if mrca_ind != tskit.NULL:
                         mrca_individual_id = mrca_ind
                 
+                # Add replicate suffix to mrca_individual_id if it's not -1
+                if replicate_index is not None and mrca_individual_id != -1:
+                    mrca_individual_id = f"{int(mrca_individual_id)}_rep{replicate_index}"
+                
                 # Add to results if there's any exclusive coverage
                 if total_bp > 0:
                     result_row = {
@@ -944,7 +1017,7 @@ def calculate_comprehensive_pairwise_mrca(ts, ibd_segments_file=None, ibd_segmen
             ])
 
     except Exception as e:
-        print(f"Error in calculate_comprehensive_pairwise_mrca: {e}")
+        logging.info(f"Error in calculate_comprehensive_pairwise_mrca: {e}")
         return pd.DataFrame(columns=[
             'individual1_id', 'node1', 'individual2_id', 'node2',
             'mrca_individual_id', 'mrca_node', 'tmrca', 
@@ -979,46 +1052,48 @@ def process_tree_sequence(ts, conversion_dict, replicate_index, txt_ped_to_tskit
     for ind in ts.individuals():
         for node in ind.nodes:
             node_to_individual[node] = ind.id
-    
-    # Part 1: VCF conversion
-    vcf_file = os.path.join(results_directory, f"msprime_replicate_{replicate_index}.vcf")
-    vcf_file, sample_names = write_multi_chrom_vcf(
-        ts, vcf_file, conversion_dict, replicate_index, txt_ped_to_tskit_key,
-        node_to_individual=node_to_individual
-    )
-    
-    # Compress and index the VCF file
-    compressed_vcf = f"{vcf_file}.gz"
+            
     files_info = {
-        'vcf_file': vcf_file,
+        'vcf_file': None,
         'compressed_vcf': None,
         'index_file': None,
         'stats_file': None,
         'ibd_file': None
     }
     
-    try:
-        # Use bgzip to compress
-        bgzip_cmd = ["bgzip", "-c", vcf_file]
-        with open(compressed_vcf, 'wb') as f:
-            subprocess.run(bgzip_cmd, stdout=f, check=True)
-        files_info['compressed_vcf'] = compressed_vcf
+    # # Part 1: VCF conversion
+    # vcf_file = os.path.join(results_directory, f"msprime_replicate_{replicate_index}.vcf")
+    # vcf_file, sample_names = write_multi_chrom_vcf(
+    #     ts, vcf_file, conversion_dict, replicate_index, txt_ped_to_tskit_key,
+    #     node_to_individual=node_to_individual
+    # )
+    
+    # # Compress and index the VCF file
+    # compressed_vcf = f"{vcf_file}.gz"
+
+    
+    # try:
+    #     # Use bgzip to compress
+    #     bgzip_cmd = ["bgzip", "-c", vcf_file]
+    #     with open(compressed_vcf, 'wb') as f:
+    #         subprocess.run(bgzip_cmd, stdout=f, check=True)
+    #     files_info['compressed_vcf'] = compressed_vcf
         
-        # Index the compressed VCF file with tabix
-        tabix_cmd = ["tabix", "-p", "vcf", compressed_vcf]
-        subprocess.run(tabix_cmd, check=True)
-        files_info['index_file'] = f"{compressed_vcf}.tbi"
+    #     # Index the compressed VCF file with tabix
+    #     tabix_cmd = ["tabix", "-p", "vcf", compressed_vcf]
+    #     subprocess.run(tabix_cmd, check=True)
+    #     files_info['index_file'] = f"{compressed_vcf}.tbi"
         
-        # Run a quick stats check
-        stats_output = os.path.join(results_directory, f"vcf_stats_rep{replicate_index}.txt")
-        stat_cmd = ["bcftools", "stats", compressed_vcf]
-        with open(stats_output, 'w') as f:
-            subprocess.run(stat_cmd, stdout=f, check=True)
-        files_info['stats_file'] = stats_output
+    #     # Run a quick stats check
+    #     stats_output = os.path.join(results_directory, f"vcf_stats_rep{replicate_index}.txt")
+    #     stat_cmd = ["bcftools", "stats", compressed_vcf]
+    #     with open(stats_output, 'w') as f:
+    #         subprocess.run(stat_cmd, stdout=f, check=True)
+    #     files_info['stats_file'] = stats_output
         
-        print(f"Generated VCF files for replicate {replicate_index}")
-    except subprocess.CalledProcessError as e:
-        print(f"Error processing VCF for replicate {replicate_index}: {e}")
+    #     logging.info(f"Generated VCF files for replicate {replicate_index}")
+    # except subprocess.CalledProcessError as e:
+    #     logging.info(f"Error processing VCF for replicate {replicate_index}: {e}")
     
     # Part 2: Extract IBD segments
     ibd_output = os.path.join(results_directory, f"ibd_segments_rep_{replicate_index}.csv")
@@ -1030,15 +1105,16 @@ def process_tree_sequence(ts, conversion_dict, replicate_index, txt_ped_to_tskit
             min_segment_length_cm, 
             max_time, 
             conversion_dict, 
-            genetic_map_name
+            genetic_map_name,
+            replicate_index
         )
         
         # Save IBD segments
         ibd_df.to_csv(ibd_output, index=False)
         files_info['ibd_file'] = ibd_output
-        print(f"Extracted {len(ibd_df)} IBD segments for replicate {replicate_index}")
+        logging.info(f"Extracted {len(ibd_df)} IBD segments for replicate {replicate_index}")
     except Exception as e:
-        print(f"Error extracting IBD segments for replicate {replicate_index}: {e}")
+        logging.info(f"Error extracting IBD segments for replicate {replicate_index}: {e}")
         
     # Part 3: Calculate comprehensive pairwise MRCA
     mrca_output = os.path.join(results_directory, f"pairwise_mrca_rep_{replicate_index}.csv")
@@ -1051,18 +1127,19 @@ def process_tree_sequence(ts, conversion_dict, replicate_index, txt_ped_to_tskit
             mrca_df = calculate_comprehensive_pairwise_mrca(
                 ts=ts,
                 ibd_segments_file=files_info['ibd_file'],
-                node_to_individual=node_to_individual
+                node_to_individual=node_to_individual,
+                replicate_index=replicate_index
             )
             
             if len(mrca_df) > 0:
                 # Save MRCA results
                 mrca_df.to_csv(mrca_output, index=False)
                 files_info['mrca_file'] = mrca_output
-                print(f"Calculated MRCA for {len(mrca_df)} sample pairs")
+                logging.info(f"Calculated MRCA for {len(mrca_df)} sample pairs")
             else:
-                print("No valid MRCA results found")
+                logging.info("No valid MRCA results found")
     except Exception as e:
-        print(f"Error calculating MRCA for replicate {replicate_index}: {e}")
+        logging.info(f"Error calculating MRCA for replicate {replicate_index}: {e}")
     
     return files_info
 
@@ -1155,7 +1232,33 @@ def main():
         except Exception as e:
             logging.warning(f"Could not generate pedigree visualization: {e}")
         
+        # # Create reference sequences for all requested chromosomes
+        # reference_seed = 42  # Fixed seed for consistency
+        # rng = np.random.RandomState(reference_seed)
+        # reference_sequence = {}  # Will hold a reference sequence for each chromosome
+
+        # # For each chromosome in the simulation, create a reference sequence
+        # # We'll create sequences for all chromosomes in which_chromosome
+        # for chrom in which_chromosome:
+        #     # Find the chromosome length from conversion_dict
+        #     chrom_length = None
+        #     for (start, end), chromosome in conversion_dict.items():
+        #         if chromosome == chrom:
+        #             chrom_length = end - start
+        #             break
+            
+        #     if chrom_length is not None:
+        #         # Generate a reference sequence for this chromosome
+        #         reference_sequence[chrom] = "".join(np.random.choice(
+        #             ["A", "C", "G", "T"], 
+        #             size=chrom_length, 
+        #             p=[0.3, 0.2, 0.2, 0.3]
+        #         ))
+        #     else:
+        #         logging.warning(f"Could not find length for chromosome {chrom}")
+
         # Run simulations
+        logging.info("")
         logging.info(f"Checkpoint 1: Starting simulation with the Fixed Pedigree")
         
         # This tells the sim_ancestry function to generate a certain number of
@@ -1172,6 +1275,7 @@ def main():
         ts_filenames = []
         all_files_info = []
         for replicate_index, ts in enumerate(ped_ts_replicates):
+            logging.info("")
             logging.info(f"Checkpoint 2: Processing replicate {replicate_index}")
             
             completed_ts = msprime.sim_ancestry(
@@ -1185,6 +1289,55 @@ def main():
                 record_provenance=False
             )
             
+            # mutation_seed = rng.randint(1, 2**32 - 1)
+            
+            # # For multiple chromosomes, use a different approach
+            # # We need to mutate the sequence according to position
+            # if len(which_chromosome) == 1:
+            #     # Simple case - just one chromosome
+            #     chrom = which_chromosome[0]
+            #     mutation_model = msprime.SLiMMutationModel(
+            #         type=0,
+            #         next_id=0,
+            #         rate=args.mutation_rate,
+            #         nucleotides=True,
+            #         slim_generation=1,
+            #         sequence=reference_sequence[chrom]
+            #     )
+                
+            #     # Apply mutations
+            #     mutated_ts = msprime.sim_mutations(
+            #         completed_ts,
+            #         rate=None,  # Rate is specified in the model
+            #         model=mutation_model,
+            #         random_seed=mutation_seed
+            #     )
+            # else:
+            #     # Multiple chromosomes - use position-specific ancestral states
+            #     mutated_ts = completed_ts
+                
+            #     # Create a position-specific ancestral state map
+            #     ancestral_states = {}
+                
+            #     for position in range(int(assembly_len_maps)):
+            #         # Find which chromosome this position belongs to
+            #         for (start, end), chrom in conversion_dict.items():
+            #             if start <= position < end:
+            #                 # Get the base from the appropriate reference sequence
+            #                 local_pos = position - start
+            #                 if chrom in reference_sequence and local_pos < len(reference_sequence[chrom]):
+            #                     ancestral_states[position] = reference_sequence[chrom][local_pos]
+            #                 break
+                
+            #     # Apply mutations with consistent ancestral states
+            #     mutated_ts = msprime.sim_mutations(
+            #         completed_ts,
+            #         rate=args.mutation_rate,
+            #         random_seed=mutation_seed,
+            #         discrete_genome=True,
+            #         ancestral_state_map=ancestral_states
+            #     )
+                
             mutated_ts = msprime.sim_mutations(
                 completed_ts,
                 rate=args.mutation_rate
@@ -1197,7 +1350,7 @@ def main():
             
             logging.info(f"Checkpoint 3: Saved replicate {replicate_index}")
         
-            files_info = process_tree_sequence(ts, conversion_dict, replicate_index, txt_ped_to_tskit_key, 
+            files_info = process_tree_sequence(mutated_ts, conversion_dict, replicate_index, txt_ped_to_tskit_key, 
                         results_directory, min_segment_length_cm=3.0, max_time=None, 
                         genetic_map_name="HapMapII_GRCh38")
             all_files_info.append(files_info)
@@ -1215,6 +1368,24 @@ def main():
     seconds = (runtime % 3600) % 60
     logging.info(f"Runtime: {hours:.0f}:{minutes:.0f}:{seconds:.0f}")
     
+    # Merge IBD segment files
+    ibd_files = [info['ibd_file'] for info in all_files_info if info['ibd_file'] is not None]
+    if ibd_files:
+        # Read and concatenate all IBD segment files
+        merged_ibd = pd.concat([pd.read_csv(f) for f in ibd_files if os.path.exists(f)], ignore_index=True)
+        merged_ibd_file = os.path.join(results_directory, "merged_ibd_segments.csv")
+        merged_ibd.to_csv(merged_ibd_file, index=False)
+        logging.info(f"Merged IBD segments saved to {merged_ibd_file}")
+            
+    # Merge MRCA files
+    mrca_files = [info['mrca_file'] for info in all_files_info if info['mrca_file'] is not None]
+    if mrca_files:
+        # Read and concatenate all MRCA files
+        merged_mrca = pd.concat([pd.read_csv(f) for f in mrca_files if os.path.exists(f)], ignore_index=True)
+        merged_mrca_file = os.path.join(results_directory, "merged_pairwise_mrca.csv")
+        merged_mrca.to_csv(merged_mrca_file, index=False)
+        logging.info(f"Merged MRCA information saved to {merged_mrca_file}")
+    
     # Merge VCF files if needed
     compressed_vcf_files = [info['compressed_vcf'] for info in all_files_info if info['compressed_vcf']]
 
@@ -1225,17 +1396,17 @@ def main():
         
         try:
             subprocess.run(merge_cmd, check=True)
-            print(f"Merged VCF file saved to {output_vcf}")
+            logging.info(f"Merged VCF file saved to {output_vcf}")
             
             # Index the merged file
             merged_index_cmd = ["tabix", "-p", "vcf", output_vcf]
             subprocess.run(merged_index_cmd, check=True)
-            print(f"Indexed merged VCF file")
+            logging.info(f"Indexed merged VCF file")
             
         except subprocess.CalledProcessError as e:
-            print(f"Error merging VCF files: {e}")
+            logging.info(f"Error merging VCF files: {e}")
     else:
-        print("No valid VCF files to merge")
+        logging.info("No valid VCF files to merge")
 
 
 if __name__ == "__main__":

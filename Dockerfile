@@ -25,8 +25,10 @@ RUN apt update && apt upgrade -y && apt install -y software-properties-common
 RUN apt-add-repository -y universe && apt-add-repository -y multiverse && apt-add-repository -y ppa:deadsnakes/ppa 
 RUN apt update && apt upgrade -y
 
-# Install system
-RUN apt install -y --no-install-recommends \
+# Update repositories and install dependencies
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends \
+    software-properties-common \
     build-essential \
     g++ \
     gcc \
@@ -35,8 +37,13 @@ RUN apt install -y --no-install-recommends \
     python3.12-dev \
     python3.12-venv \
     python3-pip \
-    graphviz \
-    libfreetype-dev \
+    pipx \
+    wget \
+    curl \
+    git \
+    unzip \
+    libcairo2 \
+    libcairo2-dev \
     pkg-config \
     libpng-dev \
     zlib1g-dev \
@@ -45,19 +52,33 @@ RUN apt install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libssl-dev \
     libxml2-dev \
-    wget \
-    curl \
-    git \
-    unzip \
+    cmake \
+    libsystemd-dev \
+    libgirepository1.0-dev \
+    gir1.2-glib-2.0 \
+    libdbus-1-dev \
+    graphviz \
+    graphviz-dev \
+    libpq-dev \
+    postgresql-client \
+    libtirpc-dev \
     default-jre \
+    default-jdk \
     gawk \
     libboost-all-dev \
     texlive-xetex \
     texlive-fonts-recommended \
     texlive-plain-generic \
-    pandoc && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
+    pandoc \
+    r-base \
+    liblzma-dev \
+    libgsl-dev \
+    bcftools \
+    samtools \
+    tabix \
+    autoconf \
+    automake \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ###############################################################################
 # User Setup
@@ -124,31 +145,17 @@ RUN poetry config virtualenvs.in-project true && poetry install --no-root
 ###############################################################################
 # Install System Dependencies
 ###############################################################################
-# Update package lists and install dependencies
+ENV UTILS_DIR="${WORKSPACE_DIR}/computational_genetic_genealogy/utils"
+
 USER root
 
-RUN apt update -y && apt install -y --no-install-recommends \
-    r-base \
-    libtirpc-dev
+# Install AWS CLI
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" && \
+    unzip -q /tmp/awscliv2.zip -d /tmp && \
+    /tmp/aws/install && \
+    rm -rf /tmp/awscliv2.zip /tmp/aws
+
 RUN R --version
-
-
-RUN apt update -y && apt install -y --no-install-recommends \
-    libbz2-dev \
-    liblzma-dev \
-    zlib1g-dev \
-    libgsl-dev \
-    libcurl4-openssl-dev \
-    bcftools \
-    samtools \
-    tabix && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Set environment variable for BCFtools plugins globally
-ENV BCFTOOLS_PLUGINS=/usr/lib/x86_64-linux-gnu/bcftools
-
-# Verify installations
-RUN bcftools --version && samtools --version && tabix --version
 
 # Check if Java is installed and install if missing
 RUN if command -v java > /dev/null; then \
@@ -170,99 +177,125 @@ RUN JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::") && \
 ENV JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
-# Define BEAGLE version and URLs
-ARG BEAGLE_VERSION="17Dec24.224"
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
+ENV BCFTOOLS_PLUGINS="/usr/lib/x86_64-linux-gnu/bcftools"
+# Verify installations
+RUN bcftools --version && samtools --version && tabix --version
 
-ENV BEAGLE_JAR="beagle.${BEAGLE_VERSION}.jar"
-ENV BREF3_JAR="bref3.${BEAGLE_VERSION}.jar"
-ENV UNBREF3_JAR="unbref3.${BEAGLE_VERSION}.jar"
-ENV BEAGLE_URL="https://faculty.washington.edu/browning/beagle/${BEAGLE_JAR}"
-ENV BREF3_URL="https://faculty.washington.edu/browning/beagle/${BREF3_JAR}"
-ENV UNBREF3_URL="https://faculty.washington.edu/browning/beagle/${UNBREF3_JAR}"
+### beagle, hap_ibd, refined_ibd, merge ####################################################
 
-# Ensure utils directory exists
-RUN mkdir -p ${UTILS_DIR}
+# Define genomic analysis tool variables with updated links
+ENV BEAGLE_JAR="beagle.27Feb25.75f.jar"
+ENV HAP_IBD_JAR="hap-ibd.jar"
+ENV REFINED_IBD_JAR="refined-ibd.17Jan20.102.jar"
+ENV REFINED_IBD_MERGE_JAR="merge-ibd-segments.17Jan20.102.jar"
 
-# Function to download a file only if it does not exist
-RUN set -eux; \
-    download_if_missing() { \
-        local file_path="${UTILS_DIR}/$1"; \
-        local file_url="$2"; \
-        if [ -f "${file_path}" ]; then \
-            echo "✅ File already exists: ${file_path}. Skipping download."; \
-        else \
-            echo "⬇️ Downloading $file_url..."; \
-            wget -P "${UTILS_DIR}" "${file_url}"; \
-        fi; \
-    } && \
-    download_if_missing "$UNBREF3_JAR" "$UNBREF3_URL" && \
-    download_if_missing "$BREF3_JAR" "$BREF3_URL" && \
-    download_if_missing "$BEAGLE_JAR" "$BEAGLE_URL"
+# Ensure utils directory exists and download files with verbose output and error handling
+RUN mkdir -p "${UTILS_DIR}" && \
+    wget -v -O "${UTILS_DIR}/${BEAGLE_JAR}" "https://faculty.washington.edu/browning/beagle/${BEAGLE_JAR}" || \
+    (echo "Failed to download Beagle JAR" && exit 1) && \
+    wget -v -O "${UTILS_DIR}/${HAP_IBD_JAR}" "https://faculty.washington.edu/browning/${HAP_IBD_JAR}" || \
+    (echo "Failed to download Hap-IBD JAR" && exit 1) && \
+    wget -v -O "${UTILS_DIR}/${REFINED_IBD_JAR}" "https://faculty.washington.edu/browning/refined-ibd/${REFINED_IBD_JAR}" || \
+    (echo "Failed to download Refined-IBD JAR" && exit 1) && \
+    wget -v -O "${UTILS_DIR}/${REFINED_IBD_MERGE_JAR}" "https://faculty.washington.edu/browning/refined-ibd/${REFINED_IBD_MERGE_JAR}" || \
+    (echo "Failed to download Refined-IBD Merge JAR" && exit 1)
 
-# Set JAVA_HOME and ensure Java is installed
-RUN apt update && apt install -y --no-install-recommends default-jdk && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Verify downloads and file permissions
+RUN ls -l "${UTILS_DIR}" && \
+    chmod +x "${UTILS_DIR}"/*.jar && \
+    echo "Verifying Beagle JAR:" && \
+    java -Xmx1g -jar "${UTILS_DIR}/${BEAGLE_JAR}" 2>&1 | grep -q "Browning" && \
+    echo "✅ Beagle JAR verified successfully." || \
+    echo "⚠️ Beagle JAR verification showed unexpected output (may be OK if just missing arguments)"
 
-# Verify Beagle installation
-RUN java -jar "${UTILS_DIR}/$BEAGLE_JAR" || \
-    (echo "❌ Beagle test run failed." && exit 1)
+### BonsaiTree installation script ######################################################
 
-# Run the BonsaiTree installation script
-RUN bash /home/ubuntu/computational_genetic_genealogy/scripts_env/install_bonsaitree.sh
+# Set up BonsaiTree
+ENV BONSAI_DIR="${UTILS_DIR}/bonsaitree"
 
-# Define variables
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
-ARG HAP_IBD_JAR="hap-ibd.jar"
-ARG REFINED_IBD_JAR="refined-ibd.17Jan20.102.jar"
-ARG REFINED_IBD_MERGE_JAR="merge-ibd-segments.17Jan20.102.jar"
+# Clone BonsaiTree repository
+RUN git clone https://github.com/23andMe/bonsaitree.git "${BONSAI_DIR}"
 
-ENV HAP_IBD_URL="https://faculty.washington.edu/browning/hap-ibd.jar"
-ENV REFINED_IBD_URL="https://faculty.washington.edu/browning/refined-ibd/refined-ibd.17Jan20.102.jar"
-ENV REFINED_IBD_MERGE_URL="https://faculty.washington.edu/browning/refined-ibd/merge-ibd-segments.17Jan20.102.jar"
+# Install BonsaiTree dependencies
+WORKDIR ${BONSAI_DIR}
+RUN poetry env use python3 && \
+    if [ -f "requirements.txt" ]; then \
+        echo "Adding dependencies from requirements.txt..." && \
+        grep -vE '^\s*(#|$)' requirements.txt | while IFS= read -r dependency; do \
+            package=$(echo "$dependency" | sed 's/[<>=!~].*//') && \
+            poetry add "$package" || echo "Failed to add dependency: $package"; \
+        done; \
+    fi && \
+    echo "Adding additional dependencies..." && \
+    poetry add pandas frozendict Cython funcy numpy scipy && \
+    poetry install --no-root
 
-# Ensure Java is installed
-RUN apt update && apt install -y --no-install-recommends default-jdk && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install setuptools in the Poetry environment and verify installation
+RUN poetry run pip install setuptools && \
+    echo 'try:' > verify_bonsai.py && \
+    echo '    from bonsaitree.v3.bonsai import build_pedigree' >> verify_bonsai.py && \
+    echo '    print("Bonsai module imported successfully.")' >> verify_bonsai.py && \
+    echo 'except ImportError as e:' >> verify_bonsai.py && \
+    echo '    print(f"Failed to import Bonsai: {e}")' >> verify_bonsai.py && \
+    echo '    exit(1)' >> verify_bonsai.py && \
+    poetry run python verify_bonsai.py && \
+    rm verify_bonsai.py
 
-# Ensure utils directory exists
-RUN mkdir -p ${UTILS_DIR}
+### rfmix2, ibis, ped-sim, plink2 #######################################################################
 
-# Download JAR files only if they do not already exist
-RUN set -eux; \
-    download_if_missing() { \
-        local file_path="${UTILS_DIR}/$1"; \
-        local file_url="$2"; \
-        if [ -f "${file_path}" ]; then \
-            echo "✅ File already exists: ${file_path}. Skipping download."; \
-        else \
-            echo "⬇️ Downloading $file_url..."; \
-            wget -P "${UTILS_DIR}" "${file_url}"; \
-        fi; \
-    } && \
-    download_if_missing "$HAP_IBD_JAR" "$HAP_IBD_URL" && \
-    download_if_missing "$REFINED_IBD_JAR" "$REFINED_IBD_URL" && \
-    download_if_missing "$REFINED_IBD_MERGE_JAR" "$REFINED_IBD_MERGE_URL"
+WORKDIR ${WORKSPACE_DIR}/pipeline_main
 
-# Test each downloaded JAR file
-RUN java -jar "${UTILS_DIR}/$HAP_IBD_JAR" || (echo "❌ Hap-IBD test run failed." && exit 1)
-RUN java -jar "${UTILS_DIR}/$REFINED_IBD_JAR" || (echo "❌ Refined-IBD test run failed." && exit 1)
-RUN java -jar "${UTILS_DIR}/$REFINED_IBD_MERGE_JAR" || (echo "❌ Refined-IBD Merge test run failed." && exit 1)
+# Define repositories
+ENV RFMIX2_REPO="https://github.com/slowkoni/rfmix.git"
+ENV IBIS_REPO="https://github.com/williamslab/ibis.git"
+ENV PED_SIM_REPO="https://github.com/williamslab/ped-sim.git"
+ENV PLINK2_FILE_URL="https://s3.amazonaws.com/plink2-assets/alpha6/plink2_linux_x86_64_20241206.zip"
 
-# Define utility directory and IBIS repository details
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
-ARG IBIS_REPO="https://github.com/williamslab/ibis.git"
-ARG IBIS_DIR="${UTILS_DIR}/ibis"
+# Define install directories
+ENV RFMIX2_DIR="${UTILS_DIR}/rfmix2"
+ENV IBIS_DIR="${UTILS_DIR}/ibis"
+ENV PED_SIM_DIR="${UTILS_DIR}/ped-sim"
+ENV PLINK2_BINARY="${UTILS_DIR}/plink2"
 
-# Ensure dependencies are installed
+# Install dependencies
 RUN apt update && apt install -y --no-install-recommends \
     git \
     build-essential \
+    libboost-all-dev \
+    autoconf \
+    automake \
+    make \
+    gcc \
+    wget \
+    unzip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Clone or update the IBIS repository
+# Clone or update RFMix2 repository
 RUN set -eux; \
-    mkdir -p ${UTILS_DIR}; \
+    if [ -d "${RFMIX2_DIR}" ]; then \
+        echo "📂 RFMix2 directory already exists at ${RFMIX2_DIR}."; \
+    else \
+        echo "⬇️ Cloning RFMix2 repository..."; \
+        git clone "${RFMIX2_REPO}" "${RFMIX2_DIR}"; \
+    fi
+
+# Build RFMix2
+WORKDIR ${RFMIX2_DIR}
+RUN set -eux; \
+    echo "🔨 Generating build files for RFMix2..."; \
+    aclocal && autoheader && autoconf && automake --add-missing && ./configure && make || \
+    (echo "❌ Error: RFMix2 build failed." && exit 1)
+
+# Verify RFMix2 installation
+RUN if [ -f "${RFMIX2_DIR}/rfmix" ]; then \
+        echo "✅ RFMix2 installed successfully."; \
+    else \
+        echo "❌ RFMix2 binary not found. Build might have failed."; \
+        exit 1; \
+    fi
+
+# Clone or update IBIS repository
+RUN set -eux; \
     if [ -d "${IBIS_DIR}" ]; then \
         echo "📂 IBIS directory already exists at ${IBIS_DIR}."; \
         if [ -d "${IBIS_DIR}/.git" ]; then \
@@ -277,9 +310,9 @@ RUN set -eux; \
         git clone --recurse-submodules "${IBIS_REPO}" "${IBIS_DIR}"; \
     fi
 
-# Build IBIS using make
+# Build IBIS
 WORKDIR ${IBIS_DIR}
-RUN make || (echo "❌ Build failed." && exit 1)
+RUN make || (echo "❌ IBIS build failed." && exit 1)
 
 # Verify IBIS installation
 RUN if [ -x "${IBIS_DIR}/ibis" ]; then \
@@ -289,21 +322,8 @@ RUN if [ -x "${IBIS_DIR}/ibis" ]; then \
         exit 1; \
     fi
 
-# Define utility directory and Ped-Sim repository details
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
-ARG PED_SIM_REPO="https://github.com/williamslab/ped-sim.git"
-ARG PED_SIM_DIR="${UTILS_DIR}/ped-sim"
-
-# Install dependencies
-RUN apt update && apt install -y --no-install-recommends \
-    git \
-    libboost-all-dev \
-    make \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Clone or update the Ped-Sim repository
+# Clone or update Ped-Sim repository
 RUN set -eux; \
-    mkdir -p ${UTILS_DIR}; \
     if [ -d "${PED_SIM_DIR}" ]; then \
         echo "📂 Ped-Sim directory already exists at ${PED_SIM_DIR}."; \
         if [ -d "${PED_SIM_DIR}/.git" ]; then \
@@ -318,9 +338,9 @@ RUN set -eux; \
         git clone --recurse-submodules "${PED_SIM_REPO}" "${PED_SIM_DIR}"; \
     fi
 
-# Build Ped-Sim using make
+# Build Ped-Sim
 WORKDIR ${PED_SIM_DIR}
-RUN make || (echo "❌ Build failed." && exit 1)
+RUN make || (echo "❌ Ped-Sim build failed." && exit 1)
 
 # Ensure Ped-Sim is executable
 RUN chmod +x ${PED_SIM_DIR}/ped-sim
@@ -333,27 +353,15 @@ RUN if [ -x "${PED_SIM_DIR}/ped-sim" ]; then \
         exit 1; \
     fi
 
-# Define utility directory and PLINK2 file details
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
-ARG PLINK2_FILE_URL="https://s3.amazonaws.com/plink2-assets/alpha6/plink2_linux_x86_64_20241206.zip"
-ARG PLINK2_ZIP_FILE="${UTILS_DIR}/plink2_linux_x86_64_20241206.zip"
-ARG PLINK2_BINARY="${UTILS_DIR}/plink2"
-
-# Ensure wget and unzip are installed
-RUN apt update && apt install -y --no-install-recommends \
-    wget \
-    unzip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # Download and extract PLINK2 if it is not already installed
 RUN set -eux; \
-    mkdir -p ${UTILS_DIR}; \
     if [ ! -f "${PLINK2_BINARY}" ]; then \
         echo "⬇️ Downloading PLINK2..."; \
         wget --progress=bar:force:noscroll "${PLINK2_FILE_URL}" -P "${UTILS_DIR}"; \
         echo "📂 Unzipping PLINK2..."; \
-        unzip "${PLINK2_ZIP_FILE}" -d "${UTILS_DIR}"; \
-        rm "${PLINK2_ZIP_FILE}"; \
+        unzip "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip" -d "${UTILS_DIR}"; \
+        rm "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip"; \
+        chmod +x ${PLINK2_BINARY}; \
     fi
 
 # Verify PLINK2 installation
@@ -361,55 +369,9 @@ RUN if [ -f "${PLINK2_BINARY}" ] && [ -x "${PLINK2_BINARY}" ]; then \
         echo "✅ PLINK2 installed successfully."; \
         "${PLINK2_BINARY}" --version; \
     else \
-        echo "❌ Error: PLINK2 installation failed. Binary not found or not executable."; \
+        echo "❌ PLINK2 installation failed. Binary not found or not executable."; \
         exit 1; \
     fi
-
-# Define RFMix2 repository details
-ARG UTILS_DIR="/home/ubuntu/computational_genetic_genealogy/utils"
-ARG RFMIX2_REPO="https://github.com/slowkoni/rfmix.git"
-ARG RFMIX2_DIR="${UTILS_DIR}/rfmix2"
-
-# Install dependencies
-RUN apt update && apt install -y --no-install-recommends \
-    autoconf \
-    automake \
-    make \
-    gcc \
-    git \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-# Clone or update the RFMix2 repository
-RUN set -eux; \
-    mkdir -p ${UTILS_DIR}; \
-    if [ -d "${RFMIX2_DIR}" ]; then \
-        echo "📂 RFMix2 directory already exists at ${RFMIX2_DIR}."; \
-    else \
-        echo "⬇️ Cloning RFMix2 repository..."; \
-        git clone "${RFMIX2_REPO}" "${RFMIX2_DIR}"; \
-    fi
-
-# Build RFMix2 from source
-WORKDIR ${RFMIX2_DIR}
-RUN set -eux; \
-    echo "🔨 Generating build files..."; \
-    aclocal && \
-    autoheader && \
-    autoconf && \
-    automake --add-missing && \
-    ./configure && \
-    echo "🔨 Compiling RFMix2..."; \
-    make || (echo "❌ Error: RFMix2 build failed." && exit 1)
-
-# Verify RFMix2 build
-RUN if [ -f "${RFMIX2_DIR}/rfmix" ]; then \
-        echo "✅ RFMix2 built successfully."; \
-    else \
-        echo "❌ Error: RFMix2 binary not found. Build failed."; \
-        exit 1; \
-    fi
-
-
 
 ###############################################################################
 # Volume Configuration

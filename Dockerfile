@@ -78,6 +78,9 @@ RUN apt-get update -y && \
     tabix \
     autoconf \
     automake \
+    libblas-dev \
+    liblapack-dev \
+    libatlas-base-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ###############################################################################
@@ -109,9 +112,9 @@ RUN install -d -m 775 -o ${USERNAME} -g ${USERNAME} \
     ${WORKSPACE_DIR}/computational_genetic_genealogy/references \
     ${WORKSPACE_DIR}/computational_genetic_genealogy/utils && \
     touch ${WORKSPACE_DIR}/computational_genetic_genealogy/references/__init__.py \
-          ${WORKSPACE_DIR}/computational_genetic_genealogy/data/__init__.py \
-          ${WORKSPACE_DIR}/computational_genetic_genealogy/results/__init__.py \
-          ${WORKSPACE_DIR}/computational_genetic_genealogy/utils/__init__.py && \
+    ${WORKSPACE_DIR}/computational_genetic_genealogy/data/__init__.py \
+    ${WORKSPACE_DIR}/computational_genetic_genealogy/results/__init__.py \
+    ${WORKSPACE_DIR}/computational_genetic_genealogy/utils/__init__.py && \
     chown -R ${USERNAME}:${USERNAME} ${WORKSPACE_DIR}
 
 # Set up environment configuration
@@ -159,12 +162,12 @@ RUN R --version
 
 # Check if Java is installed and install if missing
 RUN if command -v java > /dev/null; then \
-        echo "Java is already installed. Version: $(java -version 2>&1 | head -n 1)"; \
+    echo "Java is already installed. Version: $(java -version 2>&1 | head -n 1)"; \
     else \
-        apt-get update && \
-        apt-get install -y --no-install-recommends default-jdk && \
-        apt-get clean && rm -rf /var/lib/apt/lists/* && \
-        echo "Java installation successful. Version: $(java -version 2>&1 | head -n 1)"; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends default-jdk && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    echo "Java installation successful. Version: $(java -version 2>&1 | head -n 1)"; \
     fi
 
 # Set JAVA_HOME globally
@@ -220,11 +223,11 @@ RUN git clone https://github.com/23andMe/bonsaitree.git "${BONSAI_DIR}"
 WORKDIR ${BONSAI_DIR}
 RUN poetry env use python3 && \
     if [ -f "requirements.txt" ]; then \
-        echo "Adding dependencies from requirements.txt..." && \
-        grep -vE '^\s*(#|$)' requirements.txt | while IFS= read -r dependency; do \
-            package=$(echo "$dependency" | sed 's/[<>=!~].*//') && \
-            poetry add "$package" || echo "Failed to add dependency: $package"; \
-        done; \
+    echo "Adding dependencies from requirements.txt..." && \
+    grep -vE '^\s*(#|$)' requirements.txt | while IFS= read -r dependency; do \
+    package=$(echo "$dependency" | sed 's/[<>=!~].*//') && \
+    poetry add "$package" || echo "Failed to add dependency: $package"; \
+    done; \
     fi && \
     echo "Adding additional dependencies..." && \
     poetry add pandas frozendict Cython funcy numpy scipy && \
@@ -241,9 +244,17 @@ RUN poetry run pip install setuptools && \
     poetry run python verify_bonsai.py && \
     rm verify_bonsai.py
 
+# liftover tool installation
+ENV LIFTOVER_DIR="${UTILS_DIR}/liftover"
+RUN mkdir -p "${LIFTOVER_DIR}" && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/liftOver -O "${UTILS_DIR}/liftOver" && \
+    chmod +x "${UTILS_DIR}/liftOver" && \
+    wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz -P "${WORKSPACE_DIR}/computational_genetic_genealogy/references/"
+
+
 ### rfmix2, ibis, ped-sim, plink2 #######################################################################
 
-WORKDIR ${WORKSPACE_DIR}/pipeline_main
+WORKDIR ${WORKSPACE_DIR}/computational_genetic_genealogy
 
 # Define repositories
 ENV RFMIX2_REPO="https://github.com/slowkoni/rfmix.git"
@@ -257,26 +268,13 @@ ENV IBIS_DIR="${UTILS_DIR}/ibis"
 ENV PED_SIM_DIR="${UTILS_DIR}/ped-sim"
 ENV PLINK2_BINARY="${UTILS_DIR}/plink2"
 
-# Install dependencies
-RUN apt update && apt install -y --no-install-recommends \
-    git \
-    build-essential \
-    libboost-all-dev \
-    autoconf \
-    automake \
-    make \
-    gcc \
-    wget \
-    unzip \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # Clone or update RFMix2 repository
 RUN set -eux; \
     if [ -d "${RFMIX2_DIR}" ]; then \
-        echo "📂 RFMix2 directory already exists at ${RFMIX2_DIR}."; \
+    echo "📂 RFMix2 directory already exists at ${RFMIX2_DIR}."; \
     else \
-        echo "⬇️ Cloning RFMix2 repository..."; \
-        git clone "${RFMIX2_REPO}" "${RFMIX2_DIR}"; \
+    echo "⬇️ Cloning RFMix2 repository..."; \
+    git clone "${RFMIX2_REPO}" "${RFMIX2_DIR}"; \
     fi
 
 # Build RFMix2
@@ -288,26 +286,26 @@ RUN set -eux; \
 
 # Verify RFMix2 installation
 RUN if [ -f "${RFMIX2_DIR}/rfmix" ]; then \
-        echo "✅ RFMix2 installed successfully."; \
+    echo "✅ RFMix2 installed successfully."; \
     else \
-        echo "❌ RFMix2 binary not found. Build might have failed."; \
-        exit 1; \
+    echo "❌ RFMix2 binary not found. Build might have failed."; \
+    exit 1; \
     fi
 
 # Clone or update IBIS repository
 RUN set -eux; \
     if [ -d "${IBIS_DIR}" ]; then \
-        echo "📂 IBIS directory already exists at ${IBIS_DIR}."; \
-        if [ -d "${IBIS_DIR}/.git" ]; then \
-            echo "🔄 Updating IBIS repository..."; \
-            cd "${IBIS_DIR}" && git pull origin master; \
-        else \
-            echo "⚠️ Directory exists but is not a Git repository. Consider removing it manually."; \
-            exit 1; \
-        fi; \
+    echo "📂 IBIS directory already exists at ${IBIS_DIR}."; \
+    if [ -d "${IBIS_DIR}/.git" ]; then \
+    echo "🔄 Updating IBIS repository..."; \
+    cd "${IBIS_DIR}" && git pull origin master; \
     else \
-        echo "⬇️ Cloning IBIS repository..."; \
-        git clone --recurse-submodules "${IBIS_REPO}" "${IBIS_DIR}"; \
+    echo "⚠️ Directory exists but is not a Git repository. Consider removing it manually."; \
+    exit 1; \
+    fi; \
+    else \
+    echo "⬇️ Cloning IBIS repository..."; \
+    git clone --recurse-submodules "${IBIS_REPO}" "${IBIS_DIR}"; \
     fi
 
 # Build IBIS
@@ -316,26 +314,26 @@ RUN make || (echo "❌ IBIS build failed." && exit 1)
 
 # Verify IBIS installation
 RUN if [ -x "${IBIS_DIR}/ibis" ]; then \
-        echo "✅ IBIS installed successfully."; \
+    echo "✅ IBIS installed successfully."; \
     else \
-        echo "❌ IBIS executable not found. Build might have failed."; \
-        exit 1; \
+    echo "❌ IBIS executable not found. Build might have failed."; \
+    exit 1; \
     fi
 
 # Clone or update Ped-Sim repository
 RUN set -eux; \
     if [ -d "${PED_SIM_DIR}" ]; then \
-        echo "📂 Ped-Sim directory already exists at ${PED_SIM_DIR}."; \
-        if [ -d "${PED_SIM_DIR}/.git" ]; then \
-            echo "🔄 Updating Ped-Sim repository..."; \
-            cd "${PED_SIM_DIR}" && git pull origin master; \
-        else \
-            echo "⚠️ Directory exists but is not a Git repository. Consider removing it manually."; \
-            exit 1; \
-        fi; \
+    echo "📂 Ped-Sim directory already exists at ${PED_SIM_DIR}."; \
+    if [ -d "${PED_SIM_DIR}/.git" ]; then \
+    echo "🔄 Updating Ped-Sim repository..."; \
+    cd "${PED_SIM_DIR}" && git pull origin master; \
     else \
-        echo "⬇️ Cloning Ped-Sim repository..."; \
-        git clone --recurse-submodules "${PED_SIM_REPO}" "${PED_SIM_DIR}"; \
+    echo "⚠️ Directory exists but is not a Git repository. Consider removing it manually."; \
+    exit 1; \
+    fi; \
+    else \
+    echo "⬇️ Cloning Ped-Sim repository..."; \
+    git clone --recurse-submodules "${PED_SIM_REPO}" "${PED_SIM_DIR}"; \
     fi
 
 # Build Ped-Sim
@@ -347,30 +345,30 @@ RUN chmod +x ${PED_SIM_DIR}/ped-sim
 
 # Verify Ped-Sim installation
 RUN if [ -x "${PED_SIM_DIR}/ped-sim" ]; then \
-        echo "✅ Ped-Sim installed successfully."; \
+    echo "✅ Ped-Sim installed successfully."; \
     else \
-        echo "❌ Ped-Sim executable not found. Build might have failed."; \
-        exit 1; \
+    echo "❌ Ped-Sim executable not found. Build might have failed."; \
+    exit 1; \
     fi
 
 # Download and extract PLINK2 if it is not already installed
 RUN set -eux; \
     if [ ! -f "${PLINK2_BINARY}" ]; then \
-        echo "⬇️ Downloading PLINK2..."; \
-        wget --progress=bar:force:noscroll "${PLINK2_FILE_URL}" -P "${UTILS_DIR}"; \
-        echo "📂 Unzipping PLINK2..."; \
-        unzip "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip" -d "${UTILS_DIR}"; \
-        rm "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip"; \
-        chmod +x ${PLINK2_BINARY}; \
+    echo "⬇️ Downloading PLINK2..."; \
+    wget --progress=bar:force:noscroll "${PLINK2_FILE_URL}" -P "${UTILS_DIR}"; \
+    echo "📂 Unzipping PLINK2..."; \
+    unzip "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip" -d "${UTILS_DIR}"; \
+    rm "${UTILS_DIR}/plink2_linux_x86_64_20241206.zip"; \
+    chmod +x ${PLINK2_BINARY}; \
     fi
 
 # Verify PLINK2 installation
 RUN if [ -f "${PLINK2_BINARY}" ] && [ -x "${PLINK2_BINARY}" ]; then \
-        echo "✅ PLINK2 installed successfully."; \
-        "${PLINK2_BINARY}" --version; \
+    echo "✅ PLINK2 installed successfully."; \
+    "${PLINK2_BINARY}" --version; \
     else \
-        echo "❌ PLINK2 installation failed. Binary not found or not executable."; \
-        exit 1; \
+    echo "❌ PLINK2 installation failed. Binary not found or not executable."; \
+    exit 1; \
     fi
 
 ###############################################################################
@@ -381,49 +379,12 @@ VOLUME ["${WORKSPACE_DIR}/computational_genetic_genealogy/data", "${WORKSPACE_DI
 ###############################################################################
 # Container Startup
 ###############################################################################
-USER ${USERNAME}
-WORKDIR ${WORKSPACE_DIR}/computational_genetic_genealogy
+# Add entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
-CMD ["/bin/bash", "-c", "echo '===============================================' && \
-echo '✅ Setup completed!' && \
-echo 'Your environment has been configured with:' && \
-echo '- Updated system packages' && \
-echo '- ~/.local/bin added to PATH' && \
-echo '- System dependencies installed' && \
-echo '- Poetry installed and configured' && \
-echo '- Project dependencies installed' && \
-echo '- Python kernel installed for Jupyter Notebooks' && \
-echo '===============================================' && \
-echo '' && \
-echo '🚀 Your development container is ready!' && \
-echo '' && \
-echo '📢 To connect VS Code to this running container:' && \
-echo '1️⃣ Open VS Code.' && \
-echo '2️⃣ Install the Remote - Containers extension (if not already installed).' && \
-echo '3️⃣ Open the Command Palette (Ctrl+Shift+P on Windows/Linux or Cmd+Shift+P on macOS, or via the menu: View > Command Palette)' && \
-echo '   and select Remote-Containers: Attach to Running Container.' && \
-echo '4️⃣ Choose this container from the list and start coding!' && \
-echo '' && \
-echo '💡 Note: If you wish to run a new container instance, you must first stop the current container.' && \
-echo '   To stop the container, type exit or press Ctrl+D. This halts the container while preserving it' && \
-echo '   for later reattachment.' && \
-echo '' && \
-echo '💡 To resume your previous session, first locate your container ID or name by running:' && \
-echo '   docker ps -a' && \
-echo '   Then, restart and attach to the container using:' && \
-echo '   docker start -ai <container_id_or_name>' && \
-echo '   (Data in mounted volumes persists between runs.)' && \
-echo '' && \
-echo '📂 This container leverages Docker volumes to persist your work (e.g., data, references, and results)' && \
-echo '    on your local machine. Using volumes ensures that your data remains intact even if' && \
-echo '    the container is stopped or removed, allowing you to continue your work seamlessly.' && \
-echo '    To mount local directories, run:' && \
-echo '' && \
-echo '   docker run -it \\ ' && \
-echo '   -v $(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data \\ ' && \
-echo '   -v $(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references \\ ' && \
-echo '   -v $(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results \\ ' && \
-echo '   lakishadavid/cgg_image:latest' && \
-echo '' && \
-echo '   (Replace $(pwd)/results and $(pwd)/references with your actual local paths)' && \
-exec bash"]
+WORKDIR ${WORKSPACE_DIR}/computational_genetic_genealogy
+USER ${USERNAME}
+
+# Use entrypoint script
+ENTRYPOINT ["/docker-entrypoint.sh"]

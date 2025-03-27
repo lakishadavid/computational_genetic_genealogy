@@ -3185,6 +3185,17 @@ files = [
 windows-terminal = ["colorama (>=0.4.6)"]
 
 [[package]]
+name = "pygraphviz"
+version = "1.14"
+description = "Python interface to Graphviz"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "pygraphviz-1.14.tar.gz", hash = "sha256:c10df02377f4e39b00ae17c862f4ee7e5767317f1c6b2dfd04cea6acc7fc2bea"},
+]
+
+[[package]]
 name = "pyliftover"
 version = "0.4.1"
 description = "Pure-python implementation of UCSC ``liftOver`` genome coordinate conversion."
@@ -4969,4 +4980,4 @@ test = ["botocore", "coverage", "fsspec (>=2023.10.0)", "hypothesis", "moto[s3,s
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "e0df48a02200ae7765fc0240ba04eb3da6b2bd026152939424de36e123d0f782"
+content-hash = "2f24cb49b891d2ac451e74e404c2c7bbbc7b2fda73d84987d368905ccb107526"

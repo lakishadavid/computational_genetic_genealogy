@@ -412,21 +412,18 @@ Follow these steps in your **Ubuntu terminal**:
 16. **Important Note on `scripts_env/directory_setup.py`:**
     This project includes a script `scripts_env/directory_setup.py` which can also configure directories and create a `.env` file. However, that script places the `.env` file _inside the project directory_ (`${PROJECT_BASE_DIR}/.env`), whereas the Docker environment uses `~/.env`. To ensure the local setup aligns closely with the Docker environment, these manual instructions use `~/.env` and **do not run** `scripts_env/directory_setup.py`.
 
-## Data Persistence
+## Project Directory Structure
 
-When using the Docker setup, three directories are configured as volumes for data persistence:
+The manual setup in steps 1-2 creates the following directory structure:
 
-- `${PROJECT_BASE_DIR}/data`
-- `${PROJECT_BASE_DIR}/references`
-- `${PROJECT_BASE_DIR}/results`
+- `${PROJECT_BASE_DIR}/data`: For storing input data files
+- `${PROJECT_BASE_DIR}/references`: For reference files and databases
+- `${PROJECT_BASE_DIR}/results`: For analysis outputs and results
+- `${PROJECT_BASE_DIR}/utils`: For installed tools and utility scripts
 
-With this manual setup, these directories serve the same purpose. They should contain:
+These directories are essential for organizing your work and match the structure used in the Docker setup. The initial `class_data` will be copied into the `data` directory when running Lab0_Code_Environment.ipynb.
 
-- **data**: Input data for analysis
-- **references**: Reference files and databases
-- **results**: Output from your analyses
-
-Initial class data will be copied to the data directory when running Lab0_Code_Environment.ipynb.
+Tip: Keep these directories organized as you work through the labs. When you generate results, save them to the `results` directory to easily find them later.
 
 ## Upgrading Ubuntu in WSL2
 

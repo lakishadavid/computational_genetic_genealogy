@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 0: Getting Data | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Getting Genetic Data</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab0_data.html" class="active">Lab 0: Getting Data</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 0: Getting Genetic Data</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Genetic analysis requires access to genomic data. This lab introduces two key data sources we'll be using throughout the course: OpenSNP and the 1000 Genomes Project, each offering different perspectives on human genetic variation.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the difference between public genetic data repositories</li>
+                <li>Access and download data from OpenSNP and the 1000 Genomes Project</li>
+                <li>Recognize common genetic data file formats</li>
+                <li>Prepare genetic data for computational analysis</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Genetic Data Repositories</h4>
+            <p>There are several sources of publicly available genetic data that serve different research purposes:</p>
+            
+            <table>
+                <tr>
+                    <th>Repository</th>
+                    <th>Description</th>
+                    <th>Data Type</th>
+                </tr>
+                <tr>
+                    <td>OpenSNP</td>
+                    <td>User-contributed direct-to-consumer genetic test results</td>
+                    <td>SNP genotypes from consumer tests</td>
+                </tr>
+                <tr>
+                    <td>1000 Genomes Project</td>
+                    <td>Reference collection of human genetic variation</td>
+                    <td>Whole genome sequencing data</td>
+                </tr>
+                <tr>
+                    <td>gnomAD</td>
+                    <td>Aggregated exome and genome sequencing data</td>
+                    <td>Exome and whole genome data</td>
+                </tr>
+                <tr>
+                    <td>HGDP</td>
+                    <td>Human Genome Diversity Project data</td>
+                    <td>Population genetics data</td>
+                </tr>
+            </table>
+
+            <h4>Data Formats</h4>
+            <p>Genetic data comes in various formats, each serving different analytical purposes:</p>
+            
+            <table>
+                <tr>
+                    <th>Format</th>
+                    <th>Description</th>
+                    <th>Typical Use</th>
+                </tr>
+                <tr>
+                    <td>VCF</td>
+                    <td>Variant Call Format - stores gene sequence variations</td>
+                    <td>Standard for representing SNPs, insertions, deletions</td>
+                </tr>
+                <tr>
+                    <td>PLINK (bed/bim/fam)</td>
+                    <td>Binary format for storing genotype/phenotype data</td>
+                    <td>Genetic association analyses</td>
+                </tr>
+                <tr>
+                    <td>FASTA/FASTQ</td>
+                    <td>Text-based format for representing nucleotide sequences</td>
+                    <td>Raw sequence data</td>
+                </tr>
+                <tr>
+                    <td>BAM/SAM</td>
+                    <td>Sequence alignment format</td>
+                    <td>Aligned sequence reads</td>
+                </tr>
+            </table>
+
+            <h3>OpenSNP Data</h3>
+            
+            <p>OpenSNP is a platform where individuals can share their direct-to-consumer genetic test results for research purposes. The data includes results from companies like 23andMe, AncestryDNA, and others.</p>
+            
+            <h4>Accessing OpenSNP Data</h4>
+            <p>We'll use Python to download a selection of OpenSNP datasets:</p>
+            
+            <pre><code># Python code to download OpenSNP data
+import requests
+import pandas as pd
+import os
+
+# Function to fetch metadata about available genotyping files
+def fetch_opensnp_metadata():
+    url = "https://opensnp.org/snps.json"
+    response = requests.get(url)
+    data = response.json()
+    return pd.DataFrame(data)
+
+# Display available data
+metadata = fetch_opensnp_metadata()
+print(f"Total available datasets: {len(metadata)}")
+
+# Select and download specific files (example)
+selected_ids = [12148, 12152, 12164, 12173, 12214, 12218, 6559, 6563, 6579, 8208]
+for user_id in selected_ids:
+    user_data = metadata[metadata['user_id'] == user_id]
+    if not user_data.empty:
+        download_url = user_data.iloc[0]['file_url']
+        # Download logic here...</code></pre>
+
+            <h4>Understanding OpenSNP Data</h4>
+            <p>The raw data from direct-to-consumer tests typically includes:</p>
+            <ul>
+                <li>Chromosomal position</li>
+                <li>Reference SNP cluster ID (rsID)</li>
+                <li>Genotype calls (e.g., AA, AG, GG)</li>
+            </ul>
+            
+            <p>Example of raw data format from AncestryDNA:</p>
+            
+            <pre><code># rsid,chromosome,position,allele1,allele2
+rs4477212,1,82154,A,A
+rs3094315,1,752566,G,A
+rs3131972,1,752721,G,A
+rs12124819,1,776546,A,G
+...</code></pre>
+
+            <h3>1000 Genomes Project Data</h3>
+            
+            <p>The 1000 Genomes Project is an international research effort to establish the most detailed catalog of human genetic variation. It includes sequencing data from 2,504 individuals from 26 populations around the world.</p>
+            
+            <h4>Accessing 1000 Genomes Data</h4>
+            <p>The 1000 Genomes Project data is available through multiple repositories. We'll download a small subset for our analysis:</p>
+            
+            <pre><code># Python code to download 1000 Genomes Project data
+import urllib.request
+import os
+
+def download_1kg_sample(chromosome, population, output_dir):
+    """Download a VCF file for a specific chromosome and population."""
+    base_url = "http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/"
+    filename = f"ALL.chr{chromosome}.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz"
+    url = base_url + filename
+    output_path = os.path.join(output_dir, filename)
+    
+    print(f"Downloading {filename}...")
+    urllib.request.urlretrieve(url, output_path)
+    print(f"Downloaded to {output_path}")
+    
+    # Download the index file too
+    index_url = url + ".tbi"
+    index_path = output_path + ".tbi"
+    urllib.request.urlretrieve(index_url, index_path)
+    print(f"Downloaded index to {index_path}")
+    
+# Create directory for downloaded data
+os.makedirs("1000genomes_data", exist_ok=True)
+
+# Download chromosome 22 data (smallest chromosome for testing)
+download_1kg_sample(22, "ALL", "1000genomes_data")</code></pre>
+
+            <h4>Understanding 1000 Genomes Data</h4>
+            <p>The 1000 Genomes data is provided in VCF (Variant Call Format), which includes:</p>
+            <ul>
+                <li>Detailed position information</li>
+                <li>Reference and alternate alleles</li>
+                <li>Quality scores and filter information</li>
+                <li>Genotype information for each sample</li>
+            </ul>
+            
+            <p>VCF files are more complex than direct-to-consumer test formats and contain much more information:</p>
+            
+            <pre><code>##fileformat=VCFv4.1
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=20150218
+##reference=ftp://ftp.1000genomes.ebi.ac.uk//vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  HG00096 HG00097 ...
+22      16050036        rs587755077     A       G       100     PASS    AC=1;AF=0.000199681;AN=5008;...    GT:PS   0|0:. ...</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>These data sources provide different perspectives on human genetic diversity:</p>
+            <ul>
+                <li><strong>OpenSNP data</strong> gives us access to genetic profiles from individuals who have opted to share their personal genetic information, representing people with diverse ancestry who have taken consumer DNA tests.</li>
+                <li><strong>1000 Genomes data</strong> provides a carefully curated reference of global human genetic variation with well-documented population labels, enabling us to understand broader patterns of human migration and ancestry.</li>
+            </ul>
+            
+            <p>For anthropologists, combining these datasets allows for studying both individual genealogical connections and broader population histories that can shed light on human movements like the transatlantic slave trade, colonial migrations, and other historical events.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Download a subset of OpenSNP data</li>
+                <li>Explore the structure of different genetic data file formats</li>
+                <li>Download and examine a chromosome from the 1000 Genomes Project</li>
+                <li>Compare OpenSNP and 1000 Genomes data formats</li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <p><strong>Note:</strong> These datasets can be large. For the course, we've prepared pre-processed subsets that are more manageable. The code examples above demonstrate the process but won't need to be run in full.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab0_environment.html" class="prev-lab">Environment Setup</a>
+                <a href="lab1_python.html" class="next-lab">Python Basics</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

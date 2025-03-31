@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 0: Environment Setup | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Environment Setup</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab0_environment.html" class="active">Lab 0: Environment</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 0: Setting Up Your Computational Environment</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Computational genetic genealogy requires specialized tools to process and analyze genetic data. This lab ensures you have the correct environment to work with throughout the course.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the tools and frameworks used in computational genetics</li>
+                <li>Set up a reproducible environment using Docker or local installation</li>
+                <li>Verify proper installation of bioinformatics tools</li>
+                <li>Organize project directories for genetic analysis</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Reproducible Environments</h4>
+            <p>Genetic analysis requires multiple specialized bioinformatics tools working together. We use containerization (Docker) or detailed local setup instructions to ensure everyone has identical, working environments.</p>
+            
+            <div class="figure">
+                <img src="../images/docker_diagram.png" alt="Docker environment diagram" style="max-width: 600px;">
+                <p class="figure-caption">Docker containers package all necessary tools and dependencies to ensure consistent analysis environments.</p>
+            </div>
+
+            <h4>Core Bioinformatics Tools</h4>
+            <p>The following tools are essential for genetic data processing and analysis:</p>
+            
+            <table>
+                <tr>
+                    <th>Tool</th>
+                    <th>Purpose</th>
+                    <th>Version</th>
+                </tr>
+                <tr>
+                    <td>bcftools</td>
+                    <td>Manipulate variant call format (VCF) files</td>
+                    <td>1.18</td>
+                </tr>
+                <tr>
+                    <td>samtools</td>
+                    <td>Process sequence alignment/map (SAM) files</td>
+                    <td>1.18</td>
+                </tr>
+                <tr>
+                    <td>PLINK2</td>
+                    <td>Whole genome association analysis</td>
+                    <td>2.0 alpha</td>
+                </tr>
+                <tr>
+                    <td>IBIS</td>
+                    <td>Identity-by-descent segment detection</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td>Beagle</td>
+                    <td>Phasing and imputation of genetic data</td>
+                    <td>5.4</td>
+                </tr>
+                <tr>
+                    <td>Hap-IBD</td>
+                    <td>Haplotype-based IBD detection</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td>Refined-IBD</td>
+                    <td>Identity-by-descent detection</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td>Ped-Sim</td>
+                    <td>Pedigree-based genetic simulation</td>
+                    <td>Latest</td>
+                </tr>
+                <tr>
+                    <td>BonsaiTree</td>
+                    <td>Reconstructing pedigrees from IBD data</td>
+                    <td>Latest</td>
+                </tr>
+            </table>
+
+            <h4>Project Organization</h4>
+            <p>Proper organization of directories and files is crucial for managing genetic data analysis:</p>
+            
+            <pre><code>computational_genetic_genealogy/
+├── data/            # Input genetic data
+├── references/      # Reference files and genetic maps
+├── results/         # Analysis outputs
+├── utils/           # Utility tools and binaries
+└── scripts_work/    # Analysis scripts</code></pre>
+
+            <h3>Environment Setup Options</h3>
+            
+            <h4>Option 1: Docker Setup (Recommended)</h4>
+            <p>Using Docker provides a consistent, reproducible environment with all tools pre-installed.</p>
+            
+            <ol>
+                <li>Install <a href="https://docs.docker.com/get-docker/" target="_blank">Docker</a> for your operating system</li>
+                <li>Pull the course image: <code>docker pull lakishadavid/cgg_image:latest</code></li>
+                <li>Launch the container with your local directories mapped:</li>
+            </ol>
+            
+            <pre><code>docker run -it --rm \
+   -v "$(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data" \
+   -v "$(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references" \
+   -v "$(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results" \
+   -v "$(pwd):/home/ubuntu/computational_genetic_genealogy" \
+   lakishadavid/cgg_image:latest bash</code></pre>
+
+            <div class="alert alert-warning">
+                <p><strong>Note:</strong> You must be in your project directory when running this command, or adjust the paths accordingly.</p>
+            </div>
+
+            <h4>Option 2: Ubuntu Local Setup</h4>
+            <p>For those who prefer a local installation, follow these steps on Ubuntu 24.04:</p>
+            
+            <ol>
+                <li>Install system packages:</li>
+            </ol>
+            
+            <pre><code>sudo apt update && sudo apt upgrade -y && sudo apt install -y software-properties-common
+sudo apt-add-repository -y universe && sudo apt-add-repository -y multiverse 
+sudo apt update -y
+
+# Install main dependencies
+sudo apt install -y build-essential g++ gcc make python3.12 python3.12-dev 
+python3.12-venv python3-pip pipx wget curl git unzip [additional packages...]</code></pre>
+
+            <p>Additional steps include:</p>
+            <ul>
+                <li>Building samtools, bcftools, and htslib from source</li>
+                <li>Setting up Poetry for Python dependency management</li>
+                <li>Installing Java tools (Beagle, Hap-IBD, etc.)</li>
+                <li>Building analysis tools from source (IBIS, Ped-Sim, etc.)</li>
+            </ul>
+
+            <p>The complete setup instructions are provided in the <a href="https://github.com/lakishadavid/computational_genetic_genealogy" target="_blank">GitHub repository README</a>.</p>
+
+            <h3>Environment Verification</h3>
+            <p>After setup, verify your environment by checking tool versions:</p>
+            
+            <pre><code># Check core tools are available
+bcftools --version
+samtools --version
+
+# Verify Python environment
+python --version
+poetry --version
+
+# Test Java-based tools
+java -Xmx1g -jar "${UTILS_DIR}/beagle.jar" </code></pre>
+
+            <p>A properly configured environment will show confirmation messages for each tool.</p>
+
+            <h3>Anthropological Context</h3>
+            <p>The computational tools we're setting up will allow us to analyze genetic data in ways that reveal historical family relationships and population movements. For anthropologists, these tools provide a window into human migration, kinship structures, and family ties that may have been disrupted by historical events like the transatlantic slave trade.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Set up your environment using either Docker or local installation</li>
+                <li>Verify all tools are installed correctly by running version checks</li>
+                <li>Create the proper directory structure for your data and analysis</li>
+                <li>Run a simple test command with each major tool to confirm functionality</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> If you encounter issues during setup, check the "Troubleshooting" section in the repository README or post your question in the course forum.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <span></span> <!-- placeholder for the prev button on first lab -->
+                <a href="lab0_data.html" class="next-lab">Getting Data</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

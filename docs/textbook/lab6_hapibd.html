@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 6: Hap-IBD | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>IBD Detection with Hap-IBD</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab6_hapibd.html" class="active">Lab 6: Hap-IBD</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 6: Identity-by-Descent Detection with Hap-IBD</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Hap-IBD is a newer, highly efficient algorithm for detecting IBD segments. Unlike IBIS, Hap-IBD works directly with phased VCF files and uses a different model that can provide complementary information to other IBD detection tools. Being able to run multiple detection tools improves the reliability of identified genetic relationships.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the haplotype-based approach to IBD detection</li>
+                <li>Run the Hap-IBD algorithm on phased genetic data</li>
+                <li>Interpret the output from Hap-IBD</li>
+                <li>Compare Hap-IBD results with other IBD detection methods</li>
+                <li>Analyze IBD segments across different detection algorithms</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Haplotype-Based IBD Detection</h4>
+            <p>Hap-IBD uses a different approach to IBD detection than IBIS:</p>
+            
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>IBIS</th>
+                    <th>Hap-IBD</th>
+                </tr>
+                <tr>
+                    <td>Input format</td>
+                    <td>PLINK binary files (BED/BIM/FAM)</td>
+                    <td>Phased VCF files</td>
+                </tr>
+                <tr>
+                    <td>Detection approach</td>
+                    <td>Hidden Markov Model (HMM)</td>
+                    <td>Positional Burrows-Wheeler Transform</td>
+                </tr>
+                <tr>
+                    <td>Speed</td>
+                    <td>Moderate</td>
+                    <td>Very fast</td>
+                </tr>
+                <tr>
+                    <td>Memory usage</td>
+                    <td>Moderate to high</td>
+                    <td>Lower</td>
+                </tr>
+                <tr>
+                    <td>Minimum segment length</td>
+                    <td>~2 cM</td>
+                    <td>~1 cM</td>
+                </tr>
+            </table>
+
+            <h4>The Advantage of Multiple Algorithms</h4>
+            <p>Using multiple IBD detection algorithms provides several benefits:</p>
+            <ul>
+                <li>Different detection methods may identify different segments or relationships</li>
+                <li>Segments identified by multiple methods are generally more reliable</li>
+                <li>Comparing methodologies helps understand the strengths and limitations of each approach</li>
+                <li>Combined approaches provide a more complete picture of genetic relationships</li>
+            </ul>
+
+            <h3>Preparing Data for Hap-IBD</h3>
+            
+            <h4>Input Requirements</h4>
+            <p>Hap-IBD requires:</p>
+            <ul>
+                <li>Phased VCF files (output from phasing algorithms like Beagle)</li>
+                <li>Genetic map files providing genetic distances in centiMorgans</li>
+            </ul>
+            
+            <p>Ensure your phased VCF files have the following characteristics:</p>
+            <ul>
+                <li>Each chromosome should be in a separate file</li>
+                <li>Genotypes must be phased (pipe-separated format, e.g., "0|1")</li>
+                <li>Files should be indexed (with .tbi files)</li>
+            </ul>
+
+            <h3>Running Hap-IBD</h3>
+            
+            <h4>Basic Command</h4>
+            <p>The basic command for running Hap-IBD is:</p>
+            
+            <pre><code>java -jar hap-ibd.jar \
+    gt=phased_data_chr1.vcf.gz \
+    map=genetic_map_chr1.map \
+    out=results/hapibd_chr1</code></pre>
+
+            <p>This minimal command runs Hap-IBD with default parameters. Additional parameters can be specified:</p>
+            
+            <pre><code>java -jar hap-ibd.jar \
+    gt=phased_data_chr1.vcf.gz \
+    map=genetic_map_chr1.map \
+    out=results/hapibd_chr1 \
+    min-seed=2.0 \
+    min-extend=1.0 \
+    min-output=3.0 \
+    max-gap=1000 \
+    nthreads=4</code></pre>
+
+            <p>Key parameters:</p>
+            <ul>
+                <li><code>min-seed</code>: Minimum length (cM) of seed segments</li>
+                <li><code>min-extend</code>: Minimum length (cM) to extend a seed segment</li>
+                <li><code>min-output</code>: Minimum length (cM) of reported IBD segments</li>
+                <li><code>max-gap</code>: Maximum gap (kb) allowed between markers</li>
+                <li><code>nthreads</code>: Number of computational threads to use</li>
+            </ul>
+
+            <h4>Running on Multiple Chromosomes</h4>
+            <p>We'll automate running Hap-IBD on all chromosomes using Python:</p>
+            
+            <pre><code>def run_hap_ibd(phased_samples_dir, results_directory, utils_directory, references_directory):
+    """Runs hap-ibd IBD detection for chromosome-specific phased sample VCF files."""
+    # Paths for the hap-ibd JAR and output folder
+    hap_ibd_jar = os.path.join(utils_directory, "hap-ibd.jar")
+    os.makedirs(results_directory, exist_ok=True)
+    
+    # Process each chromosome (1-22)
+    for chromosome in range(1, 23):
+        # Define input and output filenames
+        map_file = os.path.join(references_directory, 
+                            f"genetic_maps/beagle_genetic_maps/plink.chr{chromosome}.GRCh38.map")
+        vcf_file = os.path.join(phased_samples_dir, 
+                            f"opensnps_phased_chr{chromosome}.vcf.gz")
+        output_prefix = os.path.join(results_directory, 
+                                f"hap_ibd_chr{chromosome}")
+        
+        # Check if the required files exist
+        if not os.path.isfile(map_file) or not os.path.isfile(vcf_file):
+            print(f"Skipping chromosome {chromosome}: Input files not found")
+            continue
+        
+        # Construct the hap-ibd command
+        command = [
+            "java", "-jar", hap_ibd_jar,
+            f"gt={vcf_file}",
+            f"map={map_file}",
+            f"out={output_prefix}",
+            "min-seed=2.0",
+            "min-extend=1.0",
+            "min-output=3.0"
+        ]
+        
+        # Execute the command
+        subprocess.run(command, check=True)
+        print(f"Hap-IBD completed for chromosome {chromosome}")</code></pre>
+
+            <h3>Understanding Hap-IBD Output</h3>
+            
+            <h4>Output Files</h4>
+            <p>Hap-IBD generates two main output files:</p>
+            
+            <table>
+                <tr>
+                    <th>File Extension</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>.ibd.gz</code></td>
+                    <td>IBD segments between pairs of individuals</td>
+                </tr>
+                <tr>
+                    <td><code>.hbd.gz</code></td>
+                    <td>Homozygous-by-descent segments within individuals</td>
+                </tr>
+            </table>
+
+            <h4>IBD File Format</h4>
+            <p>The IBD file contains information about shared segments:</p>
+            
+            <pre><code># Columns: id1 hap1 id2 hap2 chr start end cM
+sample1 0 sample2 1 1 12345678 23456789 15.22
+sample1 1 sample3 0 1 34567890 45678901 8.45</code></pre>
+
+            <p>Fields:</p>
+            <ul>
+                <li><code>id1, id2</code>: Sample identifiers</li>
+                <li><code>hap1, hap2</code>: Haplotype indices (0 or 1) for each sample</li>
+                <li><code>chr</code>: Chromosome number</li>
+                <li><code>start, end</code>: Physical positions (base pairs)</li>
+                <li><code>cM</code>: Genetic length in centiMorgans</li>
+            </ul>
+            
+            <p>Note that unlike IBIS, Hap-IBD reports the specific haplotype (maternal or paternal) for each sample that contains the IBD segment. This provides more detailed information about the inheritance pattern.</p>
+
+            <h4>HBD File Format</h4>
+            <p>The HBD file contains information about homozygous segments:</p>
+            
+            <pre><code># Columns: id chr start end cM
+sample1 1 12345678 23456789 15.22
+sample3 2 34567890 45678901 8.45</code></pre>
+
+            <p>Fields:</p>
+            <ul>
+                <li><code>id</code>: Sample identifier</li>
+                <li><code>chr</code>: Chromosome number</li>
+                <li><code>start, end</code>: Physical positions (base pairs)</li>
+                <li><code>cM</code>: Genetic length in centiMorgans</li>
+            </ul>
+
+            <h3>Processing Hap-IBD Results</h3>
+            
+            <h4>Combining Results Across Chromosomes</h4>
+            <p>We'll combine chromosome-specific results:</p>
+            
+            <pre><code>def combine_hap_ibd_results(results_dir):
+    """Combine chromosome-specific Hap-IBD results into merged files."""
+    # Output paths for combined files
+    combined_ibd_path = os.path.join(results_dir, "hap_ibd_MergedSamples.seg")
+    combined_hbd_path = os.path.join(results_dir, "hap_hbd_MergedSamples.seg")
+    
+    # Collect IBD and HBD files
+    ibd_files = []
+    hbd_files = []
+    
+    for chrom in range(1, 23):
+        ibd_file = os.path.join(results_dir, f"hap_ibd_chr{chrom}.ibd.gz")
+        hbd_file = os.path.join(results_dir, f"hap_ibd_chr{chrom}.hbd.gz")
+        
+        if os.path.isfile(ibd_file):
+            ibd_files.append(ibd_file)
+        if os.path.isfile(hbd_file):
+            hbd_files.append(hbd_file)
+    
+    # Process IBD files
+    if ibd_files:
+        ibd_dfs = []
+        for file in ibd_files:
+            df = pd.read_csv(file, sep='\t', header=None,
+                           names=['id1', 'hap1', 'id2', 'hap2', 'chrom', 'start', 'end', 'cM'])
+            ibd_dfs.append(df)
+        
+        combined_ibd = pd.concat(ibd_dfs, ignore_index=True)
+        combined_ibd.sort_values(['chrom', 'start', 'end'], inplace=True)
+        combined_ibd.to_csv(combined_ibd_path, sep='\t', index=False, header=False)
+        print(f"Combined {len(combined_ibd)} IBD segments to {combined_ibd_path}")
+    
+    # Process HBD files
+    if hbd_files:
+        hbd_dfs = []
+        for file in hbd_files:
+            df = pd.read_csv(file, sep='\t', header=None,
+                           names=['id', 'chrom', 'start', 'end', 'cM'])
+            hbd_dfs.append(df)
+        
+        combined_hbd = pd.concat(hbd_dfs, ignore_index=True)
+        combined_hbd.sort_values(['id', 'chrom', 'start', 'end'], inplace=True)
+        combined_hbd.to_csv(combined_hbd_path, sep='\t', index=False, header=False)
+        print(f"Combined {len(combined_hbd)} HBD segments to {combined_hbd_path}")</code></pre>
+
+            <h4>Filtering and Analyzing Results</h4>
+            <p>Let's filter the results and analyze the IBD segments:</p>
+            
+            <pre><code>def analyze_hap_ibd_results(ibd_file, min_cm=3.0):
+    """Filter and analyze Hap-IBD results."""
+    # Load the combined IBD file
+    ibd_df = pd.read_csv(ibd_file, sep='\t', header=None,
+                       names=['id1', 'hap1', 'id2', 'hap2', 'chrom', 'start', 'end', 'cM'])
+    
+    # Apply length filter
+    filtered_df = ibd_df[ibd_df['cM'] >= min_cm].copy()
+    
+    print(f"Original segments: {len(ibd_df)}")
+    print(f"Filtered segments (>= {min_cm} cM): {len(filtered_df)}")
+    
+    # Basic statistics
+    print("\nSegment length statistics (cM):")
+    print(filtered_df['cM'].describe())
+    
+    # Count segments per chromosome
+    chrom_counts = filtered_df['chrom'].value_counts().sort_index()
+    print("\nSegments per chromosome:")
+    print(chrom_counts)
+    
+    # Count segments per sample pair
+    def get_pair_id(row):
+        return tuple(sorted([row['id1'], row['id2']]))
+    
+    filtered_df['pair'] = filtered_df.apply(get_pair_id, axis=1)
+    pair_counts = filtered_df['pair'].value_counts()
+    
+    print(f"\nTotal sample pairs with IBD: {len(pair_counts)}")
+    print(f"Average segments per pair: {len(filtered_df) / len(pair_counts):.2f}")
+    
+    # Top pairs by total IBD sharing
+    pair_totals = filtered_df.groupby('pair')['cM'].sum().sort_values(ascending=False)
+    print("\nTop 10 pairs by total IBD sharing:")
+    print(pair_totals.head(10))
+    
+    return filtered_df</code></pre>
+
+            <h3>Comparing Hap-IBD with IBIS</h3>
+            
+            <h4>Segment Comparison</h4>
+            <p>We can compare IBD segments detected by different methods:</p>
+            
+            <pre><code>def compare_detection_methods(hapibd_file, ibis_file, min_cm=3.0):
+    """Compare IBD segments detected by Hap-IBD and IBIS."""
+    # Load Hap-IBD results
+    hapibd_df = pd.read_csv(hapibd_file, sep='\t', header=None,
+                           names=['id1', 'hap1', 'id2', 'hap2', 'chrom', 'start', 'end', 'cM'])
+    hapibd_df = hapibd_df[hapibd_df['cM'] >= min_cm].copy()
+    
+    # Standardize sample pairs (sort ids)
+    def standardize_pair(row):
+        if row['id1'] > row['id2']:
+            return row['id2'], row['id1']
+        return row['id1'], row['id2']
+    
+    hapibd_df['id1_std'], hapibd_df['id2_std'] = zip(*hapibd_df.apply(standardize_pair, axis=1))
+    
+    # Load IBIS results
+    ibis_df = pd.read_csv(ibis_file, sep='\t')
+    ibis_df = ibis_df[ibis_df['genetic_length'] >= min_cm].copy()
+    
+    # Create standardized pair IDs for IBIS
+    def standardize_ibis_pair(row):
+        if row['id1'] > row['id2']:
+            return row['id2'], row['id1']
+        return row['id1'], row['id2']
+    
+    ibis_df['id1_std'], ibis_df['id2_std'] = zip(*ibis_df.apply(standardize_ibis_pair, axis=1))
+    
+    # Get unique sample pairs from each method
+    hapibd_pairs = set(zip(hapibd_df['id1_std'], hapibd_df['id2_std']))
+    ibis_pairs = set(zip(ibis_df['id1_std'], ibis_df['id2_std']))
+    
+    # Find overlapping and unique pairs
+    common_pairs = hapibd_pairs.intersection(ibis_pairs)
+    hapibd_only_pairs = hapibd_pairs - ibis_pairs
+    ibis_only_pairs = ibis_pairs - hapibd_pairs
+    
+    print(f"Hap-IBD detected {len(hapibd_pairs)} sample pairs")
+    print(f"IBIS detected {len(ibis_pairs)} sample pairs")
+    print(f"Detected by both methods: {len(common_pairs)} pairs")
+    print(f"Unique to Hap-IBD: {len(hapibd_only_pairs)} pairs")
+    print(f"Unique to IBIS: {len(ibis_only_pairs)} pairs")
+    
+    # Calculate total IBD sharing per pair
+    hapibd_totals = hapibd_df.groupby(['id1_std', 'id2_std'])['cM'].sum()
+    ibis_totals = ibis_df.groupby(['id1_std', 'id2_std'])['genetic_length'].sum()
+    
+    # Create a comparison DataFrame for common pairs
+    comparison = []
+    for pair in common_pairs:
+        comparison.append({
+            'id1': pair[0],
+            'id2': pair[1],
+            'hapibd_total_cm': hapibd_totals.get(pair, 0),
+            'ibis_total_cm': ibis_totals.get(pair, 0)
+        })
+    
+    comparison_df = pd.DataFrame(comparison)
+    
+    return comparison_df</code></pre>
+
+            <h4>Visualizing the Comparison</h4>
+            <p>Let's visualize how the two methods compare:</p>
+            
+            <pre><code># Plot a comparison of IBD detection methods
+def plot_method_comparison(comparison_df):
+    """Create plots comparing Hap-IBD and IBIS results."""
+    plt.figure(figsize=(10, 8))
+    
+    # Scatter plot of total IBD sharing
+    plt.scatter(comparison_df['ibis_total_cm'], 
+              comparison_df['hapibd_total_cm'],
+              alpha=0.7)
+    
+    # Add diagonal line for reference (equal values)
+    max_val = max(
+        comparison_df['ibis_total_cm'].max(),
+        comparison_df['hapibd_total_cm'].max()
+    )
+    plt.plot([0, max_val], [0, max_val], 'r--', alpha=0.5)
+    
+    plt.xlabel('IBIS Total IBD Sharing (cM)')
+    plt.ylabel('Hap-IBD Total IBD Sharing (cM)')
+    plt.title('Comparison of Total IBD Sharing by Method')
+    plt.grid(alpha=0.3)
+    
+    # Add correlation coefficient
+    correlation = comparison_df[['ibis_total_cm', 'hapibd_total_cm']].corr().iloc[0, 1]
+    plt.annotate(f'Correlation: {correlation:.3f}', 
+               xy=(0.05, 0.95), xycoords='axes fraction')
+    
+    plt.tight_layout()
+    plt.savefig('results/method_comparison.png', dpi=300)</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>Using multiple IBD detection methods has important implications for anthropological research:</p>
+            
+            <ul>
+                <li><strong>Methodological Robustness:</strong> Different algorithms may have different biases or strengths, especially with data from diverse populations</li>
+                <li><strong>Relationship Confidence:</strong> Relationships supported by multiple detection methods can be reported with higher confidence</li>
+                <li><strong>Coverage of Relatedness Spectrum:</strong> Different methods may excel at detecting different types or degrees of relationships</li>
+                <li><strong>Historical Context:</strong> For anthropologists studying historical populations or diaspora communities, having multiple lines of genetic evidence strengthens historical interpretations</li>
+            </ul>
+            
+            <p>When reconstructing genetic relationships among diverse populations with complex histories—such as in the context of the transatlantic slave trade or colonial migrations—using multiple IBD detection algorithms provides a more complete and reliable picture of genetic connections that might otherwise be difficult to detect.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Run Hap-IBD on phased VCF files for all chromosomes</li>
+                <li>Combine chromosome-specific results into a genome-wide dataset</li>
+                <li>Filter and analyze the IBD segments detected by Hap-IBD</li>
+                <li>Compare Hap-IBD results with those from IBIS</li>
+                <li>Visualize the similarities and differences between detection methods</li>
+                <li>Identify sample pairs with substantial IBD sharing detected by both methods</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> Pay special attention to very long IBD segments (>20 cM) detected by only one method. These cases often warrant further investigation to determine why they might be missed by one algorithm but not the other.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab5_ibis.html" class="prev-lab">IBIS</a>
+                <a href="lab7_refinedibd.html" class="next-lab">Refined-IBD</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

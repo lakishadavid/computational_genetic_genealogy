@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 4: Quality Control | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Quality Control for Genetic Data</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab4_qc.html" class="active">Lab 4: Quality Control</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 4: Quality Control for Genetic Data</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Genetic data from consumer tests and public databases often contain errors, missing values, and artifacts that can lead to false conclusions about genetic relationships. Quality control procedures ensure that downstream IBD detection and genealogical analyses are based on reliable data.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Identify common quality issues in genetic data</li>
+                <li>Apply filtering criteria to retain high-quality genetic variants</li>
+                <li>Handle missing data and genotyping errors</li>
+                <li>Perform sample quality assessment</li>
+                <li>Prepare quality-controlled data for IBD detection</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Common Quality Issues in Genetic Data</h4>
+            <p>Several types of quality issues can affect genetic data:</p>
+            
+            <table>
+                <tr>
+                    <th>Quality Issue</th>
+                    <th>Description</th>
+                    <th>Impact on Analysis</th>
+                </tr>
+                <tr>
+                    <td>Genotyping errors</td>
+                    <td>Incorrect genotype calls</td>
+                    <td>False IBD segments, incorrect relationships</td>
+                </tr>
+                <tr>
+                    <td>Missing data</td>
+                    <td>No genotype call for specific markers</td>
+                    <td>Reduced power, fragmented IBD segments</td>
+                </tr>
+                <tr>
+                    <td>Low call rate variants</td>
+                    <td>Markers with high levels of missing data</td>
+                    <td>Unreliable genotype patterns</td>
+                </tr>
+                <tr>
+                    <td>Strand inconsistencies</td>
+                    <td>Genotypes reported on different DNA strands</td>
+                    <td>Incorrect genotype matching</td>
+                </tr>
+                <tr>
+                    <td>Duplicate/monomorphic variants</td>
+                    <td>Multiple entries for same marker or no variation</td>
+                    <td>Redundant or uninformative markers</td>
+                </tr>
+            </table>
+
+            <h4>Quality Control Metrics</h4>
+            <p>We use several key metrics to assess and ensure data quality:</p>
+            
+            <ul>
+                <li><strong>Call Rate:</strong> Proportion of genotypes that are successfully called (not missing)</li>
+                <li><strong>Minor Allele Frequency (MAF):</strong> Frequency of the less common allele in the population</li>
+                <li><strong>Hardy-Weinberg Equilibrium (HWE):</strong> Expected genotype frequencies in a population</li>
+                <li><strong>Heterozygosity Rate:</strong> Proportion of heterozygous genotypes for an individual or variant</li>
+                <li><strong>Mendelian Inconsistencies:</strong> Genotype combinations inconsistent with parent-child inheritance</li>
+            </ul>
+
+            <h3>Quality Control Workflow</h3>
+            
+            <h4>Loading and Examining VCF Data</h4>
+            <p>First, we'll load the VCF file and perform basic data examination:</p>
+            
+            <pre><code>import allel
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the merged VCF file
+vcf_path = "results/merged_samples.vcf.gz"
+vcf = allel.read_vcf(vcf_path)
+
+# Basic information
+sample_count = len(vcf['samples'])
+variant_count = len(vcf['variants/POS'])
+print(f"Loaded VCF with {sample_count} samples and {variant_count} variants")
+
+# Convert to genotype array for easier manipulation
+genotypes = allel.GenotypeArray(vcf['calldata/GT'])
+
+# Create a dataframe with variant information
+variant_df = pd.DataFrame({
+    'CHROM': vcf['variants/CHROM'],
+    'POS': vcf['variants/POS'],
+    'ID': vcf['variants/ID'],
+    'REF': vcf['variants/REF'],
+    'ALT': [alt[0] for alt in vcf['variants/ALT']]
+})</code></pre>
+
+            <h4>Variant-Level Quality Control</h4>
+            <p>Now let's apply filters to remove low-quality variants:</p>
+            
+            <pre><code># 1. Calculate call rate for each variant
+call_rate = genotypes.count_called(axis=1) / sample_count
+
+# 2. Calculate minor allele frequency
+allele_counts = genotypes.count_alleles()
+allele_freqs = allele_counts.to_frequencies()
+mafs = np.min(allele_freqs, axis=1)  # Minor allele frequency
+
+# 3. Calculate heterozygosity rate
+heteroz_rate = genotypes.count_het(axis=1) / genotypes.count_called(axis=1)
+
+# Add QC metrics to the variant dataframe
+variant_df['call_rate'] = call_rate
+variant_df['maf'] = mafs
+variant_df['heteroz_rate'] = heteroz_rate
+
+# 4. Apply quality filters
+min_call_rate = 0.95  # At least 95% of samples have genotype data
+min_maf = 0.01        # At least 1% minor allele frequency
+max_maf = 0.99        # Maximum 99% minor allele frequency
+min_het = 0.01        # Minimum heterozygosity rate
+max_het = 0.6         # Maximum heterozygosity rate (excessive may indicate errors)
+
+# Create a mask of variants passing all filters
+mask_call_rate = call_rate >= min_call_rate
+mask_maf = (mafs >= min_maf) & (mafs <= max_maf)
+mask_het = (heteroz_rate >= min_het) & (heteroz_rate <= max_het) 
+
+# Combine all masks
+mask_combined = mask_call_rate & mask_maf & mask_het
+
+# Count variants passing filters
+print(f"Call rate filter: {np.sum(mask_call_rate)} / {variant_count} variants pass")
+print(f"MAF filter: {np.sum(mask_maf)} / {variant_count} variants pass")
+print(f"Heterozygosity filter: {np.sum(mask_het)} / {variant_count} variants pass")
+print(f"Combined filter: {np.sum(mask_combined)} / {variant_count} variants pass")
+
+# Create a filtered dataset
+filtered_genotypes = genotypes[mask_combined]
+filtered_variant_df = variant_df[mask_combined].reset_index(drop=True)</code></pre>
+
+            <h4>Sample-Level Quality Control</h4>
+            <p>Let's also check the quality of individual samples:</p>
+            
+            <pre><code># 1. Calculate sample call rate (proportion of genotypes called per sample)
+sample_call_rates = genotypes.count_called(axis=0) / variant_count
+
+# 2. Calculate heterozygosity per sample
+sample_hets = genotypes.count_het(axis=0)
+sample_called = genotypes.count_called(axis=0)
+sample_heteroz_rate = sample_hets / sample_called
+
+# Create a sample dataframe with quality metrics
+sample_df = pd.DataFrame({
+    'sample_id': vcf['samples'],
+    'call_rate': sample_call_rates,
+    'heteroz_rate': sample_heteroz_rate
+})
+
+# Apply sample filters
+min_sample_call_rate = 0.90  # At least 90% of variants called
+min_sample_het = 0.1         # Minimum heterozygosity rate
+max_sample_het = 0.4         # Maximum heterozygosity rate
+
+# Identify samples passing filters
+mask_sample_call_rate = sample_df['call_rate'] >= min_sample_call_rate
+mask_sample_het = (sample_df['heteroz_rate'] >= min_sample_het) & \
+                  (sample_df['heteroz_rate'] <= max_sample_het)
+mask_sample_combined = mask_sample_call_rate & mask_sample_het
+
+# Count samples passing filters
+print(f"Call rate filter: {np.sum(mask_sample_call_rate)} / {sample_count} samples pass")
+print(f"Heterozygosity filter: {np.sum(mask_sample_het)} / {sample_count} samples pass")
+print(f"Combined filter: {np.sum(mask_sample_combined)} / {sample_count} samples pass")
+
+# List samples failing QC for reporting
+failing_samples = sample_df[~mask_sample_combined]
+print("Samples failing QC:")
+print(failing_samples)</code></pre>
+
+            <h4>Visualizing Quality Metrics</h4>
+            <p>Visualizations help us understand the distribution of quality metrics:</p>
+            
+            <pre><code># Plot QC metric distributions
+plt.figure(figsize=(15, 10))
+
+# 1. Variant call rate distribution
+plt.subplot(2, 2, 1)
+sns.histplot(variant_df['call_rate'], bins=50)
+plt.axvline(min_call_rate, color='red', linestyle='--')
+plt.title(f'Variant Call Rate (filter: {min_call_rate})')
+plt.xlabel('Call Rate')
+plt.ylabel('Count')
+
+# 2. Minor allele frequency distribution
+plt.subplot(2, 2, 2)
+sns.histplot(variant_df['maf'], bins=50)
+plt.axvline(min_maf, color='red', linestyle='--')
+plt.axvline(max_maf, color='red', linestyle='--')
+plt.title(f'Minor Allele Frequency (filter: {min_maf}-{max_maf})')
+plt.xlabel('MAF')
+plt.ylabel('Count')
+
+# 3. Sample call rate distribution
+plt.subplot(2, 2, 3)
+sns.histplot(sample_df['call_rate'], bins=30)
+plt.axvline(min_sample_call_rate, color='red', linestyle='--')
+plt.title(f'Sample Call Rate (filter: {min_sample_call_rate})')
+plt.xlabel('Call Rate')
+plt.ylabel('Count')
+
+# 4. Sample heterozygosity rate
+plt.subplot(2, 2, 4)
+sns.histplot(sample_df['heteroz_rate'], bins=30)
+plt.axvline(min_sample_het, color='red', linestyle='--')
+plt.axvline(max_sample_het, color='red', linestyle='--')
+plt.title(f'Sample Heterozygosity Rate (filter: {min_sample_het}-{max_sample_het})')
+plt.xlabel('Heterozygosity Rate')
+plt.ylabel('Count')
+
+plt.tight_layout()
+plt.savefig('results/qc_metrics.png', dpi=300)</code></pre>
+
+            <h4>Saving Filtered Data</h4>
+            <p>Finally, we'll save the filtered dataset for downstream analysis:</p>
+            
+            <pre><code># Get the filtered variant indices and sample indices
+filtered_variant_indices = np.where(mask_combined)[0]
+passing_samples = sample_df[mask_sample_combined]['sample_id'].tolist()
+passing_sample_indices = [list(vcf['samples']).index(s) for s in passing_samples]
+
+# Extract the filtered data from the VCF
+filtered_genotypes_array = genotypes[filtered_variant_indices][:, passing_sample_indices]
+
+# Create a dictionary for the filtered VCF data
+filtered_vcf = {
+    'samples': np.array(passing_samples),
+    'variants/CHROM': vcf['variants/CHROM'][filtered_variant_indices],
+    'variants/POS': vcf['variants/POS'][filtered_variant_indices],
+    'variants/ID': vcf['variants/ID'][filtered_variant_indices],
+    'variants/REF': vcf['variants/REF'][filtered_variant_indices],
+    'variants/ALT': vcf['variants/ALT'][filtered_variant_indices],
+    'variants/QUAL': vcf['variants/QUAL'][filtered_variant_indices] if 'variants/QUAL' in vcf else None,
+    'calldata/GT': filtered_genotypes_array,
+}
+
+# Save the filtered VCF
+filtered_vcf_path = "results/merged_samples_filtered.vcf.gz"
+allel.write_vcf(filtered_vcf_path, filtered_vcf)
+
+print(f"Saved filtered VCF with {len(passing_samples)} samples and {len(filtered_variant_indices)} variants")</code></pre>
+
+            <h3>Advanced QC Techniques</h3>
+            
+            <h4>Handling Related Samples</h4>
+            <p>For some analyses, we may need to identify and handle related individuals in the dataset:</p>
+            
+            <pre><code># Calculate pairwise relatedness using a simple Identity-by-State (IBS) metric
+def calculate_pairwise_ibs(genotypes, samples):
+    sample_count = genotypes.shape[1]
+    ibs_matrix = np.zeros((sample_count, sample_count))
+    
+    # Count shared alleles for each pair
+    for i in range(sample_count):
+        for j in range(i+1, sample_count):
+            # Get genotypes for both samples
+            g1 = genotypes[:, i].copy()
+            g2 = genotypes[:, j].copy()
+            
+            # Count shared alleles where both have called genotypes
+            is_called = g1.is_called() & g2.is_called()
+            g1_alleles = g1[is_called].to_alleles()
+            g2_alleles = g2[is_called].to_alleles()
+            
+            # Count matching alleles
+            matches = (g1_alleles[:, 0] == g2_alleles[:, 0]) & (g1_alleles[:, 1] == g2_alleles[:, 1]) | \
+                     (g1_alleles[:, 0] == g2_alleles[:, 1]) & (g1_alleles[:, 1] == g2_alleles[:, 0])
+            
+            # Calculate IBS as proportion of matching genotypes
+            ibs = np.mean(matches)
+            ibs_matrix[i, j] = ibs
+            ibs_matrix[j, i] = ibs  # Symmetric matrix
+    
+    # Set diagonal to 1 (identity)
+    np.fill_diagonal(ibs_matrix, 1.0)
+    
+    return pd.DataFrame(ibs_matrix, index=samples, columns=samples)
+
+# Calculate IBS matrix
+ibs_matrix = calculate_pairwise_ibs(filtered_genotypes, passing_samples)
+
+# Visualize the relatedness matrix
+plt.figure(figsize=(12, 10))
+sns.heatmap(ibs_matrix, cmap='viridis', vmin=0.5, vmax=1.0)
+plt.title('Pairwise Sample Relatedness (IBS)')
+plt.tight_layout()
+plt.savefig('results/relatedness_matrix.png', dpi=300)</code></pre>
+
+            <h4>Phasing Genotypes</h4>
+            <p>For IBD detection, we typically need phased genotypes (haplotypes). We can prepare our data for phasing:</p>
+            
+            <pre><code># Prepare for phasing with Beagle
+def prepare_for_phasing(vcf_path, output_prefix):
+    """Prepare VCF for phasing with Beagle by splitting by chromosome."""
+    # List chromosomes in the VCF
+    chromosomes = list(pd.unique(variant_df['CHROM']))
+    
+    split_files = []
+    for chrom in chromosomes:
+        # Extract chromosome-specific VCF using bcftools
+        chrom_vcf = f"{output_prefix}_chr{chrom}.vcf.gz"
+        cmd = f"bcftools view --output-type z --output {chrom_vcf} --regions {chrom} {vcf_path}"
+        os.system(cmd)
+        
+        # Index the chromosome-specific VCF
+        os.system(f"tabix -p vcf {chrom_vcf}")
+        
+        split_files.append(chrom_vcf)
+        print(f"Prepared chromosome {chrom} VCF: {chrom_vcf}")
+    
+    return split_files
+
+# Prepare the filtered VCF for phasing
+import os
+phasing_files = prepare_for_phasing(filtered_vcf_path, "results/phasing/for_phasing")</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>Quality control is particularly important in anthropological genetic studies because:</p>
+            
+            <ul>
+                <li><strong>Data Source Variation:</strong> Anthropologists often work with genetic data from diverse sources (consumer tests, research datasets, ancient DNA) with varying quality standards</li>
+                <li><strong>Historical Sample Size Limitations:</strong> In studies of specific populations or diaspora communities, sample sizes may be limited, making each sample particularly valuable</li>
+                <li><strong>Interpretive Implications:</strong> Genealogical conclusions drawn from genetic data can have significant cultural and personal implications for individuals and communities, requiring high data quality standards</li>
+                <li><strong>Heterogeneous Ancestry:</strong> Populations with complex ancestral histories may show unusual genetic patterns that shouldn't be mistaken for quality issues</li>
+            </ul>
+            
+            <p>By implementing rigorous quality control procedures, anthropologists ensure that their genetic analyses and resulting interpretations about human relationships are based on reliable data, particularly important when studying populations with complex histories like those affected by the transatlantic slave trade or colonial migrations.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Load a merged VCF file and calculate quality metrics</li>
+                <li>Apply variant-level filters and visualize the effects</li>
+                <li>Implement sample-level quality control</li>
+                <li>Assess relatedness between samples using IBS</li>
+                <li>Prepare quality-controlled data for phasing and IBD detection</li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <p><strong>Note:</strong> The specific threshold values for quality filters should be adjusted based on your dataset characteristics and research goals. More stringent thresholds provide higher quality but may reduce the number of variants available for analysis.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab3_process.html" class="prev-lab">Processing Raw DNA</a>
+                <a href="lab5_ibis.html" class="next-lab">IBD Detection with IBIS</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

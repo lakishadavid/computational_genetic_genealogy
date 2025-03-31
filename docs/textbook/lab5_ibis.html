@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 5: Identity-by-Descent Detection with IBIS | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Identity-by-Descent Detection with IBIS</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab5_ibis.html" class="active">Lab 5: IBIS</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 5: Identity-by-Descent Detection with IBIS</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Identity-by-descent (IBD) segments are regions of DNA shared between individuals because they inherited them from a common ancestor. Detecting these segments is fundamental to reconstructing genealogical relationships, particularly when documented records are missing or incomplete.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the concept of Identity-by-Descent (IBD)</li>
+                <li>Convert VCF files to PLINK format for IBD detection</li>
+                <li>Run the IBIS algorithm to detect IBD segments</li>
+                <li>Interpret IBD output files and statistics</li>
+                <li>Visualize genetic relatedness from IBD segments</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>What is Identity-by-Descent?</h4>
+            <p>Identity-by-descent (IBD) refers to segments of DNA that are identical between two individuals because they were inherited from a common ancestor. These segments provide direct evidence of genetic relatedness.</p>
+            
+            <div class="figure">
+                <img src="../images/ibd_concept.png" alt="Identity-by-Descent diagram" style="max-width: 600px;">
+                <p class="figure-caption">IBD segments are passed down through generations and can be detected computationally to infer relationships.</p>
+            </div>
+            
+            <h4>Types of IBD Segments</h4>
+            <p>There are two primary types of IBD segments that IBIS detects:</p>
+            <ul>
+                <li><strong>IBD1:</strong> Segments where individuals share one haplotype at a given locus</li>
+                <li><strong>IBD2:</strong> Segments where individuals share both haplotypes at a given locus (often seen in siblings)</li>
+            </ul>
+
+            <h4>How IBIS Works</h4>
+            <p>IBIS (Identity-By-Descent Identification System) is a tool that:</p>
+            <ul>
+                <li>Uses phased genotype data in PLINK format</li>
+                <li>Implements a hidden Markov model (HMM) to detect IBD segments</li>
+                <li>Efficiently processes genome-wide data for multiple individuals</li>
+                <li>Provides detailed IBD segment information and kinship coefficients</li>
+            </ul>
+
+            <h3>Data Preparation</h3>
+            
+            <h4>Converting VCF to PLINK Format</h4>
+            <p>Before running IBIS, we need to convert our VCF files to PLINK format (BED/BIM/FAM):</p>
+            
+            <pre><code># Using PLINK2 to convert VCF to PLINK format
+plink2 \
+    --vcf opensnps_phased_chr1.vcf.gz \
+    --autosome \
+    --make-bed \
+    --out opensnps_phased_chr1</code></pre>
+
+            <p>This creates three files for each chromosome:</p>
+            <ul>
+                <li><code>.bed</code> - Binary file containing genotype information</li>
+                <li><code>.bim</code> - Extended map file with variant information</li>
+                <li><code>.fam</code> - First six columns of the standard PED file</li>
+            </ul>
+
+            <h4>Adding Genetic Maps</h4>
+            <p>IBIS requires genetic map information to convert physical positions to genetic positions (centiMorgans):</p>
+            
+            <pre><code># Add genetic map information to the BIM file
+./add-map-plink.pl opensnps_phased_chr1.bim references/genetic_maps/plink.chr1.GRCh38.map > opensnps_phased_chr1_gm.bim</code></pre>
+
+            <h3>Running IBIS</h3>
+            
+            <h4>Basic IBIS Command</h4>
+            <p>The basic command for running IBIS is:</p>
+            
+            <pre><code># Run IBIS on chromosome 1
+ibis \
+    opensnps_phased_chr1.bed \
+    opensnps_phased_chr1_gm.bim \
+    opensnps_phased_chr1.fam \
+    -ibd2 \
+    -min_l 7 -mt 436 -er .004 \
+    -min_l2 2 -mt2 186 -er2 .008 \
+    -o results/opensnps_phased_chr1_ibis \
+    -printCoef -noFamID</code></pre>
+
+            <p>Key parameters:</p>
+            <ul>
+                <li><code>-min_l 7</code>: Minimum length of IBD1 segments (7 cM)</li>
+                <li><code>-mt 436</code>: Minimum number of markers for IBD1 segments</li>
+                <li><code>-er .004</code>: Maximum error rate for IBD1 segments</li>
+                <li><code>-min_l2 2</code>: Minimum length of IBD2 segments (2 cM)</li>
+                <li><code>-mt2 186</code>: Minimum number of markers for IBD2 segments</li>
+                <li><code>-er2 .008</code>: Maximum error rate for IBD2 segments</li>
+            </ul>
+
+            <h4>Script for Processing All Chromosomes</h4>
+            <p>In practice, we'll run IBIS on all autosomes (chromosomes 1-22) using a Python script:</p>
+            
+            <pre><code>def run_ibis(phased_samples_dir, results_directory, utils_directory):
+    """Runs IBIS IBD detection for all chromosome-specific files."""
+    
+    ibis_executable = os.path.join(utils_directory, "ibis/ibis")
+    
+    # Iterate over all chromosome-specific BIM files
+    for chrom in range(1, 23):
+        chrom_prefix = f"opensnps_phased_chr{chrom}"
+        bed_file = os.path.join(phased_samples_dir, f"{chrom_prefix}.bed")
+        bim_file = os.path.join(phased_samples_dir, f"{chrom_prefix}_gm.bim")
+        fam_file = os.path.join(phased_samples_dir, f"{chrom_prefix}.fam")
+        output_prefix = os.path.join(results_directory, f"{chrom_prefix}_ibis")
+        
+        # Construct and run the IBIS command
+        command = [
+            ibis_executable,
+            bed_file, bim_file, fam_file,
+            "-ibd2",
+            "-min_l", "7", "-mt", "436", "-er", ".004",
+            "-min_l2", "2", "-mt2", "186", "-er2", ".008",
+            "-o", output_prefix,
+            "-printCoef", "-noFamID"
+        ]
+        
+        subprocess.run(command, check=True)
+        print(f"IBIS IBD detection completed for chromosome {chrom}")</code></pre>
+
+            <h3>Understanding IBIS Output</h3>
+            
+            <h4>IBIS Output Files</h4>
+            <p>IBIS generates several output files:</p>
+            
+            <table>
+                <tr>
+                    <th>File Extension</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>.seg</code></td>
+                    <td>IBD segments between pairs of individuals</td>
+                </tr>
+                <tr>
+                    <td><code>.coef</code></td>
+                    <td>Kinship coefficients and relationship estimates</td>
+                </tr>
+                <tr>
+                    <td><code>.hbd</code></td>
+                    <td>Homozygosity-by-descent segments (if requested)</td>
+                </tr>
+                <tr>
+                    <td><code>.incoef</code></td>
+                    <td>Inbreeding coefficients (if HBD detection enabled)</td>
+                </tr>
+            </table>
+
+            <h4>Examining the .seg File</h4>
+            <p>The .seg file contains detailed information about each IBD segment:</p>
+            
+            <pre><code># Format: sample1 sample2 chrom start_pos end_pos IBD_type g_start g_end g_length marker_count error_count error_density
+sample1 sample2 1 12345678 23456789 IBD1 13.45 28.67 15.22 1200 3 0.0025</code></pre>
+
+            <p>Each line represents one IBD segment with:</p>
+            <ul>
+                <li>Sample pair identifiers</li>
+                <li>Chromosome number</li>
+                <li>Physical positions (start/end)</li>
+                <li>IBD type (IBD1 or IBD2)</li>
+                <li>Genetic positions (start/end in cM)</li>
+                <li>Genetic length (in cM)</li>
+                <li>Number of markers in the segment</li>
+                <li>Error counts and density</li>
+            </ul>
+
+            <h4>Examining the .coef File</h4>
+            <p>The .coef file provides kinship coefficients and relationship estimates:</p>
+            
+            <pre><code># Format: sample1 sample2 kinship_coefficient IBD2_fraction segment_count degree_of_relatedness
+sample1 sample2 0.0625 0.0 10 3</code></pre>
+
+            <p>Key values:</p>
+            <ul>
+                <li><strong>Kinship coefficient:</strong> A measure of relatedness (0.25 for parent-child, 0.125 for first cousins)</li>
+                <li><strong>IBD2 fraction:</strong> Proportion of genome sharing both haplotypes (high in siblings)</li>
+                <li><strong>Degree of relatedness:</strong> Estimated relationship degree (1=parent/child/sibling, 2=grandparent/uncle/aunt, etc.)</li>
+            </ul>
+
+            <h3>Analyzing IBD Results</h3>
+            
+            <h4>Combining Results Across Chromosomes</h4>
+            <p>We'll combine the chromosome-specific results to get a genome-wide view:</p>
+            
+            <pre><code>def combine_and_sort_ibis_outputs(results_dir):
+    """Combines all chromosome-specific IBIS output files."""
+    
+    combined_coef_path = os.path.join(results_dir, "ibis_MergedSamples.coef")
+    combined_seg_path = os.path.join(results_dir, "ibis_MergedSamples.seg")
+    
+    # Collect and combine .coef files
+    coef_files = [os.path.join(results_dir, f"opensnps_phased_chr{chrom}_ibis.coef") 
+                 for chrom in range(1, 23) if os.path.isfile(f"opensnps_phased_chr{chrom}_ibis.coef")]
+    
+    # Combine and sort .seg files
+    seg_files = [os.path.join(results_dir, f"opensnps_phased_chr{chrom}_ibis.seg") 
+                for chrom in range(1, 23) if os.path.isfile(f"opensnps_phased_chr{chrom}_ibis.seg")]
+                
+    # Process and merge files
+    # (code for merging and sorting omitted for brevity)</code></pre>
+
+            <h4>Filtering Results</h4>
+            <p>We typically filter the segments to focus on reliable IBD detection:</p>
+            
+            <pre><code>filtered_segments = segments[
+    (segments['genetic_length'] >= min_length) &
+    (segments['marker_count'] >= min_markers) &
+    (segments['error_density'] <= max_error_density)
+].copy()</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>In the context of investigating historical family connections, IBD detection provides crucial evidence for genetic relationships. For anthropologists studying the African diaspora:</p>
+            
+            <ul>
+                <li>IBD segments can reveal connections between individuals separated by historical events like the transatlantic slave trade</li>
+                <li>The length of IBD segments helps estimate how recently two individuals share a common ancestor</li>
+                <li>Patterns of IBD sharing across populations can illuminate historical migration and admixture events</li>
+            </ul>
+            
+            <p>The ability to detect IBD segments computationally allows us to reconstruct family relationships that may be absent from historical records, providing new insights into historical kinship networks disrupted by colonialism and forced migration.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Convert VCF files to PLINK format for a specific chromosome</li>
+                <li>Add genetic map information to the BIM file</li>
+                <li>Run IBIS on a single chromosome</li>
+                <li>Examine the resulting .seg and .coef files</li>
+                <li>Combine results from multiple chromosomes</li>
+                <li>Create a visualization of related individuals based on kinship coefficients</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> Start with a single chromosome (e.g., chromosome 22) for testing before processing all chromosomes. This will help you understand the output format and troubleshoot any issues.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab4_qc.html" class="prev-lab">Quality Control</a>
+                <a href="lab6_hapibd.html" class="next-lab">Hap-IBD</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

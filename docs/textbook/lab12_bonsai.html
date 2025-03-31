@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12: Bonsai | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Reconstructing Pedigrees with Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab12_bonsai.html" class="active">Lab 12: Bonsai</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 12: Reconstructing Pedigrees with Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Having detected IBD segments and analyzed their statistical properties, we now proceed to the core goal of computational genetic genealogy: reconstructing family trees (pedigrees) from genetic data alone. This allows us to infer relationships even when documentary evidence is limited or missing.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the principles behind pedigree reconstruction from genetic data</li>
+                <li>Use the BonsaiTree algorithm to infer pedigree structures</li>
+                <li>Interpret pedigree reconstruction results</li>
+                <li>Evaluate the accuracy of reconstructed pedigrees</li>
+                <li>Apply pedigree reconstruction to real-world genetic genealogy questions</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Pedigree Reconstruction</h4>
+            <p>Pedigree reconstruction refers to the computational inference of family relationships based solely on genetic data, without requiring prior knowledge of family structure. This is particularly valuable in situations where:</p>
+            
+            <ul>
+                <li>Historical records are incomplete or missing</li>
+                <li>Relationships are unknown or uncertain</li>
+                <li>There's a need to validate documented relationships</li>
+            </ul>
+            
+            <div class="figure">
+                <img src="../images/pedigree_reconstruction.png" alt="Pedigree Reconstruction Process" style="max-width: 700px;">
+                <p class="figure-caption">Pedigree reconstruction uses IBD segments to infer the most likely family tree structure connecting genetic relatives.</p>
+            </div>
+
+            <h4>The BonsaiTree Algorithm</h4>
+            <p>BonsaiTree is a specialized algorithm designed to infer pedigree structures from genotype data:</p>
+            
+            <ul>
+                <li>Uses detected IBD segments as input</li>
+                <li>Models the probability of IBD sharing under different relationship scenarios</li>
+                <li>Applies graph theory to construct relationship networks</li>
+                <li>Constrains pedigrees to follow biologically plausible patterns</li>
+                <li>Builds the pedigree incrementally, like pruning a bonsai tree to reveal its structure</li>
+            </ul>
+
+            <h3>Preparing Data for Bonsai</h3>
+            
+            <h4>Required Input</h4>
+            <p>BonsaiTree requires processed IBD segment data:</p>
+            
+            <pre><code># Format IBD data for Bonsai input
+import pandas as pd
+import numpy as np
+from bonsaitree.v3.bonsai import build_pedigree
+
+# Load the IBD segments detected in previous labs
+ibd_segments = pd.read_csv("results/segments/filtered_segments_ibis.csv", sep="\t")
+
+# Convert to the format required by Bonsai
+def prepare_bonsai_input(ibd_df):
+    """Prepare IBD segments for Bonsai input."""
+    # Rename columns to match Bonsai's expected format
+    bonsai_df = ibd_df.rename(columns={
+        'id1': 'ind1', 
+        'id2': 'ind2',
+        'chromosome': 'chrom', 
+        'genetic_length': 'seg_len',
+        'physical_position_start': 'start_pos',
+        'physical_position_end': 'end_pos'
+    })
+    
+    # Add segment IDs
+    bonsai_df['seg_id'] = [f"seg_{i}" for i in range(len(bonsai_df))]
+    
+    # Keep only required columns
+    bonsai_df = bonsai_df[['seg_id', 'ind1', 'ind2', 'chrom', 'start_pos', 'end_pos', 'seg_len']]
+    
+    return bonsai_df
+
+# Prepare the data
+bonsai_input = prepare_bonsai_input(ibd_segments)</code></pre>
+
+            <h3>Running Bonsai</h3>
+            
+            <h4>Basic Bonsai Usage</h4>
+            <p>The core function for running Bonsai is simple, but there are many parameters to control the reconstruction process:</p>
+            
+            <pre><code># Run Bonsai pedigree reconstruction
+from bonsaitree.v3.bonsai import build_pedigree
+
+# Define list of individuals
+individuals = list(set(bonsai_input['ind1'].tolist() + bonsai_input['ind2'].tolist()))
+
+# Run Bonsai with default parameters
+pedigree = build_pedigree(
+    individuals=individuals,
+    segs=bonsai_input,
+    min_cm=7.0,           # Minimum IBD segment length to consider
+    meiosis_prior='uniform',  # Prior on relationship distances
+    g_max=5,              # Maximum number of generations to consider
+    verbose=True          # Show detailed progress
+)</code></pre>
+
+            <h4>Advanced Configuration</h4>
+            <p>For more control over the reconstruction process:</p>
+            
+            <pre><code># Run Bonsai with advanced options
+pedigree = build_pedigree(
+    individuals=individuals,
+    segs=bonsai_input,
+    min_cm=7.0,
+    meiosis_prior='uniform',
+    g_max=5,
+    constraints=constraints,    # Custom relationship constraints
+    sex=sex_info,              # Known sex information for individuals
+    birth_years=birth_years,   # Known or estimated birth years
+    twins=twin_pairs,          # Known twin pairs
+    verbose=True
+)</code></pre>
+
+            <h3>Analyzing Bonsai Output</h3>
+            
+            <h4>Pedigree Structure</h4>
+            <p>The returned pedigree object contains the inferred relationships:</p>
+            
+            <pre><code># Examine the pedigree structure
+print(f"Number of individuals: {len(pedigree.get_individuals())}")
+print(f"Number of inferred relationships: {len(pedigree.get_relationships())}")
+
+# Get all relationships
+relationships = pedigree.get_relationships()
+for rel in relationships[:10]:  # Print first 10 as example
+    print(f"{rel['ind1']} is related to {rel['ind2']} as {rel['type']}")</code></pre>
+
+            <h4>Visualizing the Pedigree</h4>
+            <p>Bonsai provides tools to visualize the reconstructed pedigree:</p>
+            
+            <pre><code># Visualize the pedigree
+from bonsaitree.v3.rendering import render_pedigree
+
+# Generate a plot of the pedigree
+fig = render_pedigree(pedigree)
+fig.savefig("results/reconstructed_pedigree.png", dpi=300)
+
+# You can also export to other formats
+pedigree.to_dot("results/pedigree.dot")  # GraphViz format
+pedigree.to_ped("results/pedigree.ped")  # PLINK pedigree format</code></pre>
+
+            <h3>Evaluating Pedigree Reconstruction</h3>
+            
+            <h4>Comparing to Known Relationships</h4>
+            <p>When working with simulated data or partially known pedigrees, we can evaluate the accuracy of the reconstruction:</p>
+            
+            <pre><code># Load the known pedigree structure (e.g., from simulation or records)
+known_pedigree = pd.read_csv("data/class_data/pedigree.fam", sep="\s+", 
+                           names=['fam_id', 'ind_id', 'father_id', 'mother_id', 'sex', 'phenotype'])
+
+# Function to compare known and inferred relationships
+def evaluate_pedigree(known_ped, inferred_ped):
+    """Compare known and inferred pedigree relationships."""
+    # Extract parent-child relationships from known pedigree
+    known_relations = []
+    for _, row in known_ped.iterrows():
+        if row['father_id'] != '0':
+            known_relations.append((row['father_id'], row['ind_id'], 'parent-child'))
+        if row['mother_id'] != '0':
+            known_relations.append((row['mother_id'], row['ind_id'], 'parent-child'))
+    
+    # Get inferred relationships
+    inferred_relations = []
+    for rel in inferred_ped.get_relationships():
+        inferred_relations.append((rel['ind1'], rel['ind2'], rel['type']))
+    
+    # Calculate metrics
+    correct = len(set(known_relations) & set(inferred_relations))
+    total_known = len(known_relations)
+    total_inferred = len(inferred_relations)
+    
+    precision = correct / total_inferred if total_inferred > 0 else 0
+    recall = correct / total_known if total_known > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    return {
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1,
+        'correct': correct,
+        'total_known': total_known,
+        'total_inferred': total_inferred
+    }
+
+# Evaluate our reconstruction
+metrics = evaluate_pedigree(known_pedigree, pedigree)
+print(f"Precision: {metrics['precision']:.2f}")
+print(f"Recall: {metrics['recall']:.2f}")
+print(f"F1 Score: {metrics['f1_score']:.2f}")</code></pre>
+
+            <h3>Challenges in Pedigree Reconstruction</h3>
+            
+            <h4>Ambiguity in Reconstruction</h4>
+            <p>Several factors can make pedigree reconstruction challenging:</p>
+            
+            <table>
+                <tr>
+                    <th>Challenge</th>
+                    <th>Description</th>
+                    <th>Mitigation</th>
+                </tr>
+                <tr>
+                    <td>Missing individuals</td>
+                    <td>Key connecting individuals might not be in the dataset</td>
+                    <td>Use latent ancestors; incorporate prior knowledge</td>
+                </tr>
+                <tr>
+                    <td>Equivalent structures</td>
+                    <td>Multiple pedigrees may explain the same IBD patterns</td>
+                    <td>Use additional constraints; consider most parsimonious solution</td>
+                </tr>
+                <tr>
+                    <td>IBD detection errors</td>
+                    <td>False positives or negatives in IBD detection</td>
+                    <td>Filter IBD segments; use statistical methods robust to errors</td>
+                </tr>
+                <tr>
+                    <td>Distant relationships</td>
+                    <td>Beyond ~5-6 generations, IBD signal becomes sparse</td>
+                    <td>Focus on closer relationships; combine with other evidence</td>
+                </tr>
+            </table>
+
+            <h3>Anthropological Context</h3>
+            <p>Computational pedigree reconstruction has profound implications for anthropology, particularly when studying populations with disrupted family histories:</p>
+            
+            <ul>
+                <li><strong>Diaspora Studies:</strong> Reconstructing family connections across continents disrupted by historical events like the transatlantic slave trade</li>
+                <li><strong>Kinship Systems:</strong> Comparing biological relationships to culturally defined kinship systems</li>
+                <li><strong>Historical Demography:</strong> Inferring historical population characteristics from reconstructed pedigrees</li>
+                <li><strong>Identity and Heritage:</strong> Supporting communities seeking to reconnect with ancestral ties</li>
+            </ul>
+            
+            <p>The ability to reconstruct pedigrees from genetic data alone provides a powerful tool for anthropologists studying how historical events have shaped family structures, especially when documentary evidence is limited by historical circumstances.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Prepare IBD segment data for Bonsai input</li>
+                <li>Run Bonsai with different parameter settings and compare results</li>
+                <li>Visualize the reconstructed pedigree</li>
+                <li>Compare the inferred pedigree to known relationships (when available)</li>
+                <li>Analyze how different IBD detection thresholds affect pedigree reconstruction</li>
+                <li>Discuss the implications of pedigree reconstruction for anthropological research</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> Pedigree reconstruction can be computationally intensive. Start with a small subset of individuals to understand the process before scaling up to larger datasets.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab11_distributions.html" class="prev-lab">Distributions</a>
+                <span></span> <!-- placeholder for next lab button -->
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

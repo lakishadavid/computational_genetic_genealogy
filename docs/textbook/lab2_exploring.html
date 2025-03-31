@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 2: Exploring Genomic Data | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Exploring One Thousand Genomes Data</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab2_exploring.html" class="active">Lab 2: Exploring Data</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 2: Exploring the 1000 Genomes Project Data</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Understanding population genetic datasets is essential for contextualizing individual genetic relationships. The 1000 Genomes Project provides a reference framework for human genetic variation across global populations, helping us interpret genetic connections identified in genealogical analysis.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the structure and organization of the 1000 Genomes Project data</li>
+                <li>Extract and analyze population-specific genetic variants</li>
+                <li>Calculate basic population genetics statistics</li>
+                <li>Visualize patterns of genetic variation across populations</li>
+                <li>Connect population genetic patterns to anthropological contexts</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>The 1000 Genomes Project</h4>
+            <p>The 1000 Genomes Project is a comprehensive catalog of human genetic variation, containing sequencing data from 2,504 individuals from 26 populations across five continental regions:</p>
+            
+            <table>
+                <tr>
+                    <th>Continental Region</th>
+                    <th>Populations</th>
+                    <th>Example Populations</th>
+                </tr>
+                <tr>
+                    <td>Africa (AFR)</td>
+                    <td>7</td>
+                    <td>Yoruba (YRI), Luhya (LWK), Gambian (GWD)</td>
+                </tr>
+                <tr>
+                    <td>Europe (EUR)</td>
+                    <td>5</td>
+                    <td>British (GBR), Finnish (FIN), Toscani (TSI)</td>
+                </tr>
+                <tr>
+                    <td>East Asia (EAS)</td>
+                    <td>5</td>
+                    <td>Han Chinese (CHB), Japanese (JPT), Vietnamese (KHV)</td>
+                </tr>
+                <tr>
+                    <td>South Asia (SAS)</td>
+                    <td>5</td>
+                    <td>Gujarati (GIH), Punjabi (PJL), Bengali (BEB)</td>
+                </tr>
+                <tr>
+                    <td>Americas (AMR)</td>
+                    <td>4</td>
+                    <td>Mexican (MXL), Puerto Rican (PUR), Colombian (CLM)</td>
+                </tr>
+            </table>
+            
+            <p>This dataset allows us to understand how genetic variation is distributed globally, which is essential for identifying population-specific patterns that might inform genealogical analysis.</p>
+
+            <h4>VCF File Structure</h4>
+            <p>The 1000 Genomes data is provided in VCF (Variant Call Format) files, which contain information about genetic variants and genotypes for each individual:</p>
+            
+            <pre><code>##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=20150218
+##source=1000GenomesPhase3Pipeline
+##reference=ftp://ftp.1000genomes.ebi.ac.uk//vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz
+##contig=<ID=1,assembly=b37,length=249250621>
+##contig=<ID=2,assembly=b37,length=243199373>
+[...] 
+##INFO=<ID=AC,Number=A,Type=Integer,Description="Total number of alternate alleles in called genotypes">
+##INFO=<ID=AF,Number=A,Type=Float,Description="Estimated allele frequency in the range (0,1)">
+[...]
+#CHROM  POS     ID      REF     ALT     QUAL    FILTER  INFO    FORMAT  HG00096 HG00097 [...]
+1       10177   rs367896724     A       AC      100     PASS    AC=2130;AF=0.425319;AN=5008;[...] GT      1|0     0|1     [...]     
+1       10235   rs540431307     T       TA      100     PASS    AC=998;AF=0.199281;AN=5008;[...]  GT      0|0     0|0     [...]</code></pre>
+
+            <h3>Exploring the Data</h3>
+            
+            <h4>Loading and Examining VCF Files</h4>
+            <p>We can use specialized Python libraries to efficiently work with VCF files:</p>
+            
+            <pre><code>import allel
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the VCF file for chromosome 22 (smallest chromosome)
+vcf_path = "data/1000genomes/ALL.chr22.phase3_shapeit2_mvncall_integrated_v5.20130502.genotypes.vcf.gz"
+vcf = allel.read_vcf(vcf_path, fields=['samples', 'variants/CHROM', 'variants/POS', 
+                                      'variants/REF', 'variants/ALT', 'variants/ID',
+                                      'calldata/GT'])
+
+# Examine the dataset structure
+print(f"Number of samples: {len(vcf['samples'])}")
+print(f"Number of variants: {len(vcf['variants/POS'])}")
+
+# Look at the first few variants
+variant_df = pd.DataFrame({
+    'CHROM': vcf['variants/CHROM'][:10],
+    'POS': vcf['variants/POS'][:10],
+    'ID': vcf['variants/ID'][:10],
+    'REF': vcf['variants/REF'][:10],
+    'ALT': [alt[0] for alt in vcf['variants/ALT'][:10]]
+})
+print(variant_df)</code></pre>
+
+            <h4>Loading Population Metadata</h4>
+            <p>To analyze population patterns, we need metadata associating each sample with its population:</p>
+            
+            <pre><code># Load the population metadata
+pop_metadata_path = "data/1000genomes/integrated_call_samples_v3.20130502.ALL.panel"
+pop_metadata = pd.read_csv(pop_metadata_path, sep='\t')
+
+# Examine the population distribution
+pop_counts = pop_metadata['super_pop'].value_counts()
+print(pop_counts)
+
+# Create a mapping of samples to populations
+sample_pops = dict(zip(pop_metadata['sample'], pop_metadata['super_pop']))
+pop_colors = {'AFR': 'purple', 'AMR': 'green', 'EAS': 'orange', 
+              'EUR': 'blue', 'SAS': 'red'}</code></pre>
+
+            <h3>Analyzing Genetic Variation</h3>
+            
+            <h4>Calculating Allele Frequencies by Population</h4>
+            <p>A key analysis is to examine how allele frequencies vary across populations:</p>
+            
+            <pre><code># Extract the genotype data and convert to numerical representation
+genotypes = allel.GenotypeArray(vcf['calldata/GT'])
+
+# Get the samples in our VCF file
+samples = vcf['samples']
+
+# Create population masks for each continental group
+pop_masks = {}
+for pop in pop_counts.index:
+    pop_samples = pop_metadata[pop_metadata['super_pop'] == pop]['sample'].values
+    pop_masks[pop] = np.array([s in pop_samples for s in samples])
+
+# Calculate allele frequencies for a subset of variants
+num_variants = 1000  # Limit to first 1000 variants for demonstration
+allele_freqs = {}
+
+for pop, mask in pop_masks.items():
+    # Count alleles and calculate frequency
+    ac = genotypes[:num_variants].count_alleles(subpop=mask)
+    allele_freqs[pop] = ac.to_frequencies()[:, 1]  # Frequency of alt allele
+
+# Convert to DataFrame for analysis
+af_df = pd.DataFrame(allele_freqs)
+
+# Calculate overall frequency
+af_df['ALL'] = genotypes[:num_variants].count_alleles().to_frequencies()[:, 1]
+
+# Add position information
+af_df['POS'] = vcf['variants/POS'][:num_variants]
+af_df['ID'] = vcf['variants/ID'][:num_variants]</code></pre>
+
+            <h4>Visualizing Population Differences</h4>
+            <p>We can visualize how genetic variants differ across populations:</p>
+            
+            <pre><code># Heatmap of allele frequencies for variants with high population differentiation
+# Calculate the range of frequencies for each variant
+af_df['range'] = af_df[pop_counts.index].max(axis=1) - af_df[pop_counts.index].min(axis=1)
+
+# Select variants with high differentiation
+high_diff_variants = af_df.nlargest(30, 'range')
+
+# Create a heatmap
+plt.figure(figsize=(12, 8))
+sns.heatmap(
+    high_diff_variants[pop_counts.index].T,
+    cmap='viridis',
+    vmin=0, vmax=1,
+    yticklabels=pop_counts.index,
+    cbar_kws={'label': 'Allele Frequency'}
+)
+plt.title('Population-Specific Allele Frequencies for Highly Differentiated Variants')
+plt.xlabel('Variant Index')
+plt.tight_layout()
+plt.savefig('results/population_allele_frequencies.png', dpi=300)</code></pre>
+
+            <h4>Principal Component Analysis (PCA)</h4>
+            <p>PCA is a powerful technique to visualize population genetic structure:</p>
+            
+            <pre><code>from sklearn.decomposition import PCA
+
+# Prepare the genotype data for PCA
+# Convert genotypes to allele counts per sample (0, 1, or 2 alt alleles)
+gt_counts = genotypes[:5000].to_n_alt(fill=-1)  # Use first 5000 variants
+
+# Remove missing data
+valid_variants = ~np.any(gt_counts < 0, axis=1)
+gt_counts_valid = gt_counts[valid_variants]
+
+# Run PCA
+pca = PCA(n_components=2)
+pca_result = pca.fit_transform(gt_counts_valid.T)  # Transpose to get samples as rows
+
+# Create a DataFrame with PCA results
+pca_df = pd.DataFrame({
+    'PC1': pca_result[:, 0],
+    'PC2': pca_result[:, 1],
+    'sample': samples,
+    'population': [sample_pops.get(s, 'Unknown') for s in samples]
+})
+
+# Plot the PCA results
+plt.figure(figsize=(10, 8))
+for pop in pop_counts.index:
+    mask = pca_df['population'] == pop
+    plt.scatter(
+        pca_df.loc[mask, 'PC1'],
+        pca_df.loc[mask, 'PC2'],
+        c=pop_colors[pop],
+        label=pop,
+        alpha=0.7,
+        s=30
+    )
+
+plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.2%} variance)')
+plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.2%} variance)')
+plt.title('PCA of Global Populations from 1000 Genomes Project')
+plt.legend(title='Population')
+plt.grid(alpha=0.3)
+plt.tight_layout()
+plt.savefig('results/population_pca.png', dpi=300)</code></pre>
+
+            <h3>Population Genetics Metrics</h3>
+            
+            <h4>Calculating FST (Fixation Index)</h4>
+            <p>FST measures genetic differentiation between populations:</p>
+            
+            <pre><code># Calculate FST for each pair of populations
+fst_values = {}
+
+pop_pairs = [(p1, p2) for i, p1 in enumerate(pop_counts.index) 
+             for p2 in pop_counts.index[i+1:]]
+
+for pop1, pop2 in pop_pairs:
+    # Get subpopulations
+    subpop1 = pop_masks[pop1]
+    subpop2 = pop_masks[pop2]
+    
+    # Calculate allele counts
+    ac1 = genotypes[:5000].count_alleles(subpop=subpop1)
+    ac2 = genotypes[:5000].count_alleles(subpop=subpop2)
+    
+    # Calculate FST
+    num, den = allel.hudson_fst(ac1, ac2)
+    fst = np.sum(num) / np.sum(den)
+    fst_values[(pop1, pop2)] = fst
+
+# Convert to a matrix for visualization
+fst_matrix = np.zeros((len(pop_counts), len(pop_counts)))
+fst_df = pd.DataFrame(0, index=pop_counts.index, columns=pop_counts.index)
+
+for (pop1, pop2), fst in fst_values.items():
+    fst_df.loc[pop1, pop2] = fst
+    fst_df.loc[pop2, pop1] = fst  # Matrix is symmetric
+
+# Plot FST heatmap
+plt.figure(figsize=(10, 8))
+sns.heatmap(
+    fst_df,
+    annot=True,
+    cmap='YlOrRd',
+    vmin=0,
+    fmt='.3f',
+    cbar_kws={'label': 'FST'}
+)
+plt.title('Genetic Differentiation (FST) Between Continental Populations')
+plt.tight_layout()
+plt.savefig('results/fst_heatmap.png', dpi=300)</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>The patterns of genetic variation observed in the 1000 Genomes Project reflect human evolutionary history and migration patterns:</p>
+            
+            <ul>
+                <li><strong>African Diversity:</strong> African populations typically show the highest genetic diversity, consistent with the origin of modern humans in Africa</li>
+                <li><strong>Population Bottlenecks:</strong> Non-African populations show reduced genetic diversity due to founder effects during migrations out of Africa</li>
+                <li><strong>Recent Admixture:</strong> Populations in the Americas show genetic contributions from African, European, and Native American ancestors, reflecting colonial history and the Transatlantic Slave Trade</li>
+            </ul>
+            
+            <p>Understanding these global patterns provides context for interpreting genetic relationships in genealogical studies, particularly for individuals with ancestry from diverse geographic regions. For anthropologists, these patterns connect genetic data to human history, migration, and social forces that have shaped human populations.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Calculate and visualize allele frequency distributions for specific continental populations</li>
+                <li>Identify genetic variants with the highest frequency differences between populations</li>
+                <li>Perform PCA on the genetic data and interpret the population clustering</li>
+                <li>Calculate FST between each pair of populations and visualize the results</li>
+                <li>Discuss how these population genetic patterns might inform genealogical analysis for individuals with mixed ancestry</li>
+            </ol>
+
+            <div class="alert alert-warning">
+                <p><strong>Note:</strong> Working with the full 1000 Genomes dataset requires significant computational resources. This lab uses a subset of variants to demonstrate the analytical approaches. The code can be adapted for larger analyses if you have access to more powerful computing resources.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab1_python.html" class="prev-lab">Python Basics</a>
+                <a href="lab3_process.html" class="next-lab">Processing Raw DNA</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

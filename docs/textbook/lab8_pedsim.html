@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 8: Ped-Sim | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Simulating Data with Ped-Sim</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab8_pedsim.html" class="active">Lab 8: Ped-Sim</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 8: Simulating Genetic Data with Ped-Sim</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Simulated genetic data allows us to evaluate the accuracy of IBD detection methods and pedigree reconstruction techniques. Using Ped-Sim, we can create genetic data for complex pedigrees with known relationships, providing a ground truth to assess our analytical methods.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the principles behind genetic simulation using pedigrees</li>
+                <li>Create pedigree structure definitions for simulation</li>
+                <li>Use Ped-Sim to generate simulated genetic data</li>
+                <li>Validate the simulated data against expected genetic patterns</li>
+                <li>Prepare simulated data for IBD detection and evaluation</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Genetic Simulation</h4>
+            <p>Genetic simulation is a powerful technique for testing analytical methods and understanding genetic processes:</p>
+            
+            <table>
+                <tr>
+                    <th>Simulation Approach</th>
+                    <th>Description</th>
+                    <th>Best For</th>
+                </tr>
+                <tr>
+                    <td>Forward-time (Ped-Sim)</td>
+                    <td>Simulates genetic transmission through specified pedigrees</td>
+                    <td>Recent family relationships, complex pedigrees</td>
+                </tr>
+                <tr>
+                    <td>Coalescent (MSPrime)</td>
+                    <td>Simulates genetic history by working backward from present</td>
+                    <td>Population-level patterns, ancient demography</td>
+                </tr>
+                <tr>
+                    <td>Admixture simulation</td>
+                    <td>Simulates genetic data from admixed populations</td>
+                    <td>Population mixtures, ancestry inference</td>
+                </tr>
+            </table>
+
+            <h4>Ped-Sim Overview</h4>
+            <p>Ped-Sim is a forward-time genetic simulator that:</p>
+            <ul>
+                <li>Simulates the transmission of genetic material through specified pedigrees</li>
+                <li>Models recombination, gene conversion, and mutation accurately</li>
+                <li>Generates phased genotype data for all individuals in the pedigree</li>
+                <li>Produces output in standard formats (VCF, PLINK) compatible with analysis tools</li>
+                <li>Allows simulation of complex, multi-generational pedigrees</li>
+            </ul>
+
+            <h3>Creating Pedigree Definitions</h3>
+            
+            <h4>Pedigree Definition Format</h4>
+            <p>Ped-Sim requires a pedigree definition file that specifies family relationships:</p>
+            
+            <pre><code># Pedigree definition format: child father mother sex
+# Sex: 1=male, 2=female
+
+# Founder generation (parents don't exist = 0)
+F1_1 0 0 1    # Founder male 1
+F1_2 0 0 2    # Founder female 1
+F1_3 0 0 1    # Founder male 2
+F1_4 0 0 2    # Founder female 2
+
+# Generation 2 (children of founders)
+F2_1 F1_1 F1_2 1    # Child 1 (male) of founder couple 1
+F2_2 F1_1 F1_2 2    # Child 2 (female) of founder couple 1
+F2_3 F1_3 F1_4 1    # Child 1 (male) of founder couple 2
+F2_4 F1_3 F1_4 2    # Child 2 (female) of founder couple 2
+
+# Generation 3 (cousins marry)
+F3_1 F2_1 F2_4 1    # Child of first male from couple 1 and second female from couple 2
+F3_2 F2_3 F2_2 2    # Child of first male from couple 2 and second female from couple 1</code></pre>
+
+            <h4>Python Script for Pedigree Creation</h4>
+            <p>We can create more complex pedigrees programmatically:</p>
+            
+            <pre><code>def create_pedigree_definition(output_path, num_founders=10, num_generations=5):
+    """Create a pedigree definition file with multiple generations."""
+    # Tracking individuals
+    individuals = []
+    founder_males = []
+    founder_females = []
+    current_gen_males = []
+    current_gen_females = []
+    next_id = 1
+    
+    # Create founders
+    for i in range(num_founders):
+        if i % 2 == 0:  # Male founders
+            individual_id = f"F{next_id}"
+            individuals.append((individual_id, "0", "0", "1"))  # id, father, mother, sex
+            founder_males.append(individual_id)
+            current_gen_males.append(individual_id)
+        else:  # Female founders
+            individual_id = f"F{next_id}"
+            individuals.append((individual_id, "0", "0", "2"))
+            founder_females.append(individual_id)
+            current_gen_females.append(individual_id)
+        next_id += 1
+    
+    # Create subsequent generations
+    for gen in range(2, num_generations + 1):
+        next_gen_males = []
+        next_gen_females = []
+        
+        # For simplicity, create marriages between consecutive individuals in the current generation
+        for i in range(0, min(len(current_gen_males), len(current_gen_females)), 1):
+            father = current_gen_males[i]
+            mother = current_gen_females[i]
+            
+            # Create 2 children per couple
+            for j in range(2):
+                individual_id = f"F{next_id}"
+                sex = "1" if j % 2 == 0 else "2"  # Alternate male/female children
+                individuals.append((individual_id, father, mother, sex))
+                
+                if sex == "1":
+                    next_gen_males.append(individual_id)
+                else:
+                    next_gen_females.append(individual_id)
+                    
+                next_id += 1
+        
+        # Update current generation for the next iteration
+        current_gen_males = next_gen_males
+        current_gen_females = next_gen_females
+    
+    # Write the pedigree definition to file
+    with open(output_path, 'w') as f:
+        f.write("# Pedigree definition: child father mother sex (1=male, 2=female)\n")
+        for individual in individuals:
+            f.write(" ".join(individual) + "\n")
+    
+    print(f"Created pedigree definition with {len(individuals)} individuals across {num_generations} generations")
+    
+    return output_path</code></pre>
+
+            <h3>Running Ped-Sim</h3>
+            
+            <h4>Basic Ped-Sim Command</h4>
+            <p>The basic Ped-Sim command requires several inputs:</p>
+            
+            <pre><code>./ped-sim \
+    --pedigree pedigree_definition.txt \
+    --map genetic_map.txt \
+    --founder-vcf founder_haplotypes.vcf.gz \
+    --out simulated_data</code></pre>
+
+            <p>Key parameters:</p>
+            <ul>
+                <li><code>--pedigree</code>: Pedigree definition file</li>
+                <li><code>--map</code>: Genetic map providing recombination rates</li>
+                <li><code>--founder-vcf</code>: VCF file with haplotypes for founder individuals</li>
+                <li><code>--out</code>: Output prefix for the simulated data</li>
+            </ul>
+
+            <h4>Automating Ped-Sim</h4>
+            <p>Let's create a Python function to automate the Ped-Sim process:</p>
+            
+            <pre><code>def run_ped_sim(pedigree_file, genetic_map_file, founder_vcf, output_prefix, utils_directory):
+    """Run Ped-Sim to generate simulated genetic data based on a pedigree."""
+    ped_sim_path = os.path.join(utils_directory, "ped-sim/ped-sim")
+    
+    # Construct the Ped-Sim command
+    cmd = [
+        ped_sim_path,
+        "--pedigree", pedigree_file,
+        "--map", genetic_map_file,
+        "--founder-vcf", founder_vcf,
+        "--out", output_prefix,
+        "--write-vcf",          # Output VCF file
+        "--write-map-file",     # Output MAP file for PLINK
+        "--write-genealogy"     # Output actual genetic segments
+    ]
+    
+    print(f"Running Ped-Sim: {' '.join(cmd)}")
+    
+    try:
+        subprocess.run(cmd, check=True)
+        print(f"Ped-Sim completed successfully. Output files at: {output_prefix}*")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Error running Ped-Sim: {e}")
+        return False</code></pre>
+
+            <h4>Preparing Founder Haplotypes</h4>
+            <p>Ped-Sim requires haplotypes for the founder individuals:</p>
+            
+            <pre><code>def prepare_founder_haplotypes(phased_vcf, pedigree_file, output_vcf):
+    """Extract or create haplotypes for founder individuals in the pedigree."""
+    # Identify founder individuals from the pedigree file
+    founders = set()
+    with open(pedigree_file, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue  # Skip comments
+            
+            parts = line.strip().split()
+            if len(parts) >= 4 and parts[1] == '0' and parts[2] == '0':
+                founders.add(parts[0])  # Add founder ID
+    
+    print(f"Identified {len(founders)} founders in the pedigree")
+    
+    # Use bcftools to create a VCF with random samples from the phased VCF
+    # This approach assumes we're randomly assigning haplotypes to founders
+    samples_in_vcf = subprocess.check_output(
+        ["bcftools", "query", "-l", phased_vcf], text=True).strip().split('\n')
+    
+    # Select random samples from the VCF to represent founders
+    if len(samples_in_vcf) >= len(founders):
+        selected_samples = np.random.choice(samples_in_vcf, size=len(founders), replace=False)
+    else:
+        # If not enough samples, reuse some
+        selected_samples = np.random.choice(samples_in_vcf, size=len(founders), replace=True)
+    
+    # Create a mapping from founder IDs to sample names
+    founder_to_sample = dict(zip(founders, selected_samples))
+    
+    # Create a sample mapping file for bcftools reheader
+    mapping_file = output_vcf + ".mapping"
+    with open(mapping_file, 'w') as f:
+        for old_name, new_name in zip(selected_samples, founders):
+            f.write(f"{old_name}\t{new_name}\n")
+    
+    # Extract the samples and rename them
+    subprocess.run([
+        "bcftools", "view", "-Ou", "-s", ",".join(selected_samples), phased_vcf,
+        "|", "bcftools", "reheader", "-s", mapping_file,
+        "|", "bcftools", "view", "-Oz", "-o", output_vcf
+    ], shell=True, check=True)
+    
+    # Index the output VCF
+    subprocess.run(["tabix", "-p", "vcf", output_vcf], check=True)
+    
+    print(f"Created founder haplotypes VCF at: {output_vcf}")
+    return output_vcf</code></pre>
+
+            <h3>Understanding Ped-Sim Output</h3>
+            
+            <h4>Output Files</h4>
+            <p>Ped-Sim generates several output files:</p>
+            
+            <table>
+                <tr>
+                    <th>File Extension</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td><code>.vcf</code></td>
+                    <td>Simulated genotypes in VCF format</td>
+                </tr>
+                <tr>
+                    <td><code>.seg</code></td>
+                    <td>Actual IBD segments between all pairs of individuals</td>
+                </tr>
+                <tr>
+                    <td><code>.seg_dict.txt</code></td>
+                    <td>Dictionary mapping IDs in .seg file to individual IDs</td>
+                </tr>
+                <tr>
+                    <td><code>.map</code></td>
+                    <td>Genetic map for the simulated variants</td>
+                </tr>
+            </table>
+
+            <h4>Analyzing Simulated IBD Segments</h4>
+            <p>Let's examine the true IBD segments from the simulation:</p>
+            
+            <pre><code>def analyze_true_ibd_segments(seg_file, seg_dict_file):
+    """Analyze the true IBD segments from Ped-Sim output."""
+    # Load the ID mapping dictionary
+    id_mapping = {}
+    with open(seg_dict_file, 'r') as f:
+        for line in f:
+            if ':' in line:
+                key, value = line.strip().split(': ')
+                id_mapping[key] = value
+    
+    # Load the segment file
+    segments = []
+    with open(seg_file, 'r') as f:
+        for line in f:
+            parts = line.strip().split()
+            if len(parts) >= 7:
+                ind1 = id_mapping.get(parts[0], parts[0])
+                ind2 = id_mapping.get(parts[1], parts[1])
+                chrom = parts[2]
+                start_bp = int(parts[3])
+                end_bp = int(parts[4])
+                start_cm = float(parts[5])
+                end_cm = float(parts[6])
+                length_cm = end_cm - start_cm
+                
+                segments.append({
+                    'ind1': ind1,
+                    'ind2': ind2,
+                    'chrom': chrom,
+                    'start_bp': start_bp,
+                    'end_bp': end_bp,
+                    'start_cm': start_cm,
+                    'end_cm': end_cm,
+                    'length_cm': length_cm
+                })
+    
+    # Convert to DataFrame for analysis
+    segments_df = pd.DataFrame(segments)
+    
+    # Basic statistics
+    print(f"Total true IBD segments: {len(segments_df)}")
+    print("\nSegment length statistics (cM):")
+    print(segments_df['length_cm'].describe())
+    
+    # Count segments per pair
+    pair_counts = segments_df.groupby(['ind1', 'ind2']).size()
+    print(f"\nTotal pairs with IBD: {len(pair_counts)}")
+    print(f"Average segments per pair: {len(segments_df) / len(pair_counts):.2f}")
+    
+    # Distribution of segment lengths
+    plt.figure(figsize=(10, 6))
+    sns.histplot(segments_df['length_cm'], bins=30, kde=True)
+    plt.title('Distribution of True IBD Segment Lengths')
+    plt.xlabel('Segment Length (cM)')
+    plt.ylabel('Frequency')
+    plt.grid(alpha=0.3)
+    plt.savefig('results/true_ibd_length_distribution.png', dpi=300)
+    plt.close()
+    
+    return segments_df</code></pre>
+
+            <h4>Visualizing the Pedigree and IBD Sharing</h4>
+            <p>We can visualize the pedigree structure and the pattern of IBD sharing:</p>
+            
+            <pre><code>def visualize_pedigree_ibd(pedigree_file, true_ibd_df, output_dir):
+    """Visualize the pedigree structure and IBD sharing pattern."""
+    import networkx as nx
+    
+    # Create a directed graph for the pedigree
+    G = nx.DiGraph()
+    
+    # Read the pedigree file
+    with open(pedigree_file, 'r') as f:
+        for line in f:
+            if line.startswith('#'):
+                continue
+            
+            parts = line.strip().split()
+            if len(parts) >= 4:
+                child, father, mother, sex = parts[:4]
+                
+                # Add nodes with attributes
+                G.add_node(child, sex=int(sex))
+                
+                # Add edges for parental relationships
+                if father != '0':
+                    G.add_edge(father, child)
+                if mother != '0':
+                    G.add_edge(mother, child)
+    
+    # Create a Figure and GridSpec for complex layout
+    fig = plt.figure(figsize=(15, 10))
+    gs = fig.add_gridspec(2, 2)
+    
+    # 1. Plot pedigree structure
+    ax1 = fig.add_subplot(gs[0, :])
+    pos = nx.nx_agraph.graphviz_layout(G, prog='dot')  # Hierarchical layout
+    
+    # Node colors based on sex
+    node_colors = ['lightblue' if G.nodes[n]['sex'] == 1 else 'lightpink' for n in G.nodes()]
+    
+    nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=500, 
+            font_size=10, arrowsize=15, ax=ax1)
+    ax1.set_title('Pedigree Structure')
+    
+    # 2. Heatmap of IBD sharing
+    ax2 = fig.add_subplot(gs[1, 0])
+    
+    # Create a matrix of total IBD sharing between pairs
+    individuals = sorted(list(G.nodes()))
+    n = len(individuals)
+    ibd_matrix = np.zeros((n, n))
+    
+    # Fill the matrix with total IBD sharing
+    for i, ind1 in enumerate(individuals):
+        for j, ind2 in enumerate(individuals):
+            if i == j:
+                continue  # Skip self comparisons
+            
+            # Get segments for this pair (in either direction)
+            pair_segs = true_ibd_df[
+                ((true_ibd_df['ind1'] == ind1) & (true_ibd_df['ind2'] == ind2)) |
+                ((true_ibd_df['ind1'] == ind2) & (true_ibd_df['ind2'] == ind1))
+            ]
+            
+            # Sum the segment lengths
+            total_ibd = pair_segs['length_cm'].sum()
+            ibd_matrix[i, j] = total_ibd
+    
+    # Create heatmap
+    sns.heatmap(ibd_matrix, xticklabels=individuals, yticklabels=individuals,
+               cmap='viridis', ax=ax2)
+    ax2.set_title('Total IBD Sharing (cM)')
+    
+    # 3. Histogram of segment lengths
+    ax3 = fig.add_subplot(gs[1, 1])
+    sns.histplot(true_ibd_df['length_cm'], bins=30, kde=True, ax=ax3)
+    ax3.set_title('Distribution of IBD Segment Lengths')
+    ax3.set_xlabel('Segment Length (cM)')
+    ax3.set_ylabel('Frequency')
+    ax3.grid(alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, 'pedigree_ibd_visualization.png'), dpi=300)
+    plt.close(fig)</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>Simulating genetic data with known pedigrees is valuable for anthropological research in several ways:</p>
+            
+            <ul>
+                <li><strong>Method Validation:</strong> Anthropologists can validate IBD detection and pedigree reconstruction methods before applying them to real data from communities of interest</li>
+                <li><strong>Cultural Hypothesis Testing:</strong> Simulation allows testing of hypotheses about how different cultural marriage patterns (endogamy, cousin marriage, polygyny) affect genetic patterns</li>
+                <li><strong>Historical Reconstruction:</strong> For populations with limited historical records (such as those affected by the transatlantic slave trade), simulation can test plausible historical scenarios against observed genetic patterns</li>
+                <li><strong>Privacy Protection:</strong> Using simulated data for method development avoids privacy concerns associated with real genetic data from living individuals</li>
+            </ul>
+            
+            <p>By creating simulated genetic data that mirrors real-world complexities, anthropologists can develop and refine methods for reconstructing biological relationships in culturally meaningful contexts, providing a bridge between genetics and social anthropology.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Create a pedigree definition file for a multi-generational family</li>
+                <li>Run Ped-Sim to generate simulated genetic data based on the pedigree</li>
+                <li>Analyze the true IBD segments from the simulation</li>
+                <li>Visualize the pedigree structure and pattern of IBD sharing</li>
+                <li>Apply IBD detection methods to the simulated data and compare to the ground truth</li>
+                <li>Discuss how different pedigree structures affect patterns of genetic sharing</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> Try creating pedigrees with different structures (e.g., cousin marriages, multiple generations, half-siblings) to understand how these relationship patterns affect IBD sharing and detection accuracy.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab7_refinedibd.html" class="prev-lab">Refined-IBD</a>
+                <a href="lab9_evaluation.html" class="next-lab">IBD Evaluation</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

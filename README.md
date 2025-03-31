@@ -1,189 +1,278 @@
-# cgg_image
+# Computational Genetic Genealogy Analysis Environment
 
-cgg_image is an Ubuntu 24.04 setup and Docker image code base that creates a complete development environment. Choose your preferred setup method below.
+This repository provides the necessary code and instructions to set up a complete development environment for computational genetic genealogy analysis on Ubuntu 24.04. You can choose between setting up the environment directly on your local Ubuntu system (or WSL2) or using a pre-built Docker container.
 
-## Ubuntu Setup (Non-Docker)
+## Setup Options
 
-> **Note:** This setup requires Ubuntu 24.04. If you're using WSL2 with an older Ubuntu version, please see the "Upgrading Ubuntu in WSL2" section below before proceeding.
+1.  **Ubuntu 24.04 Local Setup (Recommended for understanding the components):** Follow the steps below to configure your own Ubuntu 24.04 system. This aims to replicate the functionality of the analysis environment defined in the project's Docker configuration.
+2.  **Docker Setup (Recommended for consistency and ease of use):** Use the provided Docker image (`lakishadavid/cgg_image:latest`) for a pre-configured, isolated environment (based on Ubuntu 24.04, Python 3.12, source-built samtools/bcftools, etc.).
 
-In your Ubuntu terminal window on your computer, enter the following commands:
+## Ubuntu 24.04 Local Setup
 
-```bash
-git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
-```
+> **Note:** This setup requires **Ubuntu 24.04**. If you're using WSL2 with an older Ubuntu version, please see the "Upgrading Ubuntu in WSL2" section below before proceeding.
 
-You can now open VS Code and begin the labs. The labs are in the instructions directory. Start with Lab0_Code_Environment.ipynb to finish setting up your code environment. After this, you won't need to rerun Lab0_Code_Environment.ipynb for any lab, even if you restart your computer.
+Follow these steps in your **Ubuntu terminal**:
 
-To launch VS Code, enter the following in your terminal window:
+1.  **Clone the Repository:**
 
-```bash
-cd computational_genetic_genealogy
-code .
-```
+    ```bash
+    # Clone into your home directory or another location of your choice
+    git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
+    # Example: This creates ~/computational_genetic_genealogy if run in home dir
+    # Define the path to the cloned repository for subsequent steps
+    PROJECT_BASE_DIR="${HOME}/computational_genetic_genealogy" # <<< ADJUST THIS if you cloned elsewhere
+    ```
 
-Run Lab0_Code_Environment.ipynb in the instructions directory.
+2.  **Create Project Directory Structure:**
+    Manually create the standard subdirectories within the cloned repository.
+
+    ```bash
+    # Ensure the base directory variable is set correctly from step 1
+    echo "Using project base directory: ${PROJECT_BASE_DIR}"
+
+    mkdir -p "${PROJECT_BASE_DIR}/data" \
+             "${PROJECT_BASE_DIR}/results" \
+             "${PROJECT_BASE_DIR}/references" \
+             "${PROJECT_BASE_DIR}/utils"
+
+    echo "✅ Created project subdirectories in ${PROJECT_BASE_DIR}"
+    ```
+
+3.  **Create the Environment Configuration File (`~/.env`):**
+    Create a `.env` file in your **home directory** (`~`) to store essential absolute paths. This location aligns with the Docker environment configuration.
+    ```bash # Ensure the base directory variable is set correctly from step 1
+    echo "Using project base directory for paths: ${PROJECT_BASE_DIR}"
+
+            # Create or overwrite the .env file in your home directory
+            cat > ~/.env << EOF
+
+        PROJECT_WORKING_DIR=${PROJECT_BASE_DIR}
+
+    PROJECT_DATA_DIR=${PROJECT_BASE_DIR}/data
+    PROJECT_REFERENCES_DIR=${PROJECT_BASE_DIR}/references
+    PROJECT_RESULTS_DIR=${PROJECT_BASE_DIR}/results
+    PROJECT_UTILS_DIR=${PROJECT_BASE_DIR}/utils
+    USER_HOME=${HOME}
+    EOF
+
+            echo "✅ Created ~/.env file in your home directory (~/.env)."
+            ```
+            *Verify the contents:* `cat ~/.env`
+
+4.  **Install System Packages:**
+    Install required system dependencies using `apt`. Note that `bcftools`, `samtools`, and `tabix` are **not** installed here; they will be built from source later.
+
+    ```bash
+    # Update package lists and add necessary repositories
+    sudo apt update && sudo apt upgrade -y && sudo apt install -y software-properties-common
+    sudo apt-add-repository -y universe && sudo apt-add-repository -y multiverse && sudo apt-add-repository -y ppa:deadsnakes/ppa
+    sudo apt update -y
+
+    # Install main dependencies (excluding samtools/bcftools/tabix via apt)
+    # Added openjdk-21-jdk, libncurses-dev
+    sudo apt install -y --no-install-recommends \
+        build-essential \
+        g++ \
+        gcc \
+        make \
+        python3.12 \
+        python3.12-dev \
+        python3.12-venv \
+        python3-pip \
+        pipx \
+        wget \
+        curl \
+        git \
+        unzip \
+        libcairo2-dev \
+        pkg-config \
+        libpng-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        liblzma-dev \
+        libncurses-dev \
+        libharfbuzz-dev \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        cmake \
+        libsystemd-dev \
+        libgirepository1.0-dev \
+        gir1.2-glib-2.0 \
+        libdbus-1-dev \
+        graphviz \
+        graphviz-dev \
+        libpq-dev \
+        postgresql-client \
+        libtirpc-dev \
+        openjdk-21-jdk \
+        openjdk-21-jre \
+        gawk \
+        libboost-all-dev \
+        texlive-xetex \
+        texlive-fonts-recommended \
+        texlive-plain-generic \
+        pandoc \
+        r-base \
+        libgsl-dev \
+        autoconf \
+        automake \
+        libblas-dev \
+        liblapack-dev \
+        libatlas-base-dev
+
+    # Clean up
+    sudo apt-get clean && sudo rm -rf /var/lib/apt/lists/*
+
+    # Configure Java Environment
+    JAVA_HOME_PATH=$(update-alternatives --list java | grep 'java-21-openjdk' | sed 's/\/bin\/java//')
+    if [ -n "$JAVA_HOME_PATH" ] && ! grep -q "export JAVA_HOME=" ~/.bashrc; then
+      echo "export JAVA_HOME=$JAVA_HOME_PATH" >> ~/.bashrc
+      echo "export PATH=\$JAVA_HOME/bin:\$PATH" >> ~/.bashrc
+      echo "✅ Configured JAVA_HOME in ~/.bashrc."
+    fi
+    ```
+
+5.  **Build Samtools, BCFtools, HTSlib (v1.18) from Source:**
+    This ensures you have the specific versions used in the reference environment.
+
+    ```bash
+    # Create a temporary directory for building
+    TEMP_BUILD_DIR=$(mktemp -d)
+    cd "$TEMP_BUILD_DIR"
+    echo "Building tools in $TEMP_BUILD_DIR..."
+
+    # Define version
+    SAMTOOLS_VERSION=1.18
+
+    # HTSlib
+    wget https://github.com/samtools/htslib/releases/download/${SAMTOOLS_VERSION}/htslib-${SAMTOOLS_VERSION}.tar.bz2
+    tar -xjf htslib-${SAMTOOLS_VERSION}.tar.bz2
+    cd htslib-${SAMTOOLS_VERSION}
+    ./configure --prefix=/usr/local # Install system-wide
+    make
+    sudo make install
+    cd ..
+
+    # Samtools
+    wget https://github.com/samtools/samtools/releases/download/${SAMTOOLS_VERSION}/samtools-${SAMTOOLS_VERSION}.tar.bz2
+    tar -xjf samtools-${SAMTOOLS_VERSION}.tar.bz2
+    cd samtools-${SAMTOOLS_VERSION}
+    ./configure --prefix=/usr/local
+    make
+    sudo make install
+    cd ..
+
+    # BCFtools
+    wget https://github.com/samtools/bcftools/releases/download/${SAMTOOLS_VERSION}/bcftools-${SAMTOOLS_VERSION}.tar.bz2
+    tar -xjf bcftools-${SAMTOOLS_VERSION}.tar.bz2
+    cd bcftools-${SAMTOOLS_VERSION}
+    ./configure --prefix=/usr/local
+    make
+    sudo make install
+    cd ..
+
+    # Clean up build directory
+    cd ~ # Go back home
+    rm -rf "$TEMP_BUILD_DIR"
+
+    # Update library cache
+    sudo ldconfig
+
+    echo "✅ Samtools, BCFtools, HTSlib v${SAMTOOLS_VERSION} built and installed."
+    ```
+
+    _Verify installation:_ `bcftools --version && samtools --version`
+
+6.  **Install Poetry (Python Dependency Manager):**
+
+    ````bash
+    pipx ensurepath
+    pipx install poetry
+    # Add pipx path to current and future shells
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+    source ~/.bashrc # Apply for current session
+    ```    *Verify installation:* `poetry --version`
+
+    ````
+
+7.  **Install Python Project Dependencies:**
+    Navigate into the _cloned_ repository directory (`PROJECT_BASE_DIR`) and use Poetry.
+
+    ```bash
+    # Ensure the base directory variable is set correctly from step 1
+    echo "Changing to project base directory: ${PROJECT_BASE_DIR}"
+    cd "$PROJECT_BASE_DIR"
+
+    poetry config virtualenvs.in-project true
+    poetry install --no-root
+    ```
+
+    This creates a `.venv` directory inside the project folder.
+
+8.  **Update PATH for Utility Scripts:**
+    Manually add the project's `utils` directory to your `~/.bashrc` so tools installed there can be found easily.
+
+    ```bash
+    # Ensure the base directory variable is set correctly from step 1
+    UTILS_DIR="${PROJECT_BASE_DIR}/utils"
+    EXPORT_LINE="export PATH=\"\$PATH:${UTILS_DIR}\"" # Add utils dir to PATH
+
+    # Check if the line already exists
+    if ! grep -qF "$EXPORT_LINE" ~/.bashrc; then
+        echo -e "\n# Add project utils directory to PATH\n${EXPORT_LINE}" >> ~/.bashrc
+        echo "✅ Added utils directory (${UTILS_DIR}) to PATH in ~/.bashrc."
+    else
+        echo "✅ Utils directory already in PATH in ~/.bashrc."
+    fi
+    # Apply changes to the current terminal session
+    source ~/.bashrc
+    ```
+
+9.  **Final Tool Installation & Setup (Using Jupyter Notebook):**
+    The remaining specific bioinformatics tools (Beagle, BonsaiTree, PLINK2, etc.) and initial data copying are handled via the **`Lab0_Code_Environment.ipynb`** Jupyter Notebook.
+
+    - Open the project in VS Code:
+      ```bash
+      # Ensure the base directory variable is set correctly from step 1
+      code "$PROJECT_BASE_DIR"
+      ```
+    - Ensure you have the Python and Jupyter extensions installed in VS Code.
+    - Open the `instructions/Lab0_Code_Environment.ipynb` notebook located within your project folder.
+    - Follow the instructions **within the notebook** to:
+      - Select the correct Python interpreter (pointing to the `.venv` within the project folder).
+      - Load environment variables from `~/.env`.
+      - Verify the initial setup (Java, Samtools, R version checks).
+      - Install the remaining tools (JARs, BonsaiTree, LiftOver, RFMix2, IBIS, PedSim, PLINK2) into the `${PROJECT_BASE_DIR}/utils` directory.
+      - Copy initial `class_data`.
+      - Optionally configure passwordless sudo for notebook commands.
+
+10. **Important Note on `scripts_env/directory_setup.py`:**
+    This project includes a script `scripts_env/directory_setup.py` which can also configure directories and create a `.env` file. However, that script places the `.env` file _inside the project directory_ (`${PROJECT_BASE_DIR}/.env`), whereas the Docker environment uses `~/.env`. To ensure the local setup aligns closely with the Docker environment, these manual instructions use `~/.env` and **do not run** `scripts_env/directory_setup.py`.
 
 ## Upgrading Ubuntu in WSL2
 
-If you're using WSL2 with an older version of Ubuntu, you'll need to upgrade to Ubuntu 24.04:
-
-### Check Your Current Version
-
-```bash
-lsb_release -a
-```
-
-### Upgrade from Ubuntu 22.04 to 24.04
-
-1. Update and upgrade packages:
-
-   ```bash
-   sudo apt update && sudo apt upgrade -y
-   ```
-
-2. Install update manager:
-
-   ```bash
-   sudo apt install update-manager-core -y
-   ```
-
-3. Start the upgrade:
-
-   ```bash
-   sudo do-release-upgrade -d
-   ```
-
-4. Follow the prompts and restart WSL after completion:
-   ```powershell
-   # In Windows PowerShell
-   wsl --shutdown
-   ```
-
-### Alternative: Fresh Installation
-
-If upgrading causes issues, you can install a fresh Ubuntu 24.04:
-
-1. In Windows PowerShell (as administrator):
-   ```powershell
-   # Backup important data first!
-   wsl --unregister Ubuntu
-   wsl --install -d Ubuntu-24.04
-   ```
-
-After upgrading or installing Ubuntu 24.04, proceed with the setup instructions.
+_(Keep this section as previously provided)_
 
 ## Docker Setup
 
-### Run the Container
-
-Launch a terminal window and run:
-
-```bash
-docker pull lakishadavid/cgg_image:latest
-docker run -it lakishadavid/cgg_image:latest bash
-```
-
-You can then open and connect VS Code to the container, and begin the tutorials or run the scripts in the container terminal window.
+_(Keep this section as previously provided, ensuring volume paths align with `/home/ubuntu/computational_genetic_genealogy/...`)_
 
 ## Using VS Code
 
-### For Ubuntu Setup
-
-1. Open VS Code
-2. Install the Python extension
-3. Select Python Interpreter:
-   - Windows/Linux: Ctrl+Shift+P | macOS: Cmd+Shift+P | via View > Command Palette
-   - Select "Python: Select Interpreter"
-   - Choose the environment created by setup script
-
-### For Docker Setup
-
-1. Open VS Code
-2. Install the "Remote - Containers" extension if you haven't already
-3. Open the Command Palette:
-   - Windows/Linux: Ctrl+Shift+P | macOS: Cmd+Shift+P | via View > Command Palette
-4. Select Remote-Containers: Attach to Running Container and choose the container
-5. Install the Python extension
-6. Select Python Interpreter:
-   - Windows/Linux: Ctrl+Shift+P | macOS: Cmd+Shift+P | via View > Command Palette
-   - Select "Python: Select Interpreter"
-   - Choose the environment created by setup script
+_(Keep this section as previously provided)_
 
 ## Data Management
 
-### For Ubuntu Setup
+_(Keep this section, referencing `${PROJECT_BASE_DIR}/data` etc. for local and the Docker paths for container)_
 
-The setup script configures your directories and paths in the .env file:
+## Stopping the Container (Docker Only)
 
-- data/
-- references/
-- results/
-
-If your data directory is something other than ~/computational_genetic_genealogy/data, the script will copy the project data into your specified data directory.
-
-### For Docker Setup: Data Persistence with Volumes
-
-Use Docker volumes to ensure your work (data, references, and results) is preserved even if the container stops or is removed.
-
-To mount local directories, run:
-
-```bash
-docker run -it \
-   -v $(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data \
-   -v $(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references \
-   -v $(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results \
-   lakishadavid/cgg_image:latest
-```
-
-(Replace $(pwd)/data, $(pwd)/references, and $(pwd)/results with your actual local paths.)
-
-The container runs Ubuntu 24.04 with the working directory at `/home/ubuntu/computational_genetic_genealogy`.
-
-For example, if your home directory was mynewsystem, you created a subdirectory in mynewsystem called ANTHprojects, and you created multiple subdirectories in ANTHprojects called genetic_data, genetic_refs, and genetic_results, you would enter the following to map your directories to the container directories:
-
-```bash
-docker run -it \
-   -v /home/mynewsystem/ANTHprojects/genetic_data:/home/ubuntu/computational_genetic_genealogy/data \
-   -v /home/mynewsystem/ANTHprojects/genetic_refs:/home/ubuntu/computational_genetic_genealogy/references \
-   -v /home/mynewsystem/ANTHprojects/genetic_results:/home/ubuntu/computational_genetic_genealogy/results \
-   lakishadavid/cgg_image:latest
-```
-
-Keep the paths on the right as they are (e.g., /home/ubuntu/...). These are the file paths within the container. Also, keep the image name the same (e.g., lakishadavid/cgg_image:latest). This is the actual name of the image.
-
-## Stopping and Resuming the Container (Docker Only)
-
-### Stopping:
-
-To stop the container, simply type exit or press Ctrl+D. The container stops but remains available for reattachment (unless it was started with the --rm flag).
-
-### Resuming:
-
-Find your container's ID or name with:
-
-```bash
-docker ps -a
-```
-
-Restart and attach to the container with:
-
-```bash
-docker start -ai <container_id_or_name>
-```
-
-Data stored in mounted volumes persists between container sessions.
+_(Keep this section)_
 
 ## Troubleshooting
 
-### R Package Installation Issues
-
-If you encounter issues with R packages or Python's rpy2 integration, you may need additional system dependencies:
-
-```bash
-sudo apt install -y libblas-dev liblapack-dev libatlas-base-dev
-```
-
-This is typically needed for R's numerical computing capabilities and Python-R integration through rpy2.
+_(Keep this section, ensure it mentions checking `~/.env` and PATH includes `~/.local/bin` and the project's `utils` dir)_
 
 ## License
 

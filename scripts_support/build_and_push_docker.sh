@@ -33,7 +33,7 @@ BUILD_ONLY="${5:-false}"
 set -e
 
 # Create a timestamped log file
-LOG_FILE="/home/lakishadavid/computational_genetic_genealogy/build.log"
+LOG_FILE="/home/lakishadavid/computational_genetic_genealogy/logs/build.log"
 rm -f "${LOG_FILE}"  # Delete existing log file
 touch "${LOG_FILE}"
 echo "Build started at: $(date)" | tee -a "${LOG_FILE}"

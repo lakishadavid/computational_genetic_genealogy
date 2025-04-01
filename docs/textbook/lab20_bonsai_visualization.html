@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 20: Bonsai Visualization | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Visualization and Interpretation in Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab19_bonsai_advanced.html">Lab 19: Advanced Construction</a>
+        <a href="lab20_bonsai_visualization.html" class="active">Lab 20: Visualization</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 20: Visualization and Interpretation in Bonsai</h2>
+
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Effective visualization is crucial for interpreting complex pedigrees
+reconstructed by Bonsai. Proper visualization techniques enable researchers to communicate findings clearly, identify
+structural patterns, validate results, and gain insights that might be missed when examining raw data alone.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Master techniques for visualizing complex pedigrees at different scales</li>
+                <li>Implement interactive visualizations for exploring large pedigrees</li>
+                <li>Develop visualization strategies that highlight relationship confidence and uncertainty</li>
+                <li>Create specialized views for different research questions and audiences</li>
+                <li>Learn techniques for integrating metadata into pedigree visualizations</li>
+                <li>Apply best practices for interpreting Bonsai outputs</li>
+            </ul>
+
+            <h3>Pedigree Visualization Fundamentals</h3>
+
+            <p>Effective pedigree visualization is essential for interpreting Bonsai results.</p>
+
+            <h4>Visual Encoding of Pedigree Structure</h4>
+
+            <p>Standard visual elements used in pedigree visualizations:</p>
+
+            <ul>
+                <li><strong>Nodes:</strong> Represent individuals, typically shown as circles (females), squares (males), or
+diamonds (unknown sex)</li>
+                <li><strong>Edges:</strong> Represent relationships between individuals</li>
+                <li><strong>Generations:</strong> Typically arranged horizontally with older generations at the top</li>
+                <li><strong>Siblings:</strong> Arranged side by side and connected by a horizontal line</li>
+                <li><strong>Mating:</strong> Typically shown by a horizontal line connecting partners</li>
+                <li><strong>Parent-child:</strong> Vertical lines connecting parents to offspring</li>
+            </ul>
+
+            <p>Common pedigree layouts include:</p>
+
+            <ul>
+                <li><strong>Hierarchical Layout:</strong> Emphasizes generational structure</li>
+                <li><strong>Radial Layout:</strong> Places a focal individual at the center with relatives arranged in
+concentric circles</li>
+                <li><strong>Force-directed Layout:</strong> Positions nodes based on simulated physical forces, useful for
+complex pedigrees</li>
+                <li><strong>Matrix Layout:</strong> Represents relationships in a grid, useful for dense pedigrees</li>
+            </ul>
+
+            <h4>Basic Pedigree Visualization Implementation</h4>
+
+            <p>A basic implementation using NetworkX and Matplotlib:</p>
+
+            <pre><code>def visualize_basic_pedigree(pedigree, output_file=None):
+    """
+    Create a basic pedigree visualization.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import networkx as nx
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add individuals as nodes
+    for ind_id, data in pedigree['individuals'].items():
+        sex = data.get('sex', 'unknown')
+        G.add_node(ind_id, sex=sex, latent=data.get('latent', False))
+
+    # Add relationships as edges
+    for ind_id, parents in pedigree['relationships'].items():
+        father_id = parents.get('father')
+        mother_id = parents.get('mother')
+
+        if father_id:
+            G.add_edge(father_id, ind_id)
+
+        if mother_id:
+            G.add_edge(mother_id, ind_id)
+
+    # Calculate generation levels
+    generations = {}
+    roots = [n for n, d in G.in_degree() if d == 0]
+
+    for root in roots:
+        generations[root] = 0
+
+    # BFS to assign generation levels
+    visited = set(roots)
+    queue = [(root, 0) for root in roots]
+
+    while queue:
+        node, level = queue.pop(0)
+        for child in G.successors(node):
+            if child not in visited:
+                generations[child] = level + 1
+                visited.add(child)
+                queue.append((child, level + 1))
+
+    # Handle individuals not reached by BFS
+    for node in G.nodes():
+        if node not in generations:
+            generations[node] = 0
+
+    # Set up the plot
+    plt.figure(figsize=(12, 8))
+
+    # Create position dictionary based on generations
+    pos = {}
+    gen_counts = {}
+
+    for ind_id, gen in generations.items():
+        if gen not in gen_counts:
+            gen_counts[gen] = 0
+
+        pos[ind_id] = (gen_counts[gen], -gen)
+        gen_counts[gen] += 1
+
+    # Draw nodes with different shapes based on sex
+    for ind_id, data in G.nodes(data=True):
+        sex = data.get('sex', 'unknown')
+        latent = data.get('latent', False)
+
+        x, y = pos[ind_id]
+
+        if sex == 'male':
+            marker = 's'  # square
+            color = 'lightblue'
+        elif sex == 'female':
+            marker = 'o'  # circle
+            color = 'pink'
+        else:
+            marker = 'D'  # diamond
+            color = 'lightgray'
+
+        # Latent individuals (inferred) are drawn with dashed borders
+        if latent:
+            plt.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black',
+                       linewidth=1, linestyle='--')
+        else:
+            plt.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black',
+                       linewidth=1)
+
+        # Add labels
+        plt.text(x, y, ind_id, ha='center', va='center')
+
+    # Draw edges
+    for source, target in G.edges():
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        plt.plot([sx, tx], [sy, ty], 'k-', alpha=0.7)
+
+    # Turn off axis
+    plt.axis('off')
+
+    # Add legend
+    legend_elements = [
+        patches.Patch(facecolor='lightblue', edgecolor='black', label='Male'),
+        patches.Patch(facecolor='pink', edgecolor='black', label='Female'),
+        patches.Patch(facecolor='lightgray', edgecolor='black', label='Unknown'),
+        patches.Patch(facecolor='white', edgecolor='black', linestyle='--', label='Latent')
+    ]
+    plt.legend(handles=legend_elements, loc='upper right')
+
+    plt.title('Pedigree Visualization')
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()</code></pre>
+
+            <p>This basic implementation provides a foundation for pedigree visualization, showing individuals and their
+relationships in a hierarchical layout.</p>
+
+            <h3>Advanced Visualization Techniques</h3>
+
+            <p>Advanced techniques enable more effective visualization of complex pedigrees.</p>
+
+            <h4>Interactive Pedigree Exploration</h4>
+
+            <p>Interactive visualizations allow users to explore complex pedigrees more effectively:</p>
+
+            <pre><code>def create_interactive_pedigree_visualization(pedigree, output_file=None):
+    """
+    Create an interactive pedigree visualization using Plotly.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure
+        output_file: Optional path to save the HTML visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import plotly.graph_objects as go
+    import networkx as nx
+    import numpy as np
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add individuals as nodes
+    for ind_id, data in pedigree['individuals'].items():
+        sex = data.get('sex', 'unknown')
+        birth_year = data.get('birth_year')
+        latent = data.get('latent', False)
+
+        G.add_node(ind_id, sex=sex, birth_year=birth_year, latent=latent)
+
+    # Add relationships as edges
+    for ind_id, parents in pedigree['relationships'].items():
+        father_id = parents.get('father')
+        mother_id = parents.get('mother')
+
+        if father_id:
+            G.add_edge(father_id, ind_id, relationship='parent-child')
+
+        if mother_id:
+            G.add_edge(mother_id, ind_id, relationship='parent-child')
+
+    # Calculate generation levels
+    generations = calculate_generations(G)
+
+    # Create position dictionary using a hierarchical layout
+    pos = nx.multipartite_layout(G, subset_key=lambda x: generations.get(x, 0))
+
+    # Prepare node traces by sex
+    node_traces = {
+        'male': go.Scatter(x=[], y=[], mode='markers+text', text=[], hovertext=[],
+                          marker=dict(symbol='square', size=20, color='lightblue'),
+                          name='Male'),
+        'female': go.Scatter(x=[], y=[], mode='markers+text', text=[], hovertext=[],
+                           marker=dict(symbol='circle', size=20, color='pink'),
+                           name='Female'),
+        'unknown': go.Scatter(x=[], y=[], mode='markers+text', text=[], hovertext=[],
+                            marker=dict(symbol='diamond', size=20, color='lightgray'),
+                            name='Unknown Sex')
+    }
+
+    # Add nodes to traces
+    for ind_id, data in G.nodes(data=True):
+        sex = data.get('sex', 'unknown')
+        birth_year = data.get('birth_year', 'Unknown')
+        latent = data.get('latent', False)
+
+        x, y = pos[ind_id]
+
+        # Determine which trace to use
+        if sex not in node_traces:
+            sex = 'unknown'
+
+        # Add node to appropriate trace
+        node_traces[sex]['x'] += tuple([x])
+        node_traces[sex]['y'] += tuple([y])
+        node_traces[sex]['text'] += tuple([ind_id])
+
+        # Create hover text
+        hover_text = f"ID: {ind_id}<br>Sex: {sex}<br>Birth Year: {birth_year}"
+        if latent:
+            hover_text += "<br>(Inferred individual)"
+
+        node_traces[sex]['hovertext'] += tuple([hover_text])
+
+        # Adjust marker style for latent individuals
+        if latent:
+            if 'marker.line.dash' not in node_traces[sex]:
+                node_traces[sex]['marker']['line'] = dict(width=2, dash='dash')
+
+    # Prepare edge traces
+    edge_trace = go.Scatter(x=[], y=[], mode='lines', line=dict(width=1, color='black'),
+                           hoverinfo='none', showlegend=False)
+
+    # Add edges to trace
+    for source, target, data in G.edges(data=True):
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        edge_trace['x'] += tuple([sx, tx, None])
+        edge_trace['y'] += tuple([sy, ty, None])
+
+    # Create figure
+    fig = go.Figure(data=[edge_trace] + list(node_traces.values()))
+
+    # Update layout
+    fig.update_layout(
+        title="Interactive Pedigree Visualization",
+        showlegend=True,
+        hovermode='closest',
+        margin=dict(b=20, l=5, r=5, t=40),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        legend=dict(x=1.05, y=1),
+        width=900,
+        height=600,
+        annotations=[
+            dict(
+                text="Hover over nodes for details<br>Use toolbar to zoom/pan",
+                showarrow=False,
+                xref="paper", yref="paper",
+                x=0.01, y=-0.01
+            )
+        ]
+    )
+
+    # Add buttons for different layouts
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                buttons=[
+                    dict(label="Hierarchical Layout",
+                         method="update",
+                         args=[{"visible": [True] * (1 + len(node_traces))}]),
+                    dict(label="Force-Directed Layout",
+                         method="update",
+                         args=[{"visible": [True] * (1 + len(node_traces))}])
+                ],
+                direction="down",
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.1,
+                xanchor="left",
+                y=1.1,
+                yanchor="top"
+            )
+        ]
+    )
+
+    # Save or display
+    if output_file:
+        fig.write_html(output_file)
+    else:
+        fig.show()
+
+def calculate_generations(G):
+    """Calculate generation levels for a pedigree graph."""
+    # Implementation details...
+    generations = {}
+    # ... (generation calculation logic)
+    return generations</code></pre>
+
+            <p>Interactive visualizations allow users to zoom, pan, and explore details on demand, making them especially
+valuable for large or complex pedigrees.</p>
+
+            <h4>Visualizing Confidence and Uncertainty</h4>
+
+            <p>Visualizing confidence and uncertainty in relationships is crucial for accurate interpretation:</p>
+
+            <pre><code>def visualize_pedigree_with_confidence(pedigree, output_file=None):
+    """
+    Visualize a pedigree with relationship confidence information.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure with confidence scores
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import networkx as nx
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import matplotlib.cm as cm
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add individuals as nodes
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships as edges with confidence scores
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+        confidence = relationship.get('confidence', 1.0)
+
+        G.add_edge(source, target, type=rel_type, confidence=confidence)
+
+    # Calculate positions using hierarchical layout
+    pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
+
+    # Set up the plot
+    plt.figure(figsize=(12, 8))
+
+    # Draw nodes
+    for ind_id, data in G.nodes(data=True):
+        x, y = pos[ind_id]
+        sex = data.get('sex', 'unknown')
+        latent = data.get('latent', False)
+
+        if sex == 'male':
+            marker = 's'  # square
+            color = 'lightblue'
+        elif sex == 'female':
+            marker = 'o'  # circle
+            color = 'pink'
+        else:
+            marker = 'D'  # diamond
+            color = 'lightgray'
+
+        # Latent individuals have dashed borders
+        if latent:
+            plt.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black',
+                       linewidth=1, linestyle='--')
+        else:
+            plt.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black',
+                       linewidth=1)
+
+        # Add labels
+        plt.text(x, y, ind_id, ha='center', va='center')
+
+    # Create colormap for confidence scores
+    cmap = cm.get_cmap('RdYlGn')
+
+    # Draw edges with color based on confidence
+    for source, target, data in G.edges(data=True):
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        confidence = data.get('confidence', 1.0)
+        rel_type = data.get('type', 'unknown')
+
+        # Map confidence to color (red=low, green=high)
+        edge_color = cmap(confidence)
+
+        # Draw edge with confidence-based color
+        plt.plot([sx, tx], [sy, ty], color=edge_color, linewidth=2)
+
+        # Add relationship type and confidence as a label
+        mid_x = (sx + tx) / 2
+        mid_y = (sy + ty) / 2
+        plt.text(mid_x, mid_y, f"{rel_type}\n({confidence:.2f})",
+                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
+
+    # Add a colorbar for confidence
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(0, 1))
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=plt.gca())
+    cbar.set_label('Relationship Confidence')
+
+    # Turn off axis
+    plt.axis('off')
+
+    # Add legend
+    legend_elements = [
+        patches.Patch(facecolor='lightblue', edgecolor='black', label='Male'),
+        patches.Patch(facecolor='pink', edgecolor='black', label='Female'),
+        patches.Patch(facecolor='lightgray', edgecolor='black', label='Unknown'),
+        patches.Patch(facecolor='white', edgecolor='black', linestyle='--', label='Latent (Inferred)')
+    ]
+    plt.legend(handles=legend_elements, loc='upper right')
+
+    plt.title('Pedigree Visualization with Confidence Information')
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()</code></pre>
+
+            <p>Using color to represent confidence helps researchers quickly identify which relationships are more certain and
+ which are more tentative, guiding interpretation and further investigation.</p>
+
+            <h4>Multi-Scale Visualization</h4>
+
+            <p>Multi-scale visualization techniques help manage complexity in large pedigrees:</p>
+
+            <pre><code>def create_multiscale_pedigree_visualization(pedigree, output_file=None):
+    """
+    Create a multi-scale pedigree visualization.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import plotly.graph_objects as go
+    import networkx as nx
+
+    # Create a directed graph
+    G = nx.DiGraph()
+
+    # Add individuals as nodes
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships as edges
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+
+        G.add_edge(source, target, type=rel_type)
+
+    # Create different levels of abstraction
+    # Level 1: Full pedigree
+    G_full = G.copy()
+
+    # Level 2: Family units (collapse siblings into family groups)
+    G_families = create_family_group_graph(G)
+
+    # Level 3: Generation summary (collapse individuals into generation groups)
+    G_generations = create_generation_summary_graph(G)
+
+    # Create positions for each graph
+    pos_full = nx.nx_agraph.graphviz_layout(G_full, prog='dot')
+    pos_families = nx.nx_agraph.graphviz_layout(G_families, prog='dot')
+    pos_generations = nx.nx_agraph.graphviz_layout(G_generations, prog='dot')
+
+    # Create traces for full pedigree
+    traces_full = create_graph_traces(G_full, pos_full)
+
+    # Create traces for family view
+    traces_families = create_graph_traces(G_families, pos_families)
+
+    # Create traces for generation view
+    traces_generations = create_graph_traces(G_generations, pos_generations)
+
+    # Combine all traces
+    all_traces = traces_full + traces_families + traces_generations
+
+    # Set visibility
+    for trace in traces_full:
+        trace.visible = True
+
+    for trace in traces_families + traces_generations:
+        trace.visible = False
+
+    # Create figure
+    fig = go.Figure(data=all_traces)
+
+    # Add buttons to switch between views
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                buttons=[
+                    dict(label="Full Pedigree",
+                         method="update",
+                         args=[{"visible": [t in traces_full for t in all_traces]}]),
+                    dict(label="Family Units",
+                         method="update",
+                         args=[{"visible": [t in traces_families for t in all_traces]}]),
+                    dict(label="Generation Summary",
+                         method="update",
+                         args=[{"visible": [t in traces_generations for t in all_traces]}])
+                ],
+                direction="down",
+                pad={"r": 10, "t": 10},
+                showactive=True,
+                x=0.1,
+                xanchor="left",
+                y=1.1,
+                yanchor="top"
+            )
+        ]
+    )
+
+    # Update layout
+    fig.update_layout(
+        title="Multi-Scale Pedigree Visualization",
+        showlegend=True,
+        hovermode='closest',
+        margin=dict(b=20, l=5, r=5, t=40),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+    )
+
+    # Save or display
+    if output_file:
+        fig.write_html(output_file)
+    else:
+        fig.show()
+
+def create_family_group_graph(G):
+    """Create a graph where siblings are grouped into family units."""
+    # Implementation details...
+    return nx.DiGraph()
+
+def create_generation_summary_graph(G):
+    """Create a graph summarizing generations."""
+    # Implementation details...
+    return nx.DiGraph()
+
+def create_graph_traces(G, pos):
+    """Create Plotly traces for a graph with given positions."""
+    # Implementation details...
+    return []</code></pre>
+
+            <p>Multi-scale visualizations allow users to switch between different levels of detail, from the full pedigree to
+more abstract representations that highlight specific patterns or structures.</p>
+
+            <h3>Specialized Visualization Approaches</h3>
+
+            <p>Specialized visualization approaches address specific research questions and audiences.</p>
+
+            <h4>IBD-Centric Visualizations</h4>
+
+            <p>Visualizations that focus on IBD segment patterns:</p>
+
+            <pre><code>def create_ibd_centric_visualization(pedigree, segments, output_file=None):
+    """
+    Create a visualization that integrates pedigree structure with IBD segments.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure
+        segments: List of IBD segments
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import networkx as nx
+    import numpy as np
+
+    # Create pedigree graph
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+
+        G.add_edge(source, target, type=rel_type)
+
+    # Calculate positions
+    pos = nx.nx_agraph.graphviz_layout(G, prog='dot')
+
+    # Calculate IBD statistics between individual pairs
+    ibd_stats = {}
+    for segment in segments:
+        ind1 = segment['ind1']
+        ind2 = segment['ind2']
+
+        # Skip if individuals not in pedigree
+        if ind1 not in G.nodes or ind2 not in G.nodes:
+            continue
+
+        pair = tuple(sorted([ind1, ind2]))
+
+        if pair not in ibd_stats:
+            ibd_stats[pair] = {
+                'total_ibd': 0,
+                'segment_count': 0,
+                'max_segment': 0,
+                'segments': []
+            }
+
+        ibd_stats[pair]['total_ibd'] += segment['length']
+        ibd_stats[pair]['segment_count'] += 1
+        ibd_stats[pair]['max_segment'] = max(ibd_stats[pair]['max_segment'], segment['length'])
+        ibd_stats[pair]['segments'].append(segment)
+
+    # Set up figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8), gridspec_kw={'width_ratios': [1, 1]})
+
+    # Plot 1: Pedigree with IBD information
+    ax1.set_title('Pedigree with IBD Information')
+
+    # Draw nodes
+    for ind_id, data in G.nodes(data=True):
+        x, y = pos[ind_id]
+        sex = data.get('sex', 'unknown')
+
+        if sex == 'male':
+            marker = 's'  # square
+            color = 'lightblue'
+        elif sex == 'female':
+            marker = 'o'  # circle
+            color = 'pink'
+        else:
+            marker = 'D'  # diamond
+            color = 'lightgray'
+
+        ax1.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black', linewidth=1)
+        ax1.text(x, y, ind_id, ha='center', va='center')
+
+    # Draw edges
+    for source, target, data in G.edges(data=True):
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        ax1.plot([sx, tx], [sy, ty], 'k-', alpha=0.7)
+
+    # Add IBD information as additional edges
+    for pair, stats in ibd_stats.items():
+        ind1, ind2 = pair
+
+        # Skip if direct relationship already exists
+        if G.has_edge(ind1, ind2) or G.has_edge(ind2, ind1):
+            continue
+
+        # Only show significant IBD
+        if stats['total_ibd'] < 20:
+            continue
+
+        x1, y1 = pos[ind1]
+        x2, y2 = pos[ind2]
+
+        # Draw IBD connection
+        width = 0.5 + 2.5 * (stats['total_ibd'] / 300)  # Scale by IBD amount
+        ax1.plot([x1, x2], [y1, y2], 'r-', alpha=0.6, linewidth=width)
+
+        # Add label with IBD information
+        mid_x = (x1 + x2) / 2
+        mid_y = (y1 + y2) / 2
+        ax1.text(mid_x, mid_y, f"{stats['total_ibd']:.1f} cM\n{stats['segment_count']} segments",
+                ha='center', va='center', bbox=dict(facecolor='white', alpha=0.7))
+
+    ax1.axis('off')
+
+    # Plot 2: Chromosome view of IBD segments
+    ax2.set_title('Chromosome IBD Segments')
+
+    # Set up chromosome boundaries
+    chrom_lengths = {
+        '1': 248.9, '2': 242.2, '3': 198.3, '4': 190.2, '5': 181.5,
+        '6': 170.8, '7': 159.3, '8': 146.3, '9': 138.4, '10': 133.8,
+        '11': 135.0, '12': 133.8, '13': 114.4, '14': 106.4, '15': 101.9,
+        '16': 90.3, '17': 83.3, '18': 80.4, '19': 58.6, '20': 64.4,
+        '21': 46.7, '22': 50.8
+    }
+
+    # Calculate cumulative positions
+    cumulative_pos = {'1': 0}
+    current_pos = chrom_lengths['1']
+
+    for chrom in range(2, 23):
+        cumulative_pos[str(chrom)] = current_pos
+        current_pos += chrom_lengths[str(chrom)]
+
+    total_genome_length = current_pos
+
+    # Draw chromosome boundaries
+    for chrom, start_pos in cumulative_pos.items():
+        end_pos = start_pos + chrom_lengths[chrom]
+        ax2.axvline(x=start_pos, color='gray', linestyle='--', alpha=0.5)
+        ax2.text(start_pos + (chrom_lengths[chrom] / 2), -1, chrom, ha='center', va='top')
+
+    # Draw IBD segments
+    y_pos = 0
+    y_increment = 1
+
+    # Focus on the top 10 pairs by total IBD
+    top_pairs = sorted(ibd_stats.items(), key=lambda x: x[1]['total_ibd'], reverse=True)[:10]
+
+    for pair, stats in top_pairs:
+        ind1, ind2 = pair
+        y_pos += y_increment
+
+        # Draw pair label
+        ax2.text(-10, y_pos, f"{ind1}-{ind2}", ha='right', va='center')
+
+        # Draw segments
+        for segment in stats['segments']:
+            chrom = segment['chromosome']
+            start_cm = segment['start_cm']
+            end_cm = segment['end_cm']
+
+            # Convert to plot coordinates
+            plot_start = cumulative_pos.get(chrom, 0) + start_cm
+            plot_end = cumulative_pos.get(chrom, 0) + end_cm
+
+            # Draw segment
+            ax2.plot([plot_start, plot_end], [y_pos, y_pos], 'b-', linewidth=4, alpha=0.7)
+
+    ax2.set_xlim(-20, total_genome_length + 20)
+    ax2.set_ylim(-2, y_pos + 2)
+    ax2.set_xlabel('Genetic Position (cumulative cM)')
+    ax2.set_ylabel('Individual Pairs')
+    ax2.spines['top'].set_visible(False)
+    ax2.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()</code></pre>
+
+            <p>IBD-centric visualizations integrate genetic sharing information with pedigree structure, highlighting the
+evidence supporting relationship inferences.</p>
+
+            <h4>Temporal Visualizations</h4>
+
+            <p>Visualizations that emphasize the temporal aspects of pedigrees:</p>
+
+            <pre><code>def create_temporal_pedigree_visualization(pedigree, output_file=None):
+    """
+    Create a visualization that emphasizes temporal aspects of a pedigree.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure with birth/death years
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import networkx as nx
+    import numpy as np
+
+    # Create pedigree graph
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        # Skip individuals without birth year
+        if 'birth_year' not in data:
+            continue
+
+        G.add_node(ind_id, **data)
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+
+        # Skip if either individual was skipped
+        if source not in G.nodes or target not in G.nodes:
+            continue
+
+        G.add_edge(source, target)
+
+    # Set up figure
+    plt.figure(figsize=(14, 10))
+
+    # Get birth year range
+    birth_years = [data['birth_year'] for _, data in G.nodes(data=True)]
+    min_year = min(birth_years)
+    max_year = max(birth_years)
+
+    # Add padding to year range
+    year_padding = 10
+    min_year -= year_padding
+    max_year += year_padding
+
+    # Calculate positions based on birth year and relationship
+    pos = {}
+    year_counts = {}
+
+    for ind_id, data in G.nodes(data=True):
+        birth_year = data['birth_year']
+
+        # Count individuals per year for horizontal spacing
+        if birth_year not in year_counts:
+            year_counts[birth_year] = 0
+
+        # Position y by birth year, x by count within year
+        pos[ind_id] = (year_counts[birth_year], birth_year)
+        year_counts[birth_year] += 1
+
+    # Draw timeline
+    for year in range(min_year, max_year + 1, 10):
+        plt.axhline(y=year, color='gray', linestyle='--', alpha=0.3)
+        plt.text(-1, year, str(year), ha='right', va='center')
+
+    # Draw nodes
+    for ind_id, data in G.nodes(data=True):
+        x, y = pos[ind_id]
+        sex = data.get('sex', 'unknown')
+        birth_year = data['birth_year']
+        death_year = data.get('death_year')
+
+        if sex == 'male':
+            marker = 's'  # square
+            color = 'lightblue'
+        elif sex == 'female':
+            marker = 'o'  # circle
+            color = 'pink'
+        else:
+            marker = 'D'  # diamond
+            color = 'lightgray'
+
+        # Draw node
+        plt.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black', linewidth=1)
+
+        # Add label with birth/death years
+        label = f"{ind_id}\n{birth_year}"
+        if death_year:
+            label += f"-{death_year}"
+
+        plt.text(x, y + 1, label, ha='center', va='bottom')
+
+        # Draw lifespan if death year is available
+        if death_year:
+            plt.plot([x, x], [birth_year, death_year], 'k-', alpha=0.5)
+
+    # Draw edges (relationships)
+    for source, target in G.edges():
+        source_data = G.nodes[source]
+        target_data = G.nodes[target]
+
+        # Skip if target born before source (error in data)
+        if target_data['birth_year'] <= source_data['birth_year']:
+            continue
+
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        # Draw connection
+        plt.plot([sx, tx], [sy, ty], 'k-', alpha=0.5)
+
+    # Set up axis
+    plt.xlim(-2, max(year_counts.values()) + 2)
+    plt.ylim(min_year - 5, max_year + 5)
+
+    plt.xlabel('Relative Position')
+    plt.ylabel('Year')
+
+    # Remove x ticks
+    plt.xticks([])
+
+    # Add legend
+    legend_elements = [
+        patches.Patch(facecolor='lightblue', edgecolor='black', label='Male'),
+        patches.Patch(facecolor='pink', edgecolor='black', label='Female'),
+        patches.Patch(facecolor='lightgray', edgecolor='black', label='Unknown')
+    ]
+    plt.legend(handles=legend_elements, loc='upper right')
+
+    plt.title('Temporal Pedigree Visualization')
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()</code></pre>
+
+            <p>Temporal visualizations highlight the chronological aspects of pedigrees, showing patterns of inheritance
+across generations and time periods.</p>
+
+            <h4>Geographical Visualizations</h4>
+
+            <p>Integrating geographical information into pedigree visualizations:</p>
+
+            <pre><code>def create_geographic_pedigree_visualization(pedigree, locations, output_file=None):
+    """
+    Create a visualization that integrates pedigree structure with geographic information.
+
+    Args:
+        pedigree: Dictionary representing the pedigree structure
+        locations: Dictionary mapping individual IDs to geographic locations
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import networkx as nx
+    import numpy as np
+    from mpl_toolkits.basemap import Basemap
+
+    # Create pedigree graph
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        # Skip individuals without location data
+        if ind_id not in locations:
+            continue
+
+        G.add_node(ind_id, **data, location=locations[ind_id])
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+
+        # Skip if either individual was skipped
+        if source not in G.nodes or target not in G.nodes:
+            continue
+
+        G.add_edge(source, target, type=rel_type)
+
+    # Set up figure
+    plt.figure(figsize=(14, 10))
+
+    # Determine map boundaries from locations
+    lats = [loc['latitude'] for loc in locations.values()]
+    lons = [loc['longitude'] for loc in locations.values()]
+
+    min_lat, max_lat = min(lats), max(lats)
+    min_lon, max_lon = min(lons), max(lons)
+
+    # Add padding
+    lat_padding = (max_lat - min_lat) * 0.2
+    lon_padding = (max_lon - min_lon) * 0.2
+
+    min_lat -= lat_padding
+    max_lat += lat_padding
+    min_lon -= lon_padding
+    max_lon += lon_padding
+
+    # Create map
+    m = Basemap(projection='merc', resolution='i',
+               llcrnrlat=min_lat, urcrnrlat=max_lat,
+               llcrnrlon=min_lon, urcrnrlon=max_lon)
+
+    m.drawcoastlines()
+    m.drawcountries()
+    m.drawstates()
+    m.fillcontinents(color='beige', lake_color='lightblue')
+    m.drawmapboundary(fill_color='lightblue')
+
+    # Calculate node positions based on coordinates
+    pos = {}
+    for ind_id, data in G.nodes(data=True):
+        location = data['location']
+        lat = location['latitude']
+        lon = location['longitude']
+
+        # Convert to map coordinates
+        x, y = m(lon, lat)
+        pos[ind_id] = (x, y)
+
+    # Draw nodes
+    for ind_id, data in G.nodes(data=True):
+        x, y = pos[ind_id]
+        sex = data.get('sex', 'unknown')
+        birth_year = data.get('birth_year', 'Unknown')
+
+        if sex == 'male':
+            marker = 's'  # square
+            color = 'lightblue'
+        elif sex == 'female':
+            marker = 'o'  # circle
+            color = 'pink'
+        else:
+            marker = 'D'  # diamond
+            color = 'lightgray'
+
+        # Draw node
+        plt.scatter(x, y, s=200, marker=marker, facecolor=color, edgecolor='black', linewidth=1)
+
+        # Add label
+        plt.text(x, y - 20000, ind_id, ha='center', va='top', fontsize=8,
+                bbox=dict(facecolor='white', alpha=0.7))
+
+    # Draw edges (relationships)
+    for source, target, data in G.edges(data=True):
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+        rel_type = data.get('type', 'unknown')
+
+        # Draw connection
+        plt.plot([sx, tx], [sy, ty], 'k-', alpha=0.5)
+
+        # Add relationship label at midpoint
+        mid_x = (sx + tx) / 2
+        mid_y = (sy + ty) / 2
+        plt.text(mid_x, mid_y, rel_type, ha='center', va='center', fontsize=7,
+                bbox=dict(facecolor='white', alpha=0.7))
+
+    # Add legend
+    legend_elements = [
+        patches.Patch(facecolor='lightblue', edgecolor='black', label='Male'),
+        patches.Patch(facecolor='pink', edgecolor='black', label='Female'),
+        patches.Patch(facecolor='lightgray', edgecolor='black', label='Unknown')
+    ]
+    plt.legend(handles=legend_elements, loc='lower right')
+
+    plt.title('Geographic Pedigree Visualization')
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()</code></pre>
+
+            <p>Geographical visualizations place pedigree relationships in a spatial context, revealing patterns of migration,
+ community structure, and geographic endogamy.</p>
+
+            <h3>Interpreting Bonsai Outputs</h3>
+
+            <p>Proper interpretation of Bonsai outputs is crucial for accurate genealogical research.</p>
+
+            <h4>Evaluating Reconstruction Quality</h4>
+
+            <p>Techniques for evaluating the quality of a reconstructed pedigree:</p>
+
+            <pre><code>def evaluate_pedigree_reconstruction(pedigree, segments=None, known_relationships=None):
+    """
+    Evaluate the quality of a reconstructed pedigree.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        segments: Optional list of IBD segments used for reconstruction
+        known_relationships: Optional dictionary of known relationships for validation
+
+    Returns:
+        Dictionary of evaluation metrics
+    """
+    metrics = {}
+
+    # Create a graph representation
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+        confidence = relationship.get('confidence', 1.0)
+
+        G.add_edge(source, target, type=rel_type, confidence=confidence)
+
+    # Basic structural metrics
+    metrics['node_count'] = G.number_of_nodes()
+    metrics['edge_count'] = G.number_of_edges()
+    metrics['connected_components'] = nx.number_connected_components(G.to_undirected())
+
+    # Calculate average confidence
+    if nx.get_edge_attributes(G, 'confidence'):
+        confidences = [data['confidence'] for _, _, data in G.edges(data=True)]
+        metrics['avg_confidence'] = sum(confidences) / len(confidences)
+        metrics['min_confidence'] = min(confidences)
+        metrics['confidence_distribution'] = {
+            'high (>0.9)': sum(1 for c in confidences if c > 0.9),
+            'medium (0.7-0.9)': sum(1 for c in confidences if 0.7 <= c <= 0.9),
+            'low (<0.7)': sum(1 for c in confidences if c < 0.7)
+        }
+
+    # Evaluate relationship type distribution
+    if nx.get_edge_attributes(G, 'type'):
+        rel_types = [data['type'] for _, _, data in G.edges(data=True)]
+        type_counts = {}
+        for rel_type in rel_types:
+            if rel_type not in type_counts:
+                type_counts[rel_type] = 0
+            type_counts[rel_type] += 1
+
+        metrics['relationship_distribution'] = type_counts
+
+    # Validate against known relationships
+    if known_relationships:
+        true_positives = 0
+        false_positives = 0
+        false_negatives = 0
+
+        # Check for correctly identified relationships
+        for source, target, known_type in known_relationships:
+            if G.has_edge(source, target):
+                inferred_type = G.edges[source, target]['type']
+                if inferred_type == known_type:
+                    true_positives += 1
+                else:
+                    # Wrong relationship type
+                    false_positives += 1
+            else:
+                # Missing relationship
+                false_negatives += 1
+
+        # Check for extra relationships
+        for source, target, data in G.edges(data=True):
+            if (source, target, data['type']) not in known_relationships:
+                false_positives += 1
+
+        # Calculate precision and recall
+        if true_positives + false_positives > 0:
+            metrics['precision'] = true_positives / (true_positives + false_positives)
+        else:
+            metrics['precision'] = 0
+
+        if true_positives + false_negatives > 0:
+            metrics['recall'] = true_positives / (true_positives + false_negatives)
+        else:
+            metrics['recall'] = 0
+
+        if metrics['precision'] + metrics['recall'] > 0:
+            metrics['f1_score'] = (2 * metrics['precision'] * metrics['recall']) / (metrics['precision'] + metrics['recall'])
+        else:
+            metrics['f1_score'] = 0
+
+    # Evaluate IBD segment coverage
+    if segments:
+        covered_segments = 0
+        total_segments = len(segments)
+
+        for segment in segments:
+            ind1 = segment['ind1']
+            ind2 = segment['ind2']
+
+            # Check if relationship exists in pedigree
+            if nx.has_path(G, ind1, ind2) or nx.has_path(G, ind2, ind1):
+                covered_segments += 1
+
+        metrics['ibd_coverage'] = covered_segments / total_segments if total_segments > 0 else 0
+
+    return metrics</code></pre>
+
+            <p>These evaluation metrics help researchers assess the reliability and completeness of a reconstructed pedigree,
+guiding further refinement if needed.</p>
+
+            <h4>Identifying and Resolving Inconsistencies</h4>
+
+            <p>Techniques for identifying and resolving inconsistencies in reconstructed pedigrees:</p>
+
+            <pre><code>def identify_pedigree_inconsistencies(pedigree, segments=None):
+    """
+    Identify inconsistencies in a reconstructed pedigree.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        segments: Optional list of IBD segments used for reconstruction
+
+    Returns:
+        Dictionary of identified inconsistencies
+    """
+    inconsistencies = {
+        'temporal': [],
+        'biological': [],
+        'ibd_pattern': [],
+        'structural': []
+    }
+
+    # Create a graph representation
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+
+        G.add_edge(source, target, type=rel_type)
+
+    # Check temporal inconsistencies
+    for source, target, data in G.edges(data=True):
+        source_data = G.nodes[source]
+        target_data = G.nodes[target]
+
+        # Check if child born before parent
+        if 'birth_year' in source_data and 'birth_year' in target_data:
+            if data['type'] == 'parent-child' and source_data['birth_year'] >= target_data['birth_year']:
+                inconsistencies['temporal'].append({
+                    'type': 'child_born_before_parent',
+                    'parent': source,
+                    'child': target,
+                    'parent_birth': source_data['birth_year'],
+                    'child_birth': target_data['birth_year']
+                })
+
+        # Check if parent too young
+        if 'birth_year' in source_data and 'birth_year' in target_data:
+            if data['type'] == 'parent-child':
+                age_diff = target_data['birth_year'] - source_data['birth_year']
+                if age_diff < 12:
+                    inconsistencies['temporal'].append({
+                        'type': 'parent_too_young',
+                        'parent': source,
+                        'child': target,
+                        'age_difference': age_diff
+                    })
+
+    # Check biological inconsistencies
+    for ind_id, data in G.nodes(data=True):
+        # Male with maternal relationship
+        if data.get('sex') == 'male':
+            for _, child in G.out_edges(ind_id):
+                edge_data = G.edges[ind_id, child]
+                if edge_data.get('type') == 'mother-child':
+                    inconsistencies['biological'].append({
+                        'type': 'male_as_mother',
+                        'individual': ind_id,
+                        'child': child
+                    })
+
+        # Female with paternal relationship
+        if data.get('sex') == 'female':
+            for _, child in G.out_edges(ind_id):
+                edge_data = G.edges[ind_id, child]
+                if edge_data.get('type') == 'father-child':
+                    inconsistencies['biological'].append({
+                        'type': 'female_as_father',
+                        'individual': ind_id,
+                        'child': child
+                    })
+
+    # Check structural inconsistencies
+    for ind_id in G.nodes():
+        # Multiple fathers
+        fathers = []
+        for parent, _, data in G.in_edges(ind_id, data=True):
+            if data.get('type') in ['father-child', 'parent-child'] and G.nodes[parent].get('sex') == 'male':
+                fathers.append(parent)
+
+        if len(fathers) > 1:
+            inconsistencies['structural'].append({
+                'type': 'multiple_fathers',
+                'individual': ind_id,
+                'fathers': fathers
+            })
+
+        # Multiple mothers
+        mothers = []
+        for parent, _, data in G.in_edges(ind_id, data=True):
+            if data.get('type') in ['mother-child', 'parent-child'] and G.nodes[parent].get('sex') == 'female':
+                mothers.append(parent)
+
+        if len(mothers) > 1:
+            inconsistencies['structural'].append({
+                'type': 'multiple_mothers',
+                'individual': ind_id,
+                'mothers': mothers
+            })
+
+    # Check IBD pattern inconsistencies
+    if segments:
+        # Group segments by pair
+        pair_segments = {}
+        for segment in segments:
+            ind1 = segment['ind1']
+            ind2 = segment['ind2']
+            pair = tuple(sorted([ind1, ind2]))
+
+            if pair not in pair_segments:
+                pair_segments[pair] = []
+
+            pair_segments[pair].append(segment)
+
+        # Compare expected vs. observed IBD
+        for pair, pair_segs in pair_segments.items():
+            ind1, ind2 = pair
+
+            # Skip if individuals not in pedigree
+            if ind1 not in G.nodes or ind2 not in G.nodes:
+                continue
+
+            # Calculate observed IBD
+            total_ibd = sum(seg['length'] for seg in pair_segs)
+            segment_count = len(pair_segs)
+
+            # Determine expected relationship from pedigree
+            relationship = infer_relationship_from_pedigree(G, ind1, ind2)
+
+            if relationship:
+                # Get expected IBD range for this relationship
+                expected_range = get_expected_ibd_range(relationship)
+
+                # Check if observed IBD is inconsistent with expected
+                if total_ibd < expected_range['min_total_ibd'] or total_ibd > expected_range['max_total_ibd']:
+                    inconsistencies['ibd_pattern'].append({
+                        'type': 'unexpected_ibd_amount',
+                        'individual1': ind1,
+                        'individual2': ind2,
+                        'inferred_relationship': relationship,
+                        'observed_ibd': total_ibd,
+                        'expected_min': expected_range['min_total_ibd'],
+                        'expected_max': expected_range['max_total_ibd']
+                    })
+
+    return inconsistencies
+
+def infer_relationship_from_pedigree(G, ind1, ind2):
+    """Infer relationship type from pedigree structure."""
+    # Implementation details...
+    return None
+
+def get_expected_ibd_range(relationship):
+    """Get expected IBD range for a given relationship type."""
+    # Implementation details...
+    return {
+        'min_total_ibd': 0,
+        'max_total_ibd': 0
+    }</code></pre>
+
+            <p>Identifying inconsistencies helps researchers pinpoint potential errors in the pedigree reconstruction, guiding
+ further investigation and refinement.</p>
+
+            <h4>Comparative Visualization of Alternative Reconstructions</h4>
+
+            <p>Techniques for comparing alternative pedigree reconstructions:</p>
+
+            <pre><code>def visualize_pedigree_comparison(pedigree1, pedigree2, output_file=None):
+    """
+    Create a visualization comparing two alternative pedigree reconstructions.
+
+    Args:
+        pedigree1: First pedigree dictionary
+        pedigree2: Second pedigree dictionary
+        output_file: Optional path to save the visualization
+
+    Returns:
+        None (displays or saves visualization)
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+    import networkx as nx
+
+    # Create graph representations
+    G1 = create_pedigree_graph(pedigree1)
+    G2 = create_pedigree_graph(pedigree2)
+
+    # Identify common and unique elements
+    common_nodes = set(G1.nodes()).intersection(set(G2.nodes()))
+    g1_only_nodes = set(G1.nodes()).difference(set(G2.nodes()))
+    g2_only_nodes = set(G2.nodes()).difference(set(G1.nodes()))
+
+    # Convert edges to sets of tuples for comparison
+    g1_edges = {(s, t, d.get('type', 'unknown')) for s, t, d in G1.edges(data=True)}
+    g2_edges = {(s, t, d.get('type', 'unknown')) for s, t, d in G2.edges(data=True)}
+
+    common_edges = g1_edges.intersection(g2_edges)
+    g1_only_edges = g1_edges.difference(g2_edges)
+    g2_only_edges = g2_edges.difference(g1_edges)
+
+    # Set up figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 8))
+
+    # Calculate positions that are consistent across both graphs
+    # Start with a layout for the combined graph
+    combined_graph = nx.compose(G1, G2)
+    pos = nx.nx_agraph.graphviz_layout(combined_graph, prog='dot')
+
+    # Plot pedigree 1
+    ax1.set_title('Pedigree 1')
+    draw_pedigree_with_highlights(G1, pos, ax1,
+                                 g1_only_nodes, g1_only_edges,
+                                 common_nodes, common_edges)
+
+    # Plot pedigree 2
+    ax2.set_title('Pedigree 2')
+    draw_pedigree_with_highlights(G2, pos, ax2,
+                                 g2_only_nodes, g2_only_edges,
+                                 common_nodes, common_edges)
+
+    # Add legend
+    legend_elements = [
+        patches.Patch(facecolor='lightgray', edgecolor='black', label='Common Nodes'),
+        patches.Patch(facecolor='lightgreen', edgecolor='black', label='Unique Nodes'),
+        patches.Patch(facecolor='white', edgecolor='black', label='Common Edges'),
+        patches.Patch(facecolor='white', edgecolor='red', label='Unique Edges')
+    ]
+
+    fig.legend(handles=legend_elements, loc='lower center', ncol=4, bbox_to_anchor=(0.5, 0.02))
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.15)
+
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()
+
+def create_pedigree_graph(pedigree):
+    """Create a NetworkX graph from a pedigree dictionary."""
+    G = nx.DiGraph()
+
+    # Add individuals
+    for ind_id, data in pedigree['individuals'].items():
+        G.add_node(ind_id, **data)
+
+    # Add relationships
+    for relationship in pedigree['relationships']:
+        source = relationship['source']
+        target = relationship['target']
+        rel_type = relationship['type']
+
+        G.add_edge(source, target, type=rel_type)
+
+    return G
+
+def draw_pedigree_with_highlights(G, pos, ax, unique_nodes, unique_edges, common_nodes, common_edges):
+    """Draw a pedigree with highlighted unique and common elements."""
+    # Draw edges
+    for source, target, data in G.edges(data=True):
+        sx, sy = pos[source]
+        tx, ty = pos[target]
+
+        edge_tuple = (source, target, data.get('type', 'unknown'))
+
+        if edge_tuple in unique_edges:
+            # Unique edge - red
+            ax.plot([sx, tx], [sy, ty], 'r-', linewidth=2, alpha=0.7)
+        else:
+            # Common edge - black
+            ax.plot([sx, tx], [sy, ty], 'k-', linewidth=1, alpha=0.7)
+
+    # Draw nodes
+    for ind_id, data in G.nodes(data=True):
+        x, y = pos[ind_id]
+        sex = data.get('sex', 'unknown')
+
+        if ind_id in unique_nodes:
+            color = 'lightgreen'  # Unique nodes
+        else:
+            color = 'lightgray'   # Common nodes
+
+        if sex == 'male':
+            marker = 's'  # square
+        elif sex == 'female':
+            marker = 'o'  # circle
+        else:
+            marker = 'D'  # diamond
+
+        ax.scatter(x, y, s=300, marker=marker, facecolor=color, edgecolor='black', linewidth=1)
+        ax.text(x, y, ind_id, ha='center', va='center')
+
+    ax.axis('off')</code></pre>
+
+            <p>Comparing alternative reconstructions helps researchers identify the most reliable parts of a pedigree and
+where uncertainty remains, guiding further investigation.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement an interactive visualization that allows users to filter a pedigree by relationship type and
+confidence level.</li>
+                <li>Create a specialized visualization that integrates IBD segment information with pedigree structure for a
+known family.</li>
+                <li>Develop a visualization that highlights inconsistencies in a reconstructed pedigree.</li>
+                <li>Implement a multi-scale visualization that allows zooming from a high-level overview to detailed family
+units.</li>
+                <li>Create a temporal visualization that shows the evolution of a family structure over multiple
+generations.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When visualizing pedigrees, remember that different audiences have different needs.
+Genealogists may want detailed relationship information, while researchers might focus on confidence values and IBD patterns.
+Always design your visualizations with your specific audience and research questions in mind.</p>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab19_bonsai_advanced.html" class="prev-lab">Advanced Construction</a>
+                <a href="lab21_bonsai_applications.html" class="next-lab">Real-world Applications</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

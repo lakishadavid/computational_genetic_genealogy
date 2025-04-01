@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 18: Bonsai Data Quality | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Data Quality and Preprocessing in Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab17_bonsai_likelihood.html">Lab 17: Likelihood Calculations</a>
+        <a href="lab18_bonsai_quality.html" class="active">Lab 18: Data Quality</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 18: Data Quality and Preprocessing in Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> The quality of input data profoundly affects pedigree reconstruction accuracy. Understanding and addressing data quality issues is essential for reliable genealogical inference, especially when working with real-world genetic data that may contain errors, missing values, and biases from various sources.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Identify common data quality issues that affect Bonsai pedigree reconstruction</li>
+                <li>Implement advanced filtering techniques for IBD segment data</li>
+                <li>Develop strategies for handling missing data and incomplete pedigrees</li>
+                <li>Create and apply data preprocessing pipelines for optimal Bonsai performance</li>
+                <li>Learn techniques to detect and mitigate errors in IBD detection</li>
+                <li>Implement quality control metrics to evaluate input data reliability</li>
+            </ul>
+
+            <h3>Common Data Quality Issues in Pedigree Reconstruction</h3>
+            
+            <p>When working with real genetic data, various quality issues can affect the reliability of pedigree reconstruction.</p>
+            
+            <h4>IBD Detection Errors</h4>
+            
+            <table>
+                <tr>
+                    <th>Error Type</th>
+                    <th>Description</th>
+                    <th>Impact on Pedigree Reconstruction</th>
+                </tr>
+                <tr>
+                    <td>False Positive Segments</td>
+                    <td>Segments incorrectly identified as IBD when they are actually identical by state (IBS)</td>
+                    <td>Inference of non-existent relationships; overestimation of relatedness</td>
+                </tr>
+                <tr>
+                    <td>False Negative Segments</td>
+                    <td>Failure to detect true IBD segments</td>
+                    <td>Underestimation of relatedness; missing key relationships</td>
+                </tr>
+                <tr>
+                    <td>IBD Type Misclassification</td>
+                    <td>Confusion between IBD1 and IBD2 states</td>
+                    <td>Incorrect relationship inference (e.g., full siblings vs. parent-child)</td>
+                </tr>
+                <tr>
+                    <td>Erroneous Segment Boundaries</td>
+                    <td>Inaccurate start/end positions for IBD segments</td>
+                    <td>Incorrect segment length statistics; biased relationship inference</td>
+                </tr>
+                <tr>
+                    <td>Phase Switching Errors</td>
+                    <td>Incorrect phasing causing artificial breaks in IBD segments</td>
+                    <td>Fragmentation of segments; inflated segment counts</td>
+                </tr>
+            </table>
+            
+            <h4>Sample and Metadata Issues</h4>
+            
+            <table>
+                <tr>
+                    <th>Issue Type</th>
+                    <th>Description</th>
+                    <th>Impact on Pedigree Reconstruction</th>
+                </tr>
+                <tr>
+                    <td>Sample Swaps</td>
+                    <td>Incorrect sample identifiers or physical sample mix-ups</td>
+                    <td>Catastrophic errors in pedigree inference</td>
+                </tr>
+                <tr>
+                    <td>Missing Samples</td>
+                    <td>Key individuals not included in the dataset</td>
+                    <td>Gaps in pedigree; incorrect inference of direct connections</td>
+                </tr>
+                <tr>
+                    <td>Sex Errors</td>
+                    <td>Incorrect sex metadata for individuals</td>
+                    <td>Biologically impossible pedigree configurations</td>
+                </tr>
+                <tr>
+                    <td>Age Errors</td>
+                    <td>Incorrect age metadata for individuals</td>
+                    <td>Implausible parent-child relationships</td>
+                </tr>
+                <tr>
+                    <td>Duplicated Samples</td>
+                    <td>The same individual appearing multiple times with different IDs</td>
+                    <td>Confused pedigree structure; false inferences</td>
+                </tr>
+            </table>
+            
+            <h4>Genotype Data Quality Issues</h4>
+            
+            <table>
+                <tr>
+                    <th>Issue Type</th>
+                    <th>Description</th>
+                    <th>Impact on Pedigree Reconstruction</th>
+                </tr>
+                <tr>
+                    <td>Low Coverage</td>
+                    <td>Sparse genotype data with many missing values</td>
+                    <td>Reduced power to detect IBD; unreliable relationship inference</td>
+                </tr>
+                <tr>
+                    <td>Genotyping Errors</td>
+                    <td>Incorrect genotype calls</td>
+                    <td>False breaks in IBD segments; increased false negatives</td>
+                </tr>
+                <tr>
+                    <td>Platform Differences</td>
+                    <td>Inconsistent SNP coverage across different genotyping platforms</td>
+                    <td>Systematic biases in IBD detection between subsets of samples</td>
+                </tr>
+                <tr>
+                    <td>Batch Effects</td>
+                    <td>Systematic differences between processing batches</td>
+                    <td>Artificial patterns in IBD sharing correlated with batch</td>
+                </tr>
+                <tr>
+                    <td>Reference Panel Mismatch</td>
+                    <td>Using reference panels not well-matched to the study population</td>
+                    <td>Phasing errors; reduced IBD detection in certain populations</td>
+                </tr>
+            </table>
+
+            <h3>Advanced IBD Segment Filtering</h3>
+            
+            <p>Filtering IBD segments is a crucial preprocessing step to improve the quality of input data for Bonsai.</p>
+            
+            <h4>Length-Based Filtering</h4>
+            <p>The most basic filtering approach is based on segment length:</p>
+            
+            <pre><code>def filter_segments_by_length(segments, min_length=7.0, max_length=None):
+    """
+    Filter IBD segments based on genetic length.
+    
+    Args:
+        segments: List of IBD segments
+        min_length: Minimum segment length in cM (default: 7.0)
+        max_length: Maximum segment length in cM (default: None)
+        
+    Returns:
+        Filtered list of segments
+    """
+    filtered = []
+    
+    for segment in segments:
+        length = segment.length
+        
+        # Apply minimum length filter
+        if length < min_length:
+            continue
+            
+        # Apply maximum length filter if specified
+        if max_length is not None and length > max_length:
+            continue
+            
+        filtered.append(segment)
+    
+    return filtered</code></pre>
+            
+            <p>Setting an appropriate minimum length threshold is crucial:</p>
+            <ul>
+                <li>Lower thresholds (e.g., 3-5 cM) increase sensitivity but also increase false positives</li>
+                <li>Higher thresholds (e.g., 10-15 cM) improve specificity but may miss distant relationships</li>
+                <li>Common practice is to use 7-8 cM as a balanced threshold</li>
+            </ul>
+
+            <h4>Quality Score Filtering</h4>
+            <p>Many IBD detection tools provide quality scores for segments, which can be used for filtering:</p>
+            
+            <pre><code>def filter_segments_by_quality(segments, min_score=5.0, score_field='lod_score'):
+    """
+    Filter IBD segments based on quality scores.
+    
+    Args:
+        segments: List of IBD segments
+        min_score: Minimum quality score threshold
+        score_field: Name of the field containing quality scores
+        
+    Returns:
+        Filtered list of segments
+    """
+    filtered = []
+    
+    for segment in segments:
+        # Skip segments that don't have the score field
+        if not hasattr(segment, score_field):
+            continue
+            
+        score = getattr(segment, score_field)
+        
+        # Apply score threshold
+        if score < min_score:
+            continue
+            
+        filtered.append(segment)
+    
+    return filtered</code></pre>
+            
+            <p>Quality scores vary by IBD detection method:</p>
+            <ul>
+                <li><strong>Refined-IBD:</strong> LOD scores (higher is better)</li>
+                <li><strong>IBIS:</strong> Likelihood ratios or log p-values</li>
+                <li><strong>hap-IBD:</strong> Scores representing confidence</li>
+            </ul>
+
+            <h4>Multi-Detector Consensus Filtering</h4>
+            <p>Using multiple IBD detection methods and keeping only consensus segments can significantly reduce false positives:</p>
+            
+            <pre><code>def consensus_filter(segment_sets, overlap_threshold=0.5, min_detectors=2):
+    """
+    Filter IBD segments based on consensus across multiple detectors.
+    
+    Args:
+        segment_sets: Dictionary mapping detector names to segment lists
+        overlap_threshold: Minimum overlap ratio to consider segments as matching
+        min_detectors: Minimum number of detectors that must agree
+        
+    Returns:
+        List of consensus segments
+    """
+    # Group segments by pair
+    pair_segments = {}
+    
+    for detector, segments in segment_sets.items():
+        for segment in segments:
+            pair = (segment.ind1, segment.ind2)
+            if pair not in pair_segments:
+                pair_segments[pair] = {}
+            
+            if detector not in pair_segments[pair]:
+                pair_segments[pair][detector] = []
+                
+            pair_segments[pair][detector].append(segment)
+    
+    # Find consensus segments for each pair
+    consensus_segments = []
+    
+    for pair, detector_segments in pair_segments.items():
+        # Skip pairs with too few detectors
+        if len(detector_segments) < min_detectors:
+            continue
+            
+        # Find overlapping segments across detectors
+        consensus = find_overlapping_segments(detector_segments, overlap_threshold, min_detectors)
+        consensus_segments.extend(consensus)
+    
+    return consensus_segments
+
+def find_overlapping_segments(detector_segments, overlap_threshold, min_detectors):
+    """Find overlapping segments across multiple detectors."""
+    # Implementation details...
+    # This would involve comparing segments across detectors and
+    # identifying regions with sufficient agreement
+    pass</code></pre>
+            
+            <p>This consensus approach significantly reduces false positives, but may increase false negatives for marginal segments that are detected by only one method.</p>
+
+            <h4>Population-Specific Filtering</h4>
+            <p>Different populations may require different filtering strategies:</p>
+            
+            <pre><code>def population_aware_filtering(segments, populations, endogamy_factors=None):
+    """
+    Apply population-specific filtering to IBD segments.
+    
+    Args:
+        segments: List of IBD segments
+        populations: Dictionary mapping individual IDs to population labels
+        endogamy_factors: Dictionary mapping populations to endogamy factors
+        
+    Returns:
+        Filtered list of segments
+    """
+    if endogamy_factors is None:
+        # Default endogamy factors for common populations
+        endogamy_factors = {
+            'ASJ': 5.0,    # Ashkenazi Jewish (high endogamy)
+            'FIN': 3.0,    # Finnish (moderate endogamy)
+            'AMR': 1.5,    # Admixed American (some endogamy)
+            'EUR': 1.0,    # European (reference)
+            'EAS': 1.0,    # East Asian
+            'SAS': 1.0,    # South Asian
+            'AFR': 0.9     # African (diverse)
+        }
+    
+    filtered = []
+    
+    for segment in segments:
+        # Get populations for this pair
+        pop1 = populations.get(segment.ind1, 'Unknown')
+        pop2 = populations.get(segment.ind2, 'Unknown')
+        
+        # Skip if population information is missing
+        if pop1 == 'Unknown' or pop2 == 'Unknown':
+            filtered.append(segment)
+            continue
+        
+        # If same population, use population-specific threshold
+        if pop1 == pop2:
+            endogamy = endogamy_factors.get(pop1, 1.0)
+            min_length = 7.0 * endogamy  # Adjust threshold based on endogamy
+            
+            if segment.length >= min_length:
+                filtered.append(segment)
+        else:
+            # For cross-population pairs, use standard threshold
+            if segment.length >= 7.0:
+                filtered.append(segment)
+    
+    return filtered</code></pre>
+            
+            <p>This approach accounts for the fact that endogamous populations (e.g., Ashkenazi Jewish, Finnish) require higher thresholds to account for elevated background IBD sharing.</p>
+
+            <h3>Detecting and Handling Sample Quality Issues</h3>
+            
+            <p>Detecting and addressing sample quality issues is essential for reliable pedigree reconstruction.</p>
+            
+            <h4>Identifying Sample Swaps</h4>
+            <p>Sample swaps can be detected through consistency checks:</p>
+            
+            <pre><code>def detect_sample_swaps(segments, known_relationships=None):
+    """
+    Detect potential sample swaps using IBD patterns.
+    
+    Args:
+        segments: List of IBD segments
+        known_relationships: Dictionary of known relationships for validation
+        
+    Returns:
+        List of potential sample swap issues
+    """
+    # Calculate total IBD sharing for each pair
+    pair_sharing = {}
+    for segment in segments:
+        pair = (segment.ind1, segment.ind2)
+        if pair not in pair_sharing:
+            pair_sharing[pair] = 0
+        pair_sharing[pair] += segment.length
+    
+    swap_candidates = []
+    
+    # Check for unexpected patterns in known relationships
+    if known_relationships:
+        for pair, expected_rel in known_relationships.items():
+            if pair not in pair_sharing:
+                # No IBD detected for a known relationship
+                if expected_rel in ['parent_child', 'full_siblings']:
+                    swap_candidates.append({
+                        'pair': pair,
+                        'issue': 'Missing expected IBD',
+                        'expected': expected_rel,
+                        'observed': None
+                    })
+                continue
+                
+            sharing = pair_sharing[pair]
+            
+            # Check for major discrepancies
+            if expected_rel == 'parent_child' and sharing < 2000:
+                # Parent-child should share ~3400 cM
+                swap_candidates.append({
+                    'pair': pair,
+                    'issue': 'Low sharing for parent-child',
+                    'expected': '~3400 cM',
+                    'observed': f'{sharing:.1f} cM'
+                })
+            elif expected_rel == 'full_siblings' and sharing < 1500:
+                # Full siblings should share ~2550 cM
+                swap_candidates.append({
+                    'pair': pair,
+                    'issue': 'Low sharing for full siblings',
+                    'expected': '~2550 cM',
+                    'observed': f'{sharing:.1f} cM'
+                })
+    
+    # Check for unexpected very high sharing
+    for pair, sharing in pair_sharing.items():
+        if sharing > 3000 and (known_relationships is None or 
+                              pair not in known_relationships or 
+                              known_relationships[pair] != 'parent_child'):
+            # Very high sharing suggests parent-child relationship
+            swap_candidates.append({
+                'pair': pair,
+                'issue': 'Unexpectedly high sharing',
+                'expected': 'Not parent-child',
+                'observed': f'{sharing:.1f} cM'
+            })
+    
+    return swap_candidates</code></pre>
+            
+            <p>Sample swaps are most reliably detected when some known relationships are available for comparison.</p>
+
+            <h4>Sex Verification</h4>
+            <p>Verify sex metadata using genetic data:</p>
+            
+            <pre><code>def verify_sex(genotype_data, reported_sex):
+    """
+    Verify reported sex using genetic data.
+    
+    Args:
+        genotype_data: Dictionary mapping individual IDs to genotype data
+        reported_sex: Dictionary mapping individual IDs to reported sex
+        
+    Returns:
+        Dictionary of sex discrepancies
+    """
+    discrepancies = {}
+    
+    for ind_id, genotypes in genotype_data.items():
+        # Skip if reported sex is missing
+        if ind_id not in reported_sex:
+            continue
+            
+        # Infer sex from genetic data
+        inferred_sex = infer_sex_from_genetics(genotypes)
+        
+        # Compare with reported sex
+        if inferred_sex is not None and inferred_sex != reported_sex[ind_id]:
+            discrepancies[ind_id] = {
+                'reported': reported_sex[ind_id],
+                'inferred': inferred_sex
+            }
+    
+    return discrepancies
+
+def infer_sex_from_genetics(genotypes):
+    """Infer sex from genetic data."""
+    # Methods for sex inference:
+    # 1. X chromosome heterozygosity (typically lower in males)
+    # 2. Y chromosome presence
+    # 3. X/autosome coverage ratio
+    
+    # This is a simplified placeholder implementation
+    return None</code></pre>
+            
+            <p>Sex verification is particularly important for parent-child relationship inference, as Bonsai may use sex constraints to determine parent roles.</p>
+
+            <h4>Duplicate Sample Detection</h4>
+            <p>Identify potentially duplicated samples:</p>
+            
+            <pre><code>def detect_duplicates(segments, threshold=0.95):
+    """
+    Detect potential duplicate samples based on extreme IBD sharing.
+    
+    Args:
+        segments: List of IBD segments
+        threshold: Threshold for considering samples as duplicates (0-1)
+        
+    Returns:
+        List of potential duplicate pairs
+    """
+    genome_length = 3500  # Approximate genome length in cM
+    duplicate_threshold = threshold * genome_length
+    
+    # Calculate total IBD sharing for each pair
+    pair_sharing = {}
+    for segment in segments:
+        pair = (segment.ind1, segment.ind2)
+        if pair not in pair_sharing:
+            pair_sharing[pair] = 0
+        pair_sharing[pair] += segment.length
+    
+    # Identify potential duplicates
+    duplicates = []
+    for pair, sharing in pair_sharing.items():
+        if sharing >= duplicate_threshold:
+            duplicates.append({
+                'pair': pair,
+                'sharing': sharing,
+                'percentage': sharing / genome_length
+            })
+    
+    return duplicates</code></pre>
+            
+            <p>Duplicate samples can severely confuse pedigree reconstruction and should be merged or removed before running Bonsai.</p>
+
+            <h3>Handling Missing Data</h3>
+            
+            <p>Missing data is a common challenge in real-world genetic genealogy and requires specialized handling.</p>
+            
+            <h4>Imputing Missing Individual Attributes</h4>
+            <p>Fill in missing metadata using available information:</p>
+            
+            <pre><code>def impute_missing_attributes(individuals, pedigree=None):
+    """
+    Impute missing individual attributes using available information.
+    
+    Args:
+        individuals: List of individual information dictionaries
+        pedigree: Optional pedigree structure for more accurate imputation
+        
+    Returns:
+        List of individuals with imputed attributes
+    """
+    # Create ID-indexed dictionary for easy lookup
+    ind_dict = {ind['id']: ind for ind in individuals}
+    
+    # First pass: direct imputation from available data
+    for ind_id, ind_info in ind_dict.items():
+        # Impute missing sex based on related attributes
+        if 'sex' not in ind_info or ind_info['sex'] is None:
+            ind_info['sex'] = impute_sex(ind_info)
+            
+        # Impute missing age based on related attributes
+        if 'age' not in ind_info or ind_info['age'] is None:
+            ind_info['age'] = impute_age(ind_info)
+    
+    # Second pass: imputation using pedigree relationships (if available)
+    if pedigree:
+        for ind_id, parents in pedigree.items():
+            ind_info = ind_dict.get(ind_id)
+            if not ind_info:
+                continue
+                
+            # Impute sex based on role in pedigree
+            if ('sex' not in ind_info or ind_info['sex'] is None) and ind_id in pedigree:
+                ind_info['sex'] = impute_sex_from_pedigree(ind_id, pedigree, ind_dict)
+                
+            # Impute age based on relationships
+            if 'age' not in ind_info or ind_info['age'] is None:
+                ind_info['age'] = impute_age_from_pedigree(ind_id, pedigree, ind_dict)
+    
+    return list(ind_dict.values())
+
+def impute_sex(ind_info):
+    """Impute sex based on individual information."""
+    # Example heuristics:
+    # - Use name (if available)
+    # - Use other sex-correlated attributes
+    return 'Unknown'
+
+def impute_age(ind_info):
+    """Impute age based on individual information."""
+    # Example heuristics:
+    # - Use birth year (if available)
+    # - Use generation information
+    return None
+
+def impute_sex_from_pedigree(ind_id, pedigree, ind_dict):
+    """Impute sex based on pedigree role."""
+    # Implementation details...
+    return 'Unknown'
+
+def impute_age_from_pedigree(ind_id, pedigree, ind_dict):
+    """Impute age based on pedigree relationships."""
+    # Implementation details...
+    return None</code></pre>
+            
+            <p>Imputation of missing attributes helps Bonsai enforce appropriate constraints during pedigree reconstruction.</p>
+
+            <h4>Inferring Latent Ancestors</h4>
+            <p>One of Bonsai's strengths is its ability to infer missing (latent) ancestors:</p>
+            
+            <pre><code>def configure_latent_ancestor_inference(config, enable=True, max_ancestors=None):
+    """
+    Configure Bonsai's latent ancestor inference capabilities.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        enable: Whether to enable latent ancestor inference
+        max_ancestors: Maximum number of latent ancestors to infer
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'inference' not in config:
+        config['inference'] = {}
+        
+    config['inference']['infer_latent_ancestors'] = enable
+    
+    if max_ancestors is not None:
+        config['inference']['max_latent_ancestors'] = max_ancestors
+        
+    return config</code></pre>
+            
+            <p>When individuals are missing from the dataset, Bonsai can infer their existence and position in the pedigree based on IBD patterns among observed individuals.</p>
+
+            <h4>Handling Population Reference Panel Gaps</h4>
+            <p>Reference panel gaps can affect IBD detection for certain populations:</p>
+            
+            <pre><code>def adjust_for_reference_panel_gaps(segments, populations, adjustment_factors=None):
+    """
+    Adjust IBD detection to account for reference panel gaps.
+    
+    Args:
+        segments: List of IBD segments
+        populations: Dictionary mapping individual IDs to population labels
+        adjustment_factors: Dictionary mapping populations to adjustment factors
+        
+    Returns:
+        Adjusted list of segments
+    """
+    if adjustment_factors is None:
+        # Default adjustment factors based on reference panel coverage
+        adjustment_factors = {
+            'EUR': 1.0,     # European (well-represented in reference panels)
+            'EAS': 1.1,     # East Asian (good representation)
+            'SAS': 1.15,    # South Asian
+            'AMR': 1.2,     # Admixed American
+            'MID': 1.25,    # Middle Eastern
+            'OCE': 1.3,     # Oceanian
+            'AFR': 1.2      # African (diverse, uneven representation)
+        }
+    
+    adjusted_segments = []
+    
+    for segment in segments:
+        # Get populations for this pair
+        pop1 = populations.get(segment.ind1, 'Unknown')
+        pop2 = populations.get(segment.ind2, 'Unknown')
+        
+        # Skip if population information is missing
+        if pop1 == 'Unknown' or pop2 == 'Unknown':
+            adjusted_segments.append(segment)
+            continue
+        
+        # Calculate adjustment factor (average of the two populations)
+        factor1 = adjustment_factors.get(pop1, 1.0)
+        factor2 = adjustment_factors.get(pop2, 1.0)
+        adjustment = (factor1 + factor2) / 2
+        
+        # Apply adjustment to segment length
+        adjusted_segment = segment.copy()
+        adjusted_segment.length *= adjustment
+        
+        adjusted_segments.append(adjusted_segment)
+    
+    return adjusted_segments</code></pre>
+            
+            <p>This adjustment accounts for the fact that IBD detection power varies across populations due to differences in reference panel coverage and quality.</p>
+
+            <h3>Preprocessing Pipelines for Bonsai</h3>
+            
+            <p>Combining multiple preprocessing steps into a comprehensive pipeline ensures optimal data quality for Bonsai.</p>
+            
+            <h4>Standard Preprocessing Pipeline</h4>
+            <p>A standard preprocessing pipeline for Bonsai includes several key steps:</p>
+            
+            <pre><code>def standard_preprocessing_pipeline(segments, individuals=None, config=None):
+    """
+    Standard preprocessing pipeline for Bonsai.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Configuration parameters
+        
+    Returns:
+        Preprocessed segments and individuals
+    """
+    if config is None:
+        config = {}
+        
+    # 1. Basic segment filtering
+    min_length = config.get('min_segment_length', 7.0)
+    segments = filter_segments_by_length(segments, min_length=min_length)
+    
+    # 2. Quality score filtering (if available)
+    if hasattr(segments[0], 'lod_score'):
+        min_score = config.get('min_score', 5.0)
+        segments = filter_segments_by_quality(segments, min_score=min_score)
+    
+    # 3. Population-specific adjustments (if population info available)
+    if individuals and all('population' in ind for ind in individuals):
+        # Extract population mapping
+        populations = {ind['id']: ind['population'] for ind in individuals if 'population' in ind}
+        
+        # Apply population-specific filtering
+        segments = population_aware_filtering(segments, populations)
+    
+    # 4. Sample quality checks
+    if individuals:
+        # Verify sex information
+        if hasattr(individuals[0], 'genotype_data') and all('sex' in ind for ind in individuals):
+            reported_sex = {ind['id']: ind['sex'] for ind in individuals if 'sex' in ind}
+            genotype_data = {ind['id']: ind['genotype_data'] for ind in individuals if 'genotype_data' in ind}
+            
+            sex_discrepancies = verify_sex(genotype_data, reported_sex)
+            if sex_discrepancies:
+                # Handle sex discrepancies
+                if config.get('auto_correct_sex', False):
+                    for ind_id, discrepancy in sex_discrepancies.items():
+                        # Find individual in the list
+                        for ind in individuals:
+                            if ind['id'] == ind_id:
+                                ind['sex'] = discrepancy['inferred']
+                                break
+        
+        # Detect duplicate samples
+        duplicates = detect_duplicates(segments)
+        if duplicates and config.get('remove_duplicates', False):
+            # Remove segments involving duplicates
+            duplicate_pairs = [dup['pair'] for dup in duplicates]
+            segments = [seg for seg in segments 
+                       if (seg.ind1, seg.ind2) not in duplicate_pairs and 
+                          (seg.ind2, seg.ind1) not in duplicate_pairs]
+    
+    # 5. Impute missing attributes
+    if individuals:
+        individuals = impute_missing_attributes(individuals)
+    
+    return segments, individuals</code></pre>
+            
+            <p>This pipeline provides a comprehensive approach to preparing data for Bonsai, combining filtering, quality checks, and imputation.</p>
+
+            <h4>Advanced Pipeline with Custom Modules</h4>
+            <p>For specialized applications, a more flexible pipeline architecture allows for custom processing modules:</p>
+            
+            <pre><code>class BonsaiPreprocessor:
+    """Flexible preprocessing pipeline for Bonsai with custom modules."""
+    
+    def __init__(self):
+        """Initialize with empty processing chain."""
+        self.processing_modules = []
+        
+    def add_module(self, module_function, module_name=None, config=None):
+        """
+        Add a processing module to the pipeline.
+        
+        Args:
+            module_function: Function implementing the processing module
+            module_name: Optional name for the module
+            config: Configuration parameters for this module
+        """
+        if module_name is None:
+            module_name = module_function.__name__
+            
+        self.processing_modules.append({
+            'function': module_function,
+            'name': module_name,
+            'config': config or {}
+        })
+        
+    def process(self, segments, individuals=None):
+        """
+        Run the complete preprocessing pipeline.
+        
+        Args:
+            segments: List of IBD segments
+            individuals: List of individual information dictionaries
+            
+        Returns:
+            Preprocessed segments and individuals
+        """
+        results = {
+            'segments': segments,
+            'individuals': individuals,
+            'stats': {},
+            'warnings': [],
+            'errors': []
+        }
+        
+        # Process each module in sequence
+        for module in self.processing_modules:
+            try:
+                # Call the module function
+                module_result = module['function'](
+                    results['segments'], 
+                    results['individuals'], 
+                    module['config']
+                )
+                
+                # Update results
+                if isinstance(module_result, tuple):
+                    if len(module_result) >= 1:
+                        results['segments'] = module_result[0]
+                    if len(module_result) >= 2:
+                        results['individuals'] = module_result[1]
+                    if len(module_result) >= 3:
+                        results['stats'][module['name']] = module_result[2]
+                else:
+                    results['segments'] = module_result
+                
+                # Record basic stats
+                results['stats'][module['name']] = {
+                    'segments_after': len(results['segments'])
+                }
+                
+            except Exception as e:
+                # Record error but continue pipeline
+                results['errors'].append({
+                    'module': module['name'],
+                    'error': str(e)
+                })
+        
+        return results</code></pre>
+            
+            <p>This flexible approach allows researchers to customize the preprocessing pipeline for their specific data and research questions.</p>
+
+            <h3>Quality Control Metrics and Reporting</h3>
+            
+            <p>Comprehensive quality control metrics help evaluate the reliability of input data for Bonsai.</p>
+            
+            <h4>IBD Segment Quality Metrics</h4>
+            <p>Calculate and report metrics for IBD segment quality:</p>
+            
+            <pre><code>def calculate_segment_quality_metrics(segments):
+    """
+    Calculate quality metrics for IBD segments.
+    
+    Args:
+        segments: List of IBD segments
+        
+    Returns:
+        Dictionary of quality metrics
+    """
+    metrics = {}
+    
+    # Basic count statistics
+    metrics['total_segments'] = len(segments)
+    
+    # Count by type
+    ibd1_segments = [seg for seg in segments if seg.type == 'IBD1']
+    ibd2_segments = [seg for seg in segments if seg.type == 'IBD2']
+    metrics['ibd1_segments'] = len(ibd1_segments)
+    metrics['ibd2_segments'] = len(ibd2_segments)
+    
+    # Length statistics
+    lengths = [seg.length for seg in segments]
+    if lengths:
+        metrics['min_length'] = min(lengths)
+        metrics['max_length'] = max(lengths)
+        metrics['mean_length'] = sum(lengths) / len(lengths)
+        metrics['median_length'] = sorted(lengths)[len(lengths) // 2]
+        
+        # Distribution statistics
+        metrics['length_percentiles'] = {
+            '10th': np.percentile(lengths, 10),
+            '25th': np.percentile(lengths, 25),
+            '50th': np.percentile(lengths, 50),
+            '75th': np.percentile(lengths, 75),
+            '90th': np.percentile(lengths, 90)
+        }
+    
+    # Coverage statistics
+    total_length = sum(lengths) if lengths else 0
+    metrics['total_length'] = total_length
+    metrics['genome_coverage'] = total_length / (3500 * len(set([seg.ind1 for seg in segments])))
+    
+    # Chromosome distribution
+    chrom_counts = {}
+    for seg in segments:
+        chrom = seg.chromosome
+        if chrom not in chrom_counts:
+            chrom_counts[chrom] = 0
+        chrom_counts[chrom] += 1
+    metrics['chromosome_distribution'] = chrom_counts
+    
+    # Quality score statistics (if available)
+    if hasattr(segments[0], 'lod_score'):
+        scores = [seg.lod_score for seg in segments]
+        metrics['min_score'] = min(scores)
+        metrics['max_score'] = max(scores)
+        metrics['mean_score'] = sum(scores) / len(scores)
+        metrics['median_score'] = sorted(scores)[len(scores) // 2]
+    
+    return metrics</code></pre>
+            
+            <p>These metrics provide a comprehensive view of IBD segment quality, helping researchers identify potential issues before running Bonsai.</p>
+
+            <h4>Sample Quality Report</h4>
+            <p>Generate a report on sample quality:</p>
+            
+            <pre><code>def generate_sample_quality_report(segments, individuals=None):
+    """
+    Generate a quality report for samples.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        
+    Returns:
+        Dictionary with sample quality metrics
+    """
+    report = {}
+    
+    # Count segments per individual
+    ind_segment_counts = {}
+    for seg in segments:
+        for ind_id in [seg.ind1, seg.ind2]:
+            if ind_id not in ind_segment_counts:
+                ind_segment_counts[ind_id] = 0
+            ind_segment_counts[ind_id] += 1
+    
+    report['segment_counts'] = ind_segment_counts
+    
+    # Calculate total IBD per individual
+    ind_total_ibd = {}
+    for seg in segments:
+        for ind_id in [seg.ind1, seg.ind2]:
+            if ind_id not in ind_total_ibd:
+                ind_total_ibd[ind_id] = 0
+            ind_total_ibd[ind_id] += seg.length
+    
+    report['total_ibd'] = ind_total_ibd
+    
+    # Identify outliers (individuals with unusually high or low IBD)
+    ibd_values = list(ind_total_ibd.values())
+    mean_ibd = sum(ibd_values) / len(ibd_values)
+    std_ibd = math.sqrt(sum((x - mean_ibd) ** 2 for x in ibd_values) / len(ibd_values))
+    
+    high_outliers = {ind: ibd for ind, ibd in ind_total_ibd.items() if ibd > mean_ibd + 2 * std_ibd}
+    low_outliers = {ind: ibd for ind, ibd in ind_total_ibd.items() if ibd < mean_ibd - 2 * std_ibd}
+    
+    report['high_ibd_outliers'] = high_outliers
+    report['low_ibd_outliers'] = low_outliers
+    
+    # Check for isolated individuals (no IBD segments)
+    all_inds = set()
+    if individuals:
+        all_inds = set(ind['id'] for ind in individuals)
+    else:
+        for seg in segments:
+            all_inds.add(seg.ind1)
+            all_inds.add(seg.ind2)
+    
+    connected_inds = set(ind_segment_counts.keys())
+    isolated_inds = all_inds - connected_inds
+    
+    report['isolated_individuals'] = isolated_inds
+    
+    return report</code></pre>
+            
+            <p>This report helps identify problematic samples that may need special handling during pedigree reconstruction.</p>
+
+            <h4>Comprehensive Quality Dashboard</h4>
+            <p>Visualizing quality metrics in a dashboard helps researchers quickly identify issues:</p>
+            
+            <pre><code>def create_quality_dashboard(segments, individuals=None, output_file=None):
+    """
+    Create a comprehensive quality dashboard.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        output_file: Optional path to save the dashboard
+        
+    Returns:
+        None (displays or saves dashboard)
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    
+    # Set up the figure
+    plt.figure(figsize=(15, 12))
+    
+    # 1. Segment length distribution
+    plt.subplot(2, 3, 1)
+    lengths = [seg.length for seg in segments]
+    sns.histplot(lengths, bins=50)
+    plt.title('IBD Segment Length Distribution')
+    plt.xlabel('Segment Length (cM)')
+    plt.ylabel('Count')
+    
+    # 2. Segments per individual
+    plt.subplot(2, 3, 2)
+    ind_segment_counts = {}
+    for seg in segments:
+        for ind_id in [seg.ind1, seg.ind2]:
+            if ind_id not in ind_segment_counts:
+                ind_segment_counts[ind_id] = 0
+            ind_segment_counts[ind_id] += 1
+    
+    sns.histplot(list(ind_segment_counts.values()), bins=30)
+    plt.title('Segments per Individual')
+    plt.xlabel('Number of Segments')
+    plt.ylabel('Count of Individuals')
+    
+    # 3. Total IBD per individual
+    plt.subplot(2, 3, 3)
+    ind_total_ibd = {}
+    for seg in segments:
+        for ind_id in [seg.ind1, seg.ind2]:
+            if ind_id not in ind_total_ibd:
+                ind_total_ibd[ind_id] = 0
+            ind_total_ibd[ind_id] += seg.length
+    
+    sns.histplot(list(ind_total_ibd.values()), bins=30)
+    plt.title('Total IBD per Individual')
+    plt.xlabel('Total IBD (cM)')
+    plt.ylabel('Count of Individuals')
+    
+    # 4. Chromosome distribution
+    plt.subplot(2, 3, 4)
+    chrom_counts = {}
+    for seg in segments:
+        chrom = seg.chromosome
+        if chrom not in chrom_counts:
+            chrom_counts[chrom] = 0
+        chrom_counts[chrom] += 1
+    
+    chroms = sorted(chrom_counts.keys())
+    plt.bar(chroms, [chrom_counts[c] for c in chroms])
+    plt.title('Segments by Chromosome')
+    plt.xlabel('Chromosome')
+    plt.ylabel('Segment Count')
+    
+    # 5. Quality score distribution (if available)
+    plt.subplot(2, 3, 5)
+    if hasattr(segments[0], 'lod_score'):
+        scores = [seg.lod_score for seg in segments]
+        sns.histplot(scores, bins=30)
+        plt.title('Quality Score Distribution')
+        plt.xlabel('LOD Score')
+        plt.ylabel('Count')
+    else:
+        plt.text(0.5, 0.5, 'Quality scores not available', 
+                horizontalalignment='center', verticalalignment='center')
+    
+    # 6. Pair relatedness distribution
+    plt.subplot(2, 3, 6)
+    pair_total_ibd = {}
+    for seg in segments:
+        pair = (min(seg.ind1, seg.ind2), max(seg.ind1, seg.ind2))
+        if pair not in pair_total_ibd:
+            pair_total_ibd[pair] = 0
+        pair_total_ibd[pair] += seg.length
+    
+    sns.histplot(list(pair_total_ibd.values()), bins=50)
+    plt.title('Total IBD per Pair')
+    plt.xlabel('Total IBD (cM)')
+    plt.ylabel('Count of Pairs')
+    
+    plt.tight_layout()
+    
+    # Save or display
+    if output_file:
+        plt.savefig(output_file, dpi=300)
+    else:
+        plt.show()</code></pre>
+            
+            <p>This visual dashboard helps researchers quickly assess the quality of their IBD data before running Bonsai, enabling them to identify and address potential issues.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement a multi-detector consensus filter for IBD segments using output from IBIS, Refined-IBD, and hap-IBD.</li>
+                <li>Create a function to detect and handle inconsistent sex information in pedigree data.</li>
+                <li>Develop a preprocessing pipeline that adjusts IBD detection thresholds based on population-specific patterns.</li>
+                <li>Implement a quality control report generator that identifies problematic samples and recommends preprocessing steps.</li>
+                <li>Design a method to handle missing key individuals in a pedigree by configuring Bonsai's latent ancestor inference.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When preprocessing data for Bonsai, it's often helpful to take an iterative approach. Start with basic filtering, run Bonsai, evaluate the results, and then refine your preprocessing approach based on what you learn. This iterative process can help you identify and address data quality issues that may not be apparent initially.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab17_bonsai_likelihood.html" class="prev-lab">Likelihood Calculations</a>
+                <a href="lab19_bonsai_advanced.html" class="next-lab">Advanced Construction</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 19: Bonsai Advanced Construction | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Advanced Construction Techniques in Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab18_bonsai_quality.html">Lab 18: Data Quality</a>
+        <a href="lab19_bonsai_advanced.html" class="active">Lab 19: Advanced Construction</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 19: Advanced Construction Techniques in Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Advanced construction techniques in Bonsai enable the reconstruction of more complex pedigrees and handling of challenging real-world scenarios. These techniques empower researchers to incorporate domain knowledge, optimize search strategies, and construct reliable pedigrees even with incomplete or noisy genetic data.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Master strategies for navigating the pedigree search space efficiently</li>
+                <li>Implement constraints to incorporate known relationships and demographic information</li>
+                <li>Develop approaches for handling endogamous populations and complex family structures</li>
+                <li>Apply techniques for reconstructing ancestral populations and historical pedigrees</li>
+                <li>Optimize Bonsai parameters for diverse research scenarios</li>
+                <li>Implement custom extensions to the Bonsai algorithm for specialized applications</li>
+            </ul>
+
+            <h3>Navigating the Pedigree Search Space</h3>
+            
+            <p>The pedigree search space is vast and complex, requiring specialized strategies for efficient exploration.</p>
+            
+            <h4>Search Space Characteristics</h4>
+            
+            <p>The pedigree search space has several key characteristics that make it challenging:</p>
+            
+            <ul>
+                <li><strong>Combinatorial Explosion:</strong> The number of possible pedigrees grows exponentially with the number of individuals</li>
+                <li><strong>Multimodality:</strong> Multiple different pedigrees may explain the observed IBD patterns almost equally well</li>
+                <li><strong>Sparsity:</strong> Only a tiny fraction of possible pedigrees are biologically plausible</li>
+                <li><strong>Hierarchical Structure:</strong> Decisions about one relationship affect the plausibility of others</li>
+            </ul>
+            
+            <h4>Guided Search Strategies</h4>
+            
+            <p>Bonsai employs guided search strategies to navigate this complex space efficiently:</p>
+            
+            <pre><code>def configure_search_strategy(config, strategy='iterative_deepening', 
+                              max_iterations=1000, max_time=None):
+    """
+    Configure Bonsai's search strategy for pedigree reconstruction.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        strategy: Search strategy ('greedy', 'beam_search', 'iterative_deepening')
+        max_iterations: Maximum number of search iterations
+        max_time: Maximum search time in seconds (None for no limit)
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'search' not in config:
+        config['search'] = {}
+        
+    config['search']['strategy'] = strategy
+    config['search']['max_iterations'] = max_iterations
+    
+    if max_time is not None:
+        config['search']['max_time'] = max_time
+        
+    # Strategy-specific parameters
+    if strategy == 'beam_search':
+        config['search']['beam_width'] = 10
+    elif strategy == 'iterative_deepening':
+        config['search']['initial_depth'] = 2
+        config['search']['max_depth'] = 10
+        config['search']['depth_increment'] = 1
+    
+    return config</code></pre>
+            
+            <p>Different search strategies offer various trade-offs:</p>
+            
+            <table>
+                <tr>
+                    <th>Strategy</th>
+                    <th>Description</th>
+                    <th>Strengths</th>
+                    <th>Weaknesses</th>
+                </tr>
+                <tr>
+                    <td>Greedy Search</td>
+                    <td>Always selects the most promising next step</td>
+                    <td>Fast, works well for simple pedigrees</td>
+                    <td>Can get stuck in local optima</td>
+                </tr>
+                <tr>
+                    <td>Beam Search</td>
+                    <td>Maintains a set of most promising pedigrees</td>
+                    <td>Balance of exploration and exploitation</td>
+                    <td>Memory-intensive for large beam widths</td>
+                </tr>
+                <tr>
+                    <td>Iterative Deepening</td>
+                    <td>Gradually increases search depth</td>
+                    <td>Thorough exploration, finds optimal solutions</td>
+                    <td>Slower for complex pedigrees</td>
+                </tr>
+                <tr>
+                    <td>Simulated Annealing</td>
+                    <td>Probabilistic strategy allowing "bad" moves initially</td>
+                    <td>Can escape local optima</td>
+                    <td>Sensitive to temperature schedule</td>
+                </tr>
+                <tr>
+                    <td>Monte Carlo Tree Search</td>
+                    <td>Guided random sampling of the search space</td>
+                    <td>Works well with high uncertainty</td>
+                    <td>Requires many iterations for convergence</td>
+                </tr>
+            </table>
+
+            <h4>Heuristic-Based Moves</h4>
+            
+            <p>Bonsai uses heuristics to prioritize pedigree modifications:</p>
+            
+            <pre><code>def configure_move_heuristics(config, prioritize_strong_links=True, 
+                              use_age_heuristics=True, use_ibd_patterns=True):
+    """
+    Configure heuristics for pedigree construction moves.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        prioritize_strong_links: Prioritize individuals with strong IBD evidence
+        use_age_heuristics: Use age information to guide parent-child assignments
+        use_ibd_patterns: Use IBD pattern templates for relationship inference
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'heuristics' not in config:
+        config['heuristics'] = {}
+        
+    config['heuristics']['prioritize_strong_links'] = prioritize_strong_links
+    config['heuristics']['use_age_heuristics'] = use_age_heuristics
+    config['heuristics']['use_ibd_patterns'] = use_ibd_patterns
+    
+    # Advanced heuristic settings
+    if prioritize_strong_links:
+        config['heuristics']['min_ibd_for_strong_link'] = 100.0
+        config['heuristics']['strong_link_priority_factor'] = 2.0
+    
+    if use_age_heuristics:
+        config['heuristics']['min_parent_age_diff'] = 15
+        config['heuristics']['max_parent_age_diff'] = 50
+    
+    if use_ibd_patterns:
+        config['heuristics']['pattern_match_threshold'] = 0.8
+    
+    return config</code></pre>
+            
+            <p>Effective heuristics dramatically improve search efficiency by focusing on the most promising pedigree modifications.</p>
+
+            <h4>Incremental Pedigree Construction</h4>
+            
+            <p>Bonsai constructs pedigrees incrementally, adding relationships in order of confidence:</p>
+            
+            <pre><code>def incremental_construction_process(segments, individuals, config=None):
+    """
+    Illustrates the incremental pedigree construction process in Bonsai.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Configuration dictionary
+        
+    Returns:
+        Constructed pedigree and construction steps
+    """
+    if config is None:
+        config = {}
+    
+    # Setup initial parameters
+    min_confidence = config.get('min_confidence', 0.9)
+    max_latent_ancestors = config.get('max_latent_ancestors', 5)
+    
+    # 1. Initialize empty pedigree
+    pedigree = {}
+    construction_steps = []
+    
+    # 2. Calculate IBD statistics for all pairs
+    pair_stats = calculate_pair_ibd_statistics(segments)
+    
+    # 3. Sort pairs by IBD sharing amount (descending)
+    sorted_pairs = sorted(pair_stats.items(), key=lambda x: x[1]['total_ibd'], reverse=True)
+    
+    # 4. Iterate through pairs in order of IBD sharing
+    for (ind1, ind2), stats in sorted_pairs:
+        # Skip pairs with low total IBD
+        if stats['total_ibd'] < 10.0:
+            continue
+        
+        # Infer possible relationships
+        possible_relations = infer_possible_relationships(ind1, ind2, stats, individuals)
+        
+        # Sort relationships by confidence
+        possible_relations.sort(key=lambda x: x['confidence'], reverse=True)
+        
+        # Skip if no high-confidence relationships
+        if not possible_relations or possible_relations[0]['confidence'] < min_confidence:
+            continue
+        
+        # Select best relationship
+        best_relation = possible_relations[0]
+        
+        # Apply to pedigree
+        apply_relationship(pedigree, best_relation)
+        
+        # Record construction step
+        construction_steps.append({
+            'pair': (ind1, ind2),
+            'relationship': best_relation['type'],
+            'confidence': best_relation['confidence'],
+            'ibd_stats': stats
+        })
+    
+    # 5. Infer latent ancestors if needed
+    if len(pedigree) > 0 and max_latent_ancestors > 0:
+        infer_latent_ancestors(pedigree, segments, individuals, max_latent_ancestors)
+    
+    return pedigree, construction_steps
+
+def calculate_pair_ibd_statistics(segments):
+    """Calculate IBD statistics for all pairs."""
+    # Implementation details...
+    return {}
+
+def infer_possible_relationships(ind1, ind2, stats, individuals):
+    """Infer possible relationships between individuals."""
+    # Implementation details...
+    return []
+
+def apply_relationship(pedigree, relation):
+    """Apply a relationship to the pedigree."""
+    # Implementation details...
+    pass
+
+def infer_latent_ancestors(pedigree, segments, individuals, max_latent_ancestors):
+    """Infer latent ancestors in the pedigree."""
+    # Implementation details...
+    pass</code></pre>
+            
+            <p>This incremental approach provides a systematic way to build pedigrees from IBD evidence, focusing on the most confidently inferred relationships first.</p>
+
+            <h3>Incorporating Domain Knowledge Through Constraints</h3>
+            
+            <p>Domain knowledge can be incorporated into Bonsai through various constraints to guide pedigree reconstruction.</p>
+            
+            <h4>Known Relationship Constraints</h4>
+            
+            <p>Existing knowledge about relationships can be used as constraints:</p>
+            
+            <pre><code>def add_known_relationship_constraints(config, known_relationships):
+    """
+    Add constraints based on known relationships.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        known_relationships: List of dictionaries with known relationship information
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'constraints' not in config:
+        config['constraints'] = {}
+    
+    if 'relationships' not in config['constraints']:
+        config['constraints']['relationships'] = []
+    
+    for relationship in known_relationships:
+        # Validate relationship information
+        if 'ind1' not in relationship or 'ind2' not in relationship or 'type' not in relationship:
+            continue
+        
+        # Add to constraints
+        config['constraints']['relationships'].append({
+            'ind1': relationship['ind1'],
+            'ind2': relationship['ind2'],
+            'type': relationship['type'],
+            'confidence': relationship.get('confidence', 1.0)
+        })
+    
+    return config
+
+# Example usage
+known_relationships = [
+    {'ind1': 'ind1', 'ind2': 'ind2', 'type': 'parent_child'},
+    {'ind1': 'ind3', 'ind2': 'ind4', 'type': 'full_siblings', 'confidence': 0.95},
+    {'ind1': 'ind5', 'ind2': 'ind6', 'type': 'half_siblings', 'confidence': 0.8}
+]
+
+config = {}
+config = add_known_relationship_constraints(config, known_relationships)</code></pre>
+            
+            <p>Known relationships can range from fully certain (e.g., documented parent-child) to probabilistic constraints based on other evidence.</p>
+
+            <h4>Temporal and Demographic Constraints</h4>
+            
+            <p>Temporal and demographic information can add valuable constraints:</p>
+            
+            <pre><code>def add_demographic_constraints(config, birth_years=None, death_years=None,
+                               min_reproductive_age=15, max_reproductive_age=50):
+    """
+    Add demographic constraints based on birth/death years.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        birth_years: Dictionary mapping individual IDs to birth years
+        death_years: Dictionary mapping individual IDs to death years
+        min_reproductive_age: Minimum age for reproduction
+        max_reproductive_age: Maximum age for reproduction
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'constraints' not in config:
+        config['constraints'] = {}
+    
+    # Add temporal parameters
+    config['constraints']['min_reproductive_age'] = min_reproductive_age
+    config['constraints']['max_reproductive_age'] = max_reproductive_age
+    
+    # Add individual birth/death information
+    if 'individuals' not in config['constraints']:
+        config['constraints']['individuals'] = {}
+    
+    # Add birth years
+    if birth_years:
+        for ind_id, birth_year in birth_years.items():
+            if ind_id not in config['constraints']['individuals']:
+                config['constraints']['individuals'][ind_id] = {}
+            config['constraints']['individuals'][ind_id]['birth_year'] = birth_year
+    
+    # Add death years
+    if death_years:
+        for ind_id, death_year in death_years.items():
+            if ind_id not in config['constraints']['individuals']:
+                config['constraints']['individuals'][ind_id] = {}
+            config['constraints']['individuals'][ind_id]['death_year'] = death_year
+    
+    return config
+
+# Example usage
+birth_years = {
+    'ind1': 1950,
+    'ind2': 1975,
+    'ind3': 1978,
+    'ind4': 2000
+}
+
+death_years = {
+    'ind1': 2020
+}
+
+config = {}
+config = add_demographic_constraints(config, birth_years, death_years)</code></pre>
+            
+            <p>These constraints help Bonsai enforce biologically plausible pedigrees by ensuring appropriate age relationships between parents and children.</p>
+
+            <h4>Geographical and Historical Constraints</h4>
+            
+            <p>Geographical and historical information can provide additional context:</p>
+            
+            <pre><code>def add_geographical_constraints(config, locations=None, migrations=None,
+                               max_distance_for_relationship=None):
+    """
+    Add geographical constraints for pedigree reconstruction.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        locations: Dictionary mapping individual IDs to location histories
+        migrations: Dictionary of known migration patterns
+        max_distance_for_relationship: Max distance for relationship formation
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'constraints' not in config:
+        config['constraints'] = {}
+    
+    if 'geographical' not in config['constraints']:
+        config['constraints']['geographical'] = {}
+    
+    # Add location histories
+    if locations:
+        config['constraints']['geographical']['locations'] = locations
+    
+    # Add migration patterns
+    if migrations:
+        config['constraints']['geographical']['migrations'] = migrations
+    
+    # Add maximum distance constraint
+    if max_distance_for_relationship is not None:
+        config['constraints']['geographical']['max_distance'] = max_distance_for_relationship
+    
+    return config
+
+# Example location history format
+location_example = {
+    'ind1': [
+        {'place': 'New York, USA', 'start_year': 1950, 'end_year': 1970},
+        {'place': 'Chicago, USA', 'start_year': 1970, 'end_year': 2020}
+    ],
+    'ind2': [
+        {'place': 'Chicago, USA', 'start_year': 1975, 'end_year': 1995},
+        {'place': 'Los Angeles, USA', 'start_year': 1995, 'end_year': None}
+    ]
+}</code></pre>
+            
+            <p>Geographical constraints can be particularly valuable for reconstructing historical pedigrees or cases where physical proximity was required for relationship formation.</p>
+
+            <h3>Handling Endogamous Populations</h3>
+            
+            <p>Endogamous populations present unique challenges for pedigree reconstruction due to elevated background relatedness.</p>
+            
+            <h4>Adjusting IBD Expectations</h4>
+            
+            <p>Endogamy requires adjusting expectations for IBD sharing:</p>
+            
+            <pre><code>def configure_endogamy_handling(config, endogamy_factor=1.0, 
+                              population_specific_factors=None):
+    """
+    Configure Bonsai to handle endogamous populations appropriately.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        endogamy_factor: Global endogamy adjustment factor
+        population_specific_factors: Dictionary mapping populations to endogamy factors
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'endogamy' not in config:
+        config['endogamy'] = {}
+    
+    # Set global endogamy factor
+    config['endogamy']['global_factor'] = endogamy_factor
+    
+    # Set population-specific factors
+    if population_specific_factors:
+        config['endogamy']['population_factors'] = population_specific_factors
+    
+    # Adjust IBD thresholds based on endogamy
+    if 'thresholds' not in config:
+        config['thresholds'] = {}
+    
+    # Scale thresholds by endogamy factor
+    config['thresholds']['min_segment_length'] = 7.0 * endogamy_factor
+    config['thresholds']['min_total_ibd_close_relative'] = 50.0 * endogamy_factor
+    
+    return config
+
+# Example for highly endogamous Ashkenazi Jewish population
+population_specific_factors = {
+    'ASJ': 5.0,    # Ashkenazi Jewish (high endogamy)
+    'FIN': 3.0,    # Finnish (moderate endogamy)
+    'AMR': 1.5,    # Admixed American (some endogamy)
+    'EUR': 1.0     # European (reference)
+}
+
+config = {}
+config = configure_endogamy_handling(config, endogamy_factor=1.5, 
+                                    population_specific_factors=population_specific_factors)</code></pre>
+            
+            <p>The endogamy factor adjusts thresholds and expectations to account for elevated background IBD sharing in endogamous populations.</p>
+
+            <h4>Endogamy-Aware Relationship Models</h4>
+            
+            <p>Specialized relationship models for endogamous populations:</p>
+            
+            <pre><code>def create_endogamy_aware_models(base_models, endogamy_factor=1.0):
+    """
+    Create endogamy-aware relationship models by adjusting IBD expectations.
+    
+    Args:
+        base_models: Dictionary of baseline relationship models
+        endogamy_factor: Endogamy adjustment factor
+        
+    Returns:
+        Dictionary of endogamy-adjusted models
+    """
+    adjusted_models = {}
+    
+    for rel_type, model in base_models.items():
+        # Create a copy of the model
+        adjusted_model = model.copy()
+        
+        # Adjust expected IBD sharing
+        if 'expected_total_ibd' in model:
+            # For distant relatives, add background IBD
+            if rel_type in ['second_cousins', 'third_cousins', 'fourth_cousins']:
+                adjusted_model['expected_total_ibd'] = model['expected_total_ibd'] + (10.0 * endogamy_factor)
+            
+            # For close relatives, scale less aggressively
+            else:
+                scale_factor = 1.0 + (0.05 * (endogamy_factor - 1.0))
+                adjusted_model['expected_total_ibd'] = model['expected_total_ibd'] * scale_factor
+        
+        # Adjust segment count expectations
+        if 'expected_segment_count' in model:
+            # Endogamy increases segment count for distant relatives
+            if rel_type in ['second_cousins', 'third_cousins', 'fourth_cousins']:
+                adjusted_model['expected_segment_count'] = model['expected_segment_count'] * endogamy_factor
+        
+        adjusted_models[rel_type] = adjusted_model
+    
+    return adjusted_models</code></pre>
+            
+            <p>These adjusted models account for the impact of endogamy on both total IBD sharing and segment count distributions.</p>
+
+            <h4>Strategies for Pedigree Collapse</h4>
+            
+            <p>Pedigree collapse occurs when the same ancestor appears multiple times in a pedigree, common in endogamous populations:</p>
+            
+            <pre><code>def enable_pedigree_collapse_detection(config, max_collapse_iterations=3):
+    """
+    Configure Bonsai to handle pedigree collapse.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        max_collapse_iterations: Maximum iterations for collapse detection
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'advanced' not in config:
+        config['advanced'] = {}
+    
+    config['advanced']['detect_pedigree_collapse'] = True
+    config['advanced']['max_collapse_iterations'] = max_collapse_iterations
+    config['advanced']['collapse_likelihood_threshold'] = 0.8
+    
+    # Enable identification of individuals with multiple roles
+    config['advanced']['allow_multiple_ancestral_paths'] = True
+    
+    return config</code></pre>
+            
+            <p>Detecting pedigree collapse is crucial for accurately reconstructing pedigrees in endogamous populations, where individuals often share multiple ancestral paths.</p>
+
+            <h3>Reconstructing Ancestral Populations</h3>
+            
+            <p>Bonsai can be used to reconstruct ancestral populations and historical pedigrees.</p>
+            
+            <h4>Multi-Generation Reconstruction</h4>
+            
+            <p>Strategies for reconstructing multiple generations:</p>
+            
+            <pre><code>def configure_multigenerational_reconstruction(config, max_generations=5,
+                                         latent_ancestor_confidence=0.7):
+    """
+    Configure Bonsai for multi-generational pedigree reconstruction.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        max_generations: Maximum number of generations to reconstruct
+        latent_ancestor_confidence: Confidence threshold for latent ancestors
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'reconstruction' not in config:
+        config['reconstruction'] = {}
+    
+    config['reconstruction']['max_generations'] = max_generations
+    config['reconstruction']['latent_ancestor_confidence'] = latent_ancestor_confidence
+    
+    # Enable generation-aware search
+    config['reconstruction']['generation_aware_search'] = True
+    
+    # Configure generation-specific parameters
+    config['reconstruction']['generation_params'] = {}
+    
+    # Stricter evidence requirements for older generations
+    for gen in range(1, max_generations + 1):
+        config['reconstruction']['generation_params'][gen] = {
+            'min_confidence': latent_ancestor_confidence * (1.1 ** (gen - 1)),
+            'min_supporting_descendants': 2 * gen
+        }
+    
+    return config</code></pre>
+            
+            <p>Multi-generational reconstruction requires careful consideration of evidence thresholds, as more distant ancestors have more sparse and indirect evidence.</p>
+
+            <h4>Reconstructing Ancestral Subpopulations</h4>
+            
+            <p>Techniques for identifying ancestral subpopulations:</p>
+            
+            <pre><code>def reconstruct_ancestral_subpopulations(segments, individuals, config=None):
+    """
+    Use Bonsai to reconstruct ancestral subpopulations.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Configuration dictionary
+        
+    Returns:
+        Dictionary mapping subpopulation IDs to member lists
+    """
+    if config is None:
+        config = {}
+    
+    # 1. Cluster individuals based on IBD patterns
+    clusters = cluster_by_ibd_sharing(segments, individuals)
+    
+    # 2. Reconstruct pedigrees within each cluster
+    subpopulations = {}
+    
+    for cluster_id, cluster_members in clusters.items():
+        # Filter segments to those within the cluster
+        cluster_segments = filter_segments_by_individuals(segments, cluster_members)
+        
+        # Filter individuals to cluster members
+        cluster_individuals = [ind for ind in individuals if ind['id'] in cluster_members]
+        
+        # Reconstruct pedigree for this cluster
+        pedigree = reconstruct_pedigree(cluster_segments, cluster_individuals, config)
+        
+        # Store as subpopulation
+        subpopulations[f"subpop_{cluster_id}"] = {
+            'members': cluster_members,
+            'pedigree': pedigree
+        }
+    
+    # 3. Identify links between subpopulations
+    subpopulation_links = identify_subpopulation_links(segments, subpopulations)
+    
+    # Add link information to subpopulations
+    for link in subpopulation_links:
+        subpop1 = link['subpop1']
+        subpop2 = link['subpop2']
+        
+        if 'links' not in subpopulations[subpop1]:
+            subpopulations[subpop1]['links'] = []
+        
+        if 'links' not in subpopulations[subpop2]:
+            subpopulations[subpop2]['links'] = []
+        
+        subpopulations[subpop1]['links'].append({
+            'connected_to': subpop2,
+            'strength': link['strength'],
+            'individuals': link['individuals']
+        })
+        
+        subpopulations[subpop2]['links'].append({
+            'connected_to': subpop1,
+            'strength': link['strength'],
+            'individuals': link['individuals']
+        })
+    
+    return subpopulations
+
+def cluster_by_ibd_sharing(segments, individuals):
+    """Cluster individuals based on IBD sharing patterns."""
+    # Implementation details...
+    return {}
+
+def filter_segments_by_individuals(segments, individuals):
+    """Filter segments to only those connecting specified individuals."""
+    # Implementation details...
+    return []
+
+def reconstruct_pedigree(segments, individuals, config):
+    """Reconstruct a pedigree using Bonsai."""
+    # Implementation details...
+    return {}
+
+def identify_subpopulation_links(segments, subpopulations):
+    """Identify links between subpopulations based on IBD sharing."""
+    # Implementation details...
+    return []</code></pre>
+            
+            <p>This approach first identifies subpopulations through IBD clustering, then reconstructs pedigrees within each subpopulation, and finally identifies links between subpopulations.</p>
+
+            <h4>Historical Demography Inference</h4>
+            
+            <p>Inferring historical demographic parameters:</p>
+            
+            <pre><code>def infer_demographic_parameters(pedigree, segments, individuals, config=None):
+    """
+    Infer historical demographic parameters from reconstructed pedigrees.
+    
+    Args:
+        pedigree: Reconstructed pedigree
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Configuration dictionary
+        
+    Returns:
+        Dictionary of inferred demographic parameters
+    """
+    if config is None:
+        config = {}
+    
+    # Extract generations from pedigree
+    generations = extract_generations(pedigree)
+    
+    # Calculate basic demographic parameters
+    params = {}
+    
+    # Population size over time
+    params['population_size'] = {gen: len(members) for gen, members in generations.items()}
+    
+    # Average age at reproduction
+    reproduction_ages = calculate_reproduction_ages(pedigree, individuals)
+    params['avg_reproduction_age'] = {
+        'overall': sum(reproduction_ages) / len(reproduction_ages) if reproduction_ages else None,
+        'by_generation': {}
+    }
+    
+    for gen, members in generations.items():
+        gen_ages = [age for ind_id, age in reproduction_ages.items() if ind_id in members]
+        if gen_ages:
+            params['avg_reproduction_age']['by_generation'][gen] = sum(gen_ages) / len(gen_ages)
+    
+    # Inbreeding coefficient over time
+    params['inbreeding_coefficient'] = calculate_inbreeding_coefficients(pedigree, generations)
+    
+    # Migration rate estimates
+    if 'geographical' in config.get('constraints', {}):
+        params['migration_rates'] = estimate_migration_rates(pedigree, individuals, 
+                                                           config['constraints']['geographical'])
+    
+    # Bottleneck detection
+    params['bottlenecks'] = detect_bottlenecks(params['population_size'])
+    
+    # Expansion events
+    params['expansions'] = detect_expansions(params['population_size'])
+    
+    return params
+
+def extract_generations(pedigree):
+    """Extract generations from pedigree."""
+    # Implementation details...
+    return {}
+
+def calculate_reproduction_ages(pedigree, individuals):
+    """Calculate reproduction ages for individuals in the pedigree."""
+    # Implementation details...
+    return {}
+
+def calculate_inbreeding_coefficients(pedigree, generations):
+    """Calculate inbreeding coefficients by generation."""
+    # Implementation details...
+    return {}
+
+def estimate_migration_rates(pedigree, individuals, geo_constraints):
+    """Estimate migration rates based on pedigree and geographical data."""
+    # Implementation details...
+    return {}
+
+def detect_bottlenecks(population_sizes):
+    """Detect population bottlenecks from size estimates."""
+    # Implementation details...
+    return []
+
+def detect_expansions(population_sizes):
+    """Detect population expansion events from size estimates."""
+    # Implementation details...
+    return []</code></pre>
+            
+            <p>This analysis extracts valuable demographic information from reconstructed pedigrees, providing insights into historical population dynamics.</p>
+
+            <h3>Optimizing Bonsai Parameters</h3>
+            
+            <p>Optimal Bonsai performance requires careful parameter tuning.</p>
+            
+            <h4>Parameter Sensitivity Analysis</h4>
+            
+            <p>Analyzing how different parameters affect reconstruction quality:</p>
+            
+            <pre><code>def parameter_sensitivity_analysis(segments, individuals, true_pedigree=None,
+                                evaluation_metric='likelihood'):
+    """
+    Perform parameter sensitivity analysis for Bonsai.
+    
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        true_pedigree: Optional known pedigree for accuracy assessment
+        evaluation_metric: Metric to evaluate parameter performance
+        
+    Returns:
+        Dictionary of parameter sensitivity results
+    """
+    # Parameters to test
+    parameters = {
+        'min_segment_length': [3.0, 5.0, 7.0, 10.0],
+        'min_confidence': [0.5, 0.7, 0.9, 0.95],
+        'max_latent_ancestors': [0, 2, 5, 10],
+        'endogamy_factor': [1.0, 1.5, 2.0, 3.0]
+    }
+    
+    # Initialize results
+    results = {param: {} for param in parameters}
+    
+    # Test each parameter independently
+    for param, values in parameters.items():
+        for value in values:
+            # Create config with this parameter value
+            config = create_default_config()
+            set_parameter(config, param, value)
+            
+            # Run pedigree reconstruction
+            pedigree = reconstruct_pedigree(segments, individuals, config)
+            
+            # Evaluate result
+            if evaluation_metric == 'likelihood':
+                score = calculate_likelihood(pedigree, segments)
+            elif evaluation_metric == 'accuracy' and true_pedigree:
+                score = calculate_accuracy(pedigree, true_pedigree)
+            else:
+                score = calculate_default_score(pedigree, segments)
+            
+            # Store result
+            results[param][value] = score
+    
+    # Find optimal values
+    optimal_values = {}
+    for param, scores in results.items():
+        optimal_values[param] = max(scores.items(), key=lambda x: x[1])[0]
+    
+    return {
+        'results': results,
+        'optimal_values': optimal_values
+    }
+
+def create_default_config():
+    """Create default Bonsai configuration."""
+    # Implementation details...
+    return {}
+
+def set_parameter(config, param, value):
+    """Set a specific parameter in the configuration."""
+    # Implementation details...
+    pass
+
+def calculate_likelihood(pedigree, segments):
+    """Calculate the likelihood of a pedigree given IBD segments."""
+    # Implementation details...
+    return 0.0
+
+def calculate_accuracy(pedigree, true_pedigree):
+    """Calculate the accuracy of a reconstructed pedigree compared to truth."""
+    # Implementation details...
+    return 0.0
+
+def calculate_default_score(pedigree, segments):
+    """Calculate a default score for pedigree quality."""
+    # Implementation details...
+    return 0.0</code></pre>
+            
+            <p>This analysis helps identify the optimal parameters for a given dataset, improving reconstruction accuracy.</p>
+
+            <h4>Adaptive Parameter Tuning</h4>
+            
+            <p>Adaptive tuning of parameters during reconstruction:</p>
+            
+            <pre><code>def configure_adaptive_tuning(config, enable=True, tuning_frequency=100):
+    """
+    Configure adaptive parameter tuning during Bonsai reconstruction.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        enable: Whether to enable adaptive tuning
+        tuning_frequency: How often to adjust parameters (in iterations)
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'adaptive_tuning' not in config:
+        config['adaptive_tuning'] = {}
+    
+    config['adaptive_tuning']['enabled'] = enable
+    config['adaptive_tuning']['frequency'] = tuning_frequency
+    
+    # Set parameters that can be adaptively tuned
+    config['adaptive_tuning']['tunable_parameters'] = [
+        'min_confidence',
+        'min_segment_length',
+        'endogamy_factor'
+    ]
+    
+    # Set parameter adjustment limits
+    config['adaptive_tuning']['adjustment_limits'] = {
+        'min_confidence': {'min': 0.5, 'max': 0.95, 'step': 0.05},
+        'min_segment_length': {'min': 3.0, 'max': 15.0, 'step': 1.0},
+        'endogamy_factor': {'min': 1.0, 'max': 5.0, 'step': 0.5}
+    }
+    
+    # Specify adaptive rules
+    config['adaptive_tuning']['rules'] = [
+        {
+            'condition': 'too_many_relationships',
+            'parameter': 'min_confidence',
+            'adjustment': '+0.05'
+        },
+        {
+            'condition': 'too_few_relationships',
+            'parameter': 'min_confidence',
+            'adjustment': '-0.05'
+        },
+        {
+            'condition': 'high_relationship_uncertainty',
+            'parameter': 'min_segment_length',
+            'adjustment': '+1.0'
+        },
+        {
+            'condition': 'elevated_background_ibd',
+            'parameter': 'endogamy_factor',
+            'adjustment': '+0.5'
+        }
+    ]
+    
+    return config</code></pre>
+            
+            <p>Adaptive parameter tuning allows Bonsai to adjust its behavior based on the characteristics of the data, leading to more robust reconstruction.</p>
+
+            <h4>Optimization for Different Research Goals</h4>
+            
+            <p>Different research goals require different optimization strategies:</p>
+            
+            <pre><code>def optimize_for_research_goal(config, goal='accurate_close_relatives'):
+    """
+    Optimize Bonsai configuration for a specific research goal.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        goal: Research goal ('accurate_close_relatives', 'distant_ancestry',
+              'population_structure', 'demographic_inference')
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if goal == 'accurate_close_relatives':
+        # Focus on accurately identifying close relationships
+        config['thresholds'] = {
+            'min_segment_length': 15.0,
+            'min_confidence': 0.95,
+            'max_latent_ancestors': 0
+        }
+        config['search'] = {
+            'strategy': 'greedy',
+            'max_iterations': 500
+        }
+    
+    elif goal == 'distant_ancestry':
+        # Optimize for finding distant relationships
+        config['thresholds'] = {
+            'min_segment_length': 5.0,
+            'min_confidence': 0.7,
+            'max_latent_ancestors': 10
+        }
+        config['search'] = {
+            'strategy': 'iterative_deepening',
+            'max_iterations': 2000,
+            'initial_depth': 2,
+            'max_depth': 10
+        }
+    
+    elif goal == 'population_structure':
+        # Focus on identifying population substructure
+        config['thresholds'] = {
+            'min_segment_length': 7.0,
+            'min_confidence': 0.8,
+            'max_latent_ancestors': 5
+        }
+        config['search'] = {
+            'strategy': 'beam_search',
+            'max_iterations': 1000,
+            'beam_width': 20
+        }
+        # Enable clustering
+        if 'advanced' not in config:
+            config['advanced'] = {}
+        config['advanced']['enable_clustering'] = True
+    
+    elif goal == 'demographic_inference':
+        # Optimize for demographic parameter inference
+        config['thresholds'] = {
+            'min_segment_length': 10.0,
+            'min_confidence': 0.85,
+            'max_latent_ancestors': 15
+        }
+        config['search'] = {
+            'strategy': 'iterative_deepening',
+            'max_iterations': 3000,
+            'initial_depth': 3,
+            'max_depth': 15
+        }
+        # Enable demographic inference
+        if 'advanced' not in config:
+            config['advanced'] = {}
+        config['advanced']['infer_demographics'] = True
+    
+    return config</code></pre>
+            
+            <p>This approach provides optimized configurations for different research goals, helping researchers focus on their specific questions of interest.</p>
+
+            <h3>Custom Extensions to Bonsai</h3>
+            
+            <p>Bonsai can be extended with custom functionality for specialized applications.</p>
+            
+            <h4>Custom Relationship Models</h4>
+            
+            <p>Implementing custom relationship models for specific scenarios:</p>
+            
+            <pre><code>def register_custom_relationship_model(config, relationship_type, model):
+    """
+    Register a custom relationship model with Bonsai.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        relationship_type: Name of the custom relationship type
+        model: Relationship model dictionary
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'custom_relationships' not in config:
+        config['custom_relationships'] = {}
+    
+    config['custom_relationships'][relationship_type] = model
+    
+    return config
+
+# Example: Custom model for double first cousins
+double_first_cousin_model = {
+    'expected_total_ibd': 637.5,  # In cM (halfway between first cousins and half-siblings)
+    'expected_segment_count': 24,
+    'variance_total_ibd': 9500,
+    'variance_segment_count': 12,
+    'min_segments': 15,
+    'max_segments': 35,
+    'min_total_ibd': 425,
+    'max_total_ibd': 850,
+    'description': 'Double first cousins - share two grandparent pairs',
+    'generation_difference': 0
+}
+
+config = {}
+config = register_custom_relationship_model(config, 'double_first_cousins', double_first_cousin_model)
+
+# Example: Custom complex relationship
+complex_relationship_model = {
+    'combined_from': [
+        {'type': 'half_siblings', 'weight': 0.5},
+        {'type': 'first_cousins', 'weight': 0.5}
+    ],
+    'description': 'Half-siblings who also share one grandparent pair',
+    'generation_difference': 0
+}
+
+config = register_custom_relationship_model(config, 'half_sibling_first_cousins', complex_relationship_model)</code></pre>
+            
+            <p>Custom relationship models allow Bonsai to accurately handle complex or unusual relationship types that may be important in specific research contexts.</p>
+
+            <h4>Custom Likelihood Functions</h4>
+            
+            <p>Implementing custom likelihood functions:</p>
+            
+            <pre><code>def register_custom_likelihood_function(config, function_name, parameters):
+    """
+    Register a custom likelihood function with Bonsai.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        function_name: Name of the likelihood function
+        parameters: Dictionary of function parameters
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'custom_functions' not in config:
+        config['custom_functions'] = {}
+    
+    if 'likelihood' not in config['custom_functions']:
+        config['custom_functions']['likelihood'] = {}
+    
+    config['custom_functions']['likelihood'][function_name] = parameters
+    
+    return config
+
+# Example: Custom likelihood function for handling admixed populations
+admixture_likelihood_params = {
+    'function_type': 'mixture',
+    'components': [
+        {'population': 'EUR', 'weight': 0.7, 'model': 'standard'},
+        {'population': 'AFR', 'weight': 0.3, 'model': 'standard'}
+    ],
+    'use_population_specific_parameters': True,
+    'description': 'Mixed likelihood model for admixed African-European ancestry'
+}
+
+config = {}
+config = register_custom_likelihood_function(config, 'admixed_likelihood', admixture_likelihood_params)
+
+# Example: Custom IBD segment processing function
+custom_segment_processing = {
+    'function_type': 'segment_processor',
+    'operations': [
+        {'operation': 'merge_adjacent', 'max_gap': 2.0},
+        {'operation': 'adjust_boundaries', 'boundary_confidence': 0.9},
+        {'operation': 'filter_outliers', 'z_score_threshold': 3.0}
+    ],
+    'apply_before': 'relationship_inference',
+    'description': 'Enhanced segment processing for noisy IBD data'
+}
+
+config = register_custom_likelihood_function(config, 'enhanced_segment_processing', 
+                                            custom_segment_processing)</code></pre>
+            
+            <p>Custom likelihood functions can account for specialized scenarios such as admixture, unusual IBD patterns, or novel statistical models.</p>
+
+            <h4>Integration with External Systems</h4>
+            
+            <p>Bonsai can be integrated with external systems for enhanced functionality:</p>
+            
+            <pre><code>def configure_external_integrations(config, integrations):
+    """
+    Configure Bonsai integration with external systems.
+    
+    Args:
+        config: Bonsai configuration dictionary
+        integrations: List of integration configurations
+        
+    Returns:
+        Updated configuration dictionary
+    """
+    if 'integrations' not in config:
+        config['integrations'] = {}
+    
+    for integration in integrations:
+        if 'type' not in integration or 'name' not in integration:
+            continue
+        
+        integration_type = integration['type']
+        integration_name = integration['name']
+        
+        if integration_type not in config['integrations']:
+            config['integrations'][integration_type] = {}
+        
+        config['integrations'][integration_type][integration_name] = integration
+    
+    return config
+
+# Example: Integration with external genetic database
+genetic_db_integration = {
+    'type': 'database',
+    'name': 'ancestry_db',
+    'connection': {
+        'host': 'db.example.com',
+        'port': 5432,
+        'database': 'genetic_ancestry',
+        'auth_method': 'apikey',
+        'auth_token': '$AUTH_TOKEN_ENV_VAR'
+    },
+    'query_templates': {
+        'get_relationship': 'SELECT * FROM relationships WHERE ind1 = :ind1 AND ind2 = :ind2',
+        'get_individual': 'SELECT * FROM individuals WHERE id = :id'
+    },
+    'cache_results': True,
+    'timeout': 5000
+}
+
+# Example: Integration with mapping service
+mapping_integration = {
+    'type': 'mapping',
+    'name': 'geographic',
+    'provider': 'openstreetmap',
+    'api_endpoint': 'https://api.openstreetmap.org/api/0.6/',
+    'features': ['geocoding', 'distance_calculation', 'historical_maps'],
+    'cache_results': True,
+    'timeout': 3000
+}
+
+# Example: Integration with external demographic model
+demographic_model_integration = {
+    'type': 'model',
+    'name': 'demographic_history',
+    'model_type': 'demes',
+    'model_file': 'models/out_of_africa.yaml',
+    'parameters': {
+        'generation_time': 25,
+        'reference_population': 'CEU'
+    },
+    'use_for': ['migration_rates', 'population_sizes', 'splitting_times']
+}
+
+# Configure all integrations
+integrations = [genetic_db_integration, mapping_integration, demographic_model_integration]
+config = {}
+config = configure_external_integrations(config, integrations)</code></pre>
+            
+            <p>External integrations enable Bonsai to incorporate additional data sources and functionality, enhancing its pedigree reconstruction capabilities.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement a custom search strategy for Bonsai that combines elements of beam search and simulated annealing.</li>
+                <li>Develop a configuration for handling a highly endogamous population with known pedigree collapse.</li>
+                <li>Create a multi-generation reconstruction pipeline that optimizes parameters differently for each generation.</li>
+                <li>Implement a custom relationship model for a complex relationship type not covered by standard models.</li>
+                <li>Design an approach for identifying subpopulation structure in a diverse dataset using Bonsai.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When working with advanced construction techniques in Bonsai, start with simple configurations and gradually add complexity. This iterative approach helps you understand the impact of each parameter and technique on the reconstruction process, making it easier to troubleshoot issues and optimize results.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab18_bonsai_quality.html" class="prev-lab">Data Quality</a>
+                <a href="lab20_bonsai_visualization.html" class="next-lab">Visualization</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

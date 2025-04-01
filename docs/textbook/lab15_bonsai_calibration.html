@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 15: Bonsai Model Calibration | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Model Calibration in Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab14_bonsai_data_structures.html">Lab 14: Data Structures</a>
+        <a href="lab15_bonsai_calibration.html" class="active">Lab 15: Model Calibration</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 15: Model Calibration in Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> The accuracy of pedigree reconstruction depends critically on how well statistical models match the biological reality of genetic inheritance. Model calibration bridges the gap between theoretical expectations and observed data patterns, ensuring that Bonsai can handle real-world genetic data with its inherent noise and biases.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the importance of model calibration in pedigree reconstruction</li>
+                <li>Master techniques for calibrating IBD detection thresholds</li>
+                <li>Learn how to estimate parameters for relationship likelihood models</li>
+                <li>Develop methods to validate and refine calibration using known relationships</li>
+                <li>Apply cross-validation techniques to evaluate calibration effectiveness</li>
+                <li>Implement custom calibration approaches for specific populations or datasets</li>
+            </ul>
+
+            <h3>The Need for Model Calibration</h3>
+            
+            <p>Genetic data in the real world rarely follows perfectly the theoretical distributions we expect. Several factors introduce systematic biases that must be accounted for:</p>
+            
+            <h4>Sources of Model Discrepancy</h4>
+            <ul>
+                <li><strong>IBD Detection Errors:</strong> False positives and false negatives in IBD detection</li>
+                <li><strong>Population-Specific Recombination:</strong> Variation in recombination rates across populations</li>
+                <li><strong>Genotyping Technology:</strong> Systematic biases introduced by different genotyping platforms</li>
+                <li><strong>Background Relatedness:</strong> Low-level shared ancestry in endogamous populations</li>
+                <li><strong>Ascertainment Bias:</strong> Non-random sampling of individuals for analysis</li>
+            </ul>
+            
+            <p>Calibration adjusts Bonsai's internal models to account for these discrepancies, ensuring accurate relationship inference despite these real-world complications.</p>
+
+            <div class="figure">
+                <img src="../images/model_calibration.png" alt="Model Calibration Process" style="max-width: 700px;">
+                <p class="figure-caption">Model calibration adjusts theoretical expectations to match observed patterns in genetic data.</p>
+            </div>
+
+            <h3>Calibrating IBD Detection Thresholds</h3>
+            
+            <p>The first step in Bonsai calibration is determining appropriate thresholds for IBD segment detection.</p>
+            
+            <h4>Minimum Segment Length Calibration</h4>
+            
+            <p>The choice of minimum segment length threshold balances sensitivity and specificity:</p>
+            
+            <pre><code># Python implementation of threshold calibration
+def calibrate_min_segment_length(ibd_segments, known_relationships=None):
+    """Calibrate the minimum segment length threshold.
+    
+    Args:
+        ibd_segments: List of detected IBD segments
+        known_relationships: Dictionary mapping pairs to known relationship types (optional)
+        
+    Returns:
+        Recommended minimum segment length threshold
+    """
+    # Approach 1: ROC curve analysis (if known relationships available)
+    if known_relationships:
+        thresholds = range(3, 15)  # Test thresholds from 3-15 cM
+        results = []
+        
+        for threshold in thresholds:
+            # Filter segments by threshold
+            filtered_segments = [seg for seg in ibd_segments if seg.length_cm >= threshold]
+            
+            # Create pair-based index
+            pair_index = {}
+            for seg in filtered_segments:
+                pair = tuple(sorted([seg.ind1, seg.ind2]))
+                if pair not in pair_index:
+                    pair_index[pair] = []
+                pair_index[pair].append(seg)
+            
+            # Evaluate accuracy on known relationships
+            true_positives = 0
+            false_positives = 0
+            false_negatives = 0
+            
+            # Count pairs with segments above threshold
+            detected_pairs = set(pair_index.keys())
+            
+            # Count pairs with known relationships
+            known_pairs = set(known_relationships.keys())
+            
+            # Calculate metrics
+            true_positives = len(detected_pairs & known_pairs)
+            false_positives = len(detected_pairs - known_pairs)
+            false_negatives = len(known_pairs - detected_pairs)
+            
+            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
+            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
+            f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+            
+            results.append({
+                'threshold': threshold,
+                'precision': precision,
+                'recall': recall,
+                'f1_score': f1_score
+            })
+        
+        # Find threshold with best F1 score
+        best_threshold = max(results, key=lambda x: x['f1_score'])['threshold']
+        return best_threshold
+    
+    # Approach 2: Distribution-based calibration (if no known relationships)
+    else:
+        # Analyze the distribution of segment lengths
+        lengths = [seg.length_cm for seg in ibd_segments]
+        
+        # Look for the inflection point in the distribution
+        # (This is a heuristic approach - the exact implementation depends on the dataset)
+        # A common approach is to look at the density histogram and find where
+        # there's a significant drop in the number of segments
+        
+        # Simple heuristic: 5th percentile
+        return max(7, np.percentile(lengths, 5))</code></pre>
+            
+            <p>Appropriate thresholds can vary based on:</p>
+            <ul>
+                <li>The IBD detection algorithm used (IBIS, Refined-IBD, HAP-IBD, etc.)</li>
+                <li>Population density of the dataset</li>
+                <li>Genotyping density and quality</li>
+                <li>The specific relationships of interest</li>
+            </ul>
+
+            <h4>False Positive Control</h4>
+            <p>Additional filtering can be applied to reduce false positives:</p>
+            
+            <pre><code># Filtering IBD segments for quality control
+def filter_ibd_segments(segments):
+    """Filter IBD segments to reduce false positives."""
+    filtered = []
+    
+    for seg in segments:
+        # Filter by minimum genetic length
+        if seg.length_cm < 7:
+            continue
+            
+        # Filter by minimum physical length
+        if (seg.end_pos - seg.start_pos) < 500000:  # 500kb minimum
+            continue
+            
+        # Filter by SNP density
+        if seg.snp_count < 400:  # Minimum SNPs for confidence
+            continue
+            
+        # Filter by LOD score if available
+        if hasattr(seg, 'lod_score') and seg.lod_score < 5:
+            continue
+            
+        # Filter by chromosome (e.g., exclude problematic regions)
+        if seg.chrom in ['X', 'Y', 'MT']:  # Special handling for sex/mitochondrial chromosomes
+            # Apply more stringent criteria
+            if seg.length_cm < 10:  # Higher threshold for sex chromosomes
+                continue
+        
+        filtered.append(seg)
+    
+    return filtered</code></pre>
+
+            <h3>Calibrating Relationship Likelihood Models</h3>
+            
+            <p>The core of Bonsai's accuracy lies in its relationship likelihood models, which must be calibrated to match observed data patterns.</p>
+            
+            <h4>Model Parameter Estimation</h4>
+            <p>Key parameters in Bonsai's models can be estimated from observed data:</p>
+            
+            <pre><code># Estimating parameters for IBD sharing models
+def estimate_model_parameters(segments_by_relationship):
+    """Estimate parameters for relationship likelihood models.
+    
+    Args:
+        segments_by_relationship: Dictionary mapping relationship types
+                                to lists of segment data
+        
+    Returns:
+        Dictionary of calibrated parameters for each relationship type
+    """
+    calibrated_params = {}
+    
+    for relationship, segments_list in segments_by_relationship.items():
+        # Calculate observed statistics
+        num_pairs = len(segments_list)
+        total_segments = sum(len(segs) for segs in segments_list)
+        avg_segments_per_pair = total_segments / num_pairs if num_pairs > 0 else 0
+        
+        total_length = sum(sum(seg.length_cm for seg in segs) for segs in segments_list)
+        avg_length_per_pair = total_length / num_pairs if num_pairs > 0 else 0
+        
+        # Calculate variance (important for calibration)
+        segment_counts = [len(segs) for segs in segments_list]
+        count_variance = np.var(segment_counts) if len(segment_counts) > 1 else 0
+        
+        length_values = [sum(seg.length_cm for seg in segs) for segs in segments_list]
+        length_variance = np.var(length_values) if len(length_values) > 1 else 0
+        
+        # Store calibrated parameters
+        calibrated_params[relationship] = {
+            'expected_segments': avg_segments_per_pair,
+            'expected_length': avg_length_per_pair,
+            'segment_count_variance': count_variance,
+            'length_variance': length_variance,
+            # Additional parameters specific to each relationship type
+            'ibd2_proportion': calculate_ibd2_proportion(segments_list, relationship),
+            'segment_length_distribution': fit_segment_length_distribution(segments_list)
+        }
+    
+    return calibrated_params</code></pre>
+            
+            <p>This calibration process adjusts theoretical expectations to match empirical observations, making the model more robust to real-world data variations.</p>
+
+            <h4>Relationship-Specific Calibration</h4>
+            <p>Different relationship types require different calibration approaches:</p>
+            
+            <table>
+                <tr>
+                    <th>Relationship</th>
+                    <th>Key Parameters</th>
+                    <th>Calibration Approach</th>
+                </tr>
+                <tr>
+                    <td>Parent-Child</td>
+                    <td>IBD1 coverage, segment count</td>
+                    <td>Adjust for genotyping gaps, chromosome edges</td>
+                </tr>
+                <tr>
+                    <td>Full Siblings</td>
+                    <td>IBD0/IBD1/IBD2 proportions</td>
+                    <td>Adjust for detection biases in IBD2 regions</td>
+                </tr>
+                <tr>
+                    <td>Grandparent</td>
+                    <td>Segment count, total length</td>
+                    <td>Adjust for false negatives in short segments</td>
+                </tr>
+                <tr>
+                    <td>Avuncular</td>
+                    <td>Segment count, length distribution</td>
+                    <td>Use empirical cumulative distribution functions</td>
+                </tr>
+                <tr>
+                    <td>First Cousins</td>
+                    <td>Segment count variance</td>
+                    <td>Adjust for higher-than-theoretical variance</td>
+                </tr>
+                <tr>
+                    <td>Distant Relatives</td>
+                    <td>Detection probability by length</td>
+                    <td>Calibrate using population-specific length thresholds</td>
+                </tr>
+            </table>
+
+            <h3>Population-Specific Calibration</h3>
+            
+            <p>Different human populations have distinct genetic characteristics that affect IBD patterns and require specific calibration.</p>
+            
+            <h4>Recombination Rate Variation</h4>
+            <p>Recombination rates vary across populations, affecting expected IBD segment length distributions:</p>
+            
+            <pre><code># Adjusting for population-specific recombination rates
+def adjust_for_population_recombination(params, population):
+    """Adjust model parameters for population-specific recombination rates.
+    
+    Args:
+        params: Dictionary of baseline model parameters
+        population: Population identifier (e.g., 'EUR', 'AFR', 'EAS')
+        
+    Returns:
+        Adjusted parameters dictionary
+    """
+    # Define population-specific scaling factors
+    # These values would be determined empirically for each population
+    scaling_factors = {
+        'EUR': 1.0,  # European (reference population)
+        'AFR': 1.12,  # African (higher recombination rate)
+        'EAS': 0.97,  # East Asian
+        'SAS': 0.98,  # South Asian
+        'AMR': 1.02,  # Admixed American
+        'MID': 0.99   # Middle Eastern
+    }
+    
+    # Default to reference population if unknown
+    scale = scaling_factors.get(population, 1.0)
+    
+    # Create a copy of parameters to modify
+    adjusted = {rel: param.copy() for rel, param in params.items()}
+    
+    # Adjust parameters related to segment lengths and counts
+    for rel in adjusted:
+        # Segment counts scale inversely with recombination rate
+        adjusted[rel]['expected_segments'] /= scale
+        
+        # Average segment length scales inversely with recombination rate
+        adjusted[rel]['expected_length'] /= scale
+        
+        # Segment length distribution needs to be scaled
+        if 'segment_length_distribution' in adjusted[rel]:
+            dist = adjusted[rel]['segment_length_distribution']
+            # The exact adjustment depends on the distribution type
+            if dist['type'] == 'exponential':
+                # For exponential, scale the rate parameter
+                dist['rate'] *= scale
+            elif dist['type'] == 'gamma':
+                # For gamma, scale the scale parameter
+                dist['scale'] /= scale
+    
+    return adjusted</code></pre>
+            
+            <p>Populations with higher recombination rates (e.g., African populations) will tend to have more, but shorter IBD segments compared to populations with lower rates (e.g., East Asian populations).</p>
+
+            <h4>Endogamy and Background Relatedness</h4>
+            <p>Endogamous populations require special handling due to elevated background relatedness:</p>
+            
+            <pre><code># Adjusting for endogamy
+def adjust_for_endogamy(params, endogamy_factor):
+    """Adjust model parameters for endogamous populations.
+    
+    Args:
+        params: Dictionary of baseline model parameters
+        endogamy_factor: Measure of population endogamy (1.0 = no endogamy)
+        
+    Returns:
+        Adjusted parameters dictionary
+    """
+    adjusted = {rel: param.copy() for rel, param in params.items()}
+    
+    for rel in adjusted:
+        # Background IBD increases the expected number of segments
+        # between distantly related individuals
+        if rel in ['distant', 'unrelated']:
+            adjusted[rel]['expected_segments'] *= endogamy_factor
+            adjusted[rel]['expected_length'] *= endogamy_factor
+        
+        # Increase variance in segment counts for all relationships
+        adjusted[rel]['segment_count_variance'] *= endogamy_factor**2
+        adjusted[rel]['length_variance'] *= endogamy_factor**2
+        
+        # Adjust detection thresholds for background IBD
+        if 'min_significant_length' in adjusted[rel]:
+            adjusted[rel]['min_significant_length'] += (endogamy_factor - 1) * 2
+    
+    return adjusted</code></pre>
+            
+            <p>Highly endogamous populations (like Ashkenazi Jewish, Finnish, or Pacific Islander) may require substantial adjustment to avoid inferring relationships that are actually due to population-wide background sharing.</p>
+
+            <h3>Cross-Validation and Model Selection</h3>
+            
+            <p>To ensure that calibration improves rather than degrades performance, cross-validation techniques should be applied.</p>
+            
+            <h4>K-Fold Cross-Validation</h4>
+            <p>K-fold cross-validation helps avoid overfitting during model calibration:</p>
+            
+            <pre><code># Performing k-fold cross-validation for model selection
+def cross_validate_calibration(segments_by_relationship, k=5):
+    """Perform k-fold cross-validation to select optimal calibration parameters.
+    
+    Args:
+        segments_by_relationship: Dictionary mapping relationship types to segment data
+        k: Number of folds for cross-validation
+        
+    Returns:
+        Best calibration parameters across folds
+    """
+    # Flatten the data for easier partitioning
+    flattened_data = []
+    for rel, segments_list in segments_by_relationship.items():
+        for i, segments in enumerate(segments_list):
+            flattened_data.append({
+                'relationship': rel,
+                'pair_id': f"{rel}_{i}",
+                'segments': segments
+            })
+    
+    # Shuffle the data
+    random.shuffle(flattened_data)
+    
+    # Split into k folds
+    fold_size = len(flattened_data) // k
+    folds = [flattened_data[i*fold_size:(i+1)*fold_size] for i in range(k)]
+    
+    # If there are remaining items, add them to the last fold
+    if len(flattened_data) % k != 0:
+        folds[-1].extend(flattened_data[k*fold_size:])
+    
+    # For each fold, use k-1 folds for training and 1 for validation
+    results = []
+    for i in range(k):
+        # Create training and validation sets
+        validation = folds[i]
+        training = [item for fold in folds[:i] + folds[i+1:] for item in fold]
+        
+        # Convert back to the format needed for parameter estimation
+        train_by_rel = {}
+        for item in training:
+            rel = item['relationship']
+            if rel not in train_by_rel:
+                train_by_rel[rel] = []
+            train_by_rel[rel].append(item['segments'])
+        
+        # Estimate parameters from training data
+        params = estimate_model_parameters(train_by_rel)
+        
+        # Validate on the held-out fold
+        validation_accuracy = evaluate_calibration(params, validation)
+        
+        results.append({
+            'fold': i,
+            'params': params,
+            'accuracy': validation_accuracy
+        })
+    
+    # Find the best parameters across folds
+    best_result = max(results, key=lambda x: x['accuracy'])
+    return best_result['params']</code></pre>
+            
+            <p>This process helps identify the most robust calibration parameters that generalize well to unseen data, rather than just fitting the peculiarities of the training set.</p>
+
+            <h4>Model Complexity and Regularization</h4>
+            <p>When calibrating models, it's important to balance accuracy with model complexity:</p>
+            <ul>
+                <li><strong>Simple Models:</strong> More robust, less prone to overfitting, but may miss important patterns</li>
+                <li><strong>Complex Models:</strong> Can capture nuanced patterns, but risk overfitting to noise</li>
+                <li><strong>Regularization:</strong> Techniques to constrain model complexity and prevent overfitting</li>
+            </ul>
+            
+            <pre><code># Implementing regularization in model calibration
+def regularized_parameter_estimation(observed_data, theoretical_model, lambda_reg=0.5):
+    """Estimate model parameters with regularization.
+    
+    Args:
+        observed_data: Observed IBD statistics from real data
+        theoretical_model: Theoretical expectations from genetic theory
+        lambda_reg: Regularization parameter (0-1, higher values favor theoretical model)
+        
+    Returns:
+        Regularized parameter estimates
+    """
+    # Initialize parameters
+    regularized_params = {}
+    
+    # For each parameter, blend observed and theoretical values
+    for param_name in theoretical_model:
+        observed_value = observed_data.get(param_name, theoretical_model[param_name])
+        theoretical_value = theoretical_model[param_name]
+        
+        # Weighted average between observed and theoretical
+        regularized_params[param_name] = (
+            lambda_reg * theoretical_value + (1 - lambda_reg) * observed_value
+        )
+    
+    return regularized_params</code></pre>
+            
+            <p>This regularization approach blends theoretical expectations with empirical observations, finding a middle ground that's both accurate and robust.</p>
+
+            <h3>Evaluating Calibration Effectiveness</h3>
+            
+            <p>After calibration, it's essential to evaluate how well the calibrated models perform on relationship inference tasks.</p>
+            
+            <h4>Relationship Classification Metrics</h4>
+            <p>Standard metrics can quantify classification performance:</p>
+            
+            <pre><code># Evaluating relationship classification performance
+def evaluate_relationship_classification(true_relationships, predicted_relationships):
+    """Evaluate the accuracy of relationship classification.
+    
+    Args:
+        true_relationships: Dictionary mapping pairs to true relationship types
+        predicted_relationships: Dictionary mapping pairs to predicted relationship types
+        
+    Returns:
+        Dictionary of evaluation metrics
+    """
+    # Count correct and incorrect classifications
+    correct = 0
+    incorrect = 0
+    pairs = set(true_relationships.keys())
+    
+    # Initialize confusion matrix
+    relationship_types = set(true_relationships.values()).union(set(predicted_relationships.values()))
+    confusion_matrix = {true_rel: {pred_rel: 0 for pred_rel in relationship_types} 
+                        for true_rel in relationship_types}
+    
+    # Fill confusion matrix and count correct/incorrect
+    for pair in pairs:
+        true_rel = true_relationships.get(pair)
+        pred_rel = predicted_relationships.get(pair)
+        
+        if pred_rel is None:
+            continue  # Skip pairs without predictions
+            
+        if true_rel == pred_rel:
+            correct += 1
+        else:
+            incorrect += 1
+            
+        # Update confusion matrix
+        confusion_matrix[true_rel][pred_rel] += 1
+    
+    # Calculate metrics
+    total = correct + incorrect
+    accuracy = correct / total if total > 0 else 0
+    
+    # Calculate precision, recall, F1 for each relationship type
+    metrics_by_type = {}
+    for rel_type in relationship_types:
+        # True positives, false positives, false negatives
+        tp = confusion_matrix[rel_type][rel_type]
+        fp = sum(confusion_matrix[other][rel_type] for other in relationship_types if other != rel_type)
+        fn = sum(confusion_matrix[rel_type][other] for other in relationship_types if other != rel_type)
+        
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+        
+        metrics_by_type[rel_type] = {
+            'precision': precision,
+            'recall': recall,
+            'f1_score': f1
+        }
+    
+    return {
+        'overall_accuracy': accuracy,
+        'by_relationship': metrics_by_type,
+        'confusion_matrix': confusion_matrix
+    }</code></pre>
+            
+            <p>These metrics help identify which relationship types benefit most from calibration and which may require further adjustment.</p>
+
+            <h4>Visualizing Calibration Effects</h4>
+            <p>Visualization can provide intuitive understanding of how calibration affects model performance:</p>
+            
+            <pre><code># Visualizing calibration effects
+def visualize_calibration_effects(uncalibrated_predictions, calibrated_predictions, true_relationships):
+    """Create visualizations to compare uncalibrated and calibrated models.
+    
+    Args:
+        uncalibrated_predictions: Relationship predictions before calibration
+        calibrated_predictions: Relationship predictions after calibration
+        true_relationships: True relationship types
+        
+    Returns:
+        None (generates plots)
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    
+    # Set up the figure
+    plt.figure(figsize=(15, 10))
+    
+    # 1. Compare overall accuracy
+    uncal_metrics = evaluate_relationship_classification(true_relationships, uncalibrated_predictions)
+    cal_metrics = evaluate_relationship_classification(true_relationships, calibrated_predictions)
+    
+    plt.subplot(2, 2, 1)
+    accuracies = [uncal_metrics['overall_accuracy'], cal_metrics['overall_accuracy']]
+    plt.bar(['Uncalibrated', 'Calibrated'], accuracies)
+    plt.title('Overall Accuracy Comparison')
+    plt.ylabel('Accuracy')
+    plt.ylim(0, 1)
+    
+    # 2. Compare F1 scores by relationship type
+    plt.subplot(2, 2, 2)
+    common_types = set(uncal_metrics['by_relationship'].keys()) & set(cal_metrics['by_relationship'].keys())
+    rel_types = sorted(list(common_types))
+    
+    uncal_f1 = [uncal_metrics['by_relationship'][rel]['f1_score'] for rel in rel_types]
+    cal_f1 = [cal_metrics['by_relationship'][rel]['f1_score'] for rel in rel_types]
+    
+    x = range(len(rel_types))
+    width = 0.35
+    
+    plt.bar([i - width/2 for i in x], uncal_f1, width, label='Uncalibrated')
+    plt.bar([i + width/2 for i in x], cal_f1, width, label='Calibrated')
+    
+    plt.xlabel('Relationship Type')
+    plt.ylabel('F1 Score')
+    plt.title('F1 Score by Relationship Type')
+    plt.xticks(x, rel_types, rotation=45)
+    plt.legend()
+    plt.ylim(0, 1)
+    
+    # 3. Confusion matrix heatmap for calibrated model
+    plt.subplot(2, 2, 3)
+    cm = cal_metrics['confusion_matrix']
+    rel_types = sorted(cm.keys())
+    
+    # Convert to numpy array for heatmap
+    cm_array = np.array([[cm[true][pred] for pred in rel_types] for true in rel_types])
+    # Normalize by row (true relationships)
+    row_sums = cm_array.sum(axis=1, keepdims=True)
+    cm_norm = cm_array / row_sums
+    
+    sns.heatmap(cm_norm, annot=True, fmt='.2f', cmap='Blues',
+                xticklabels=rel_types, yticklabels=rel_types)
+    plt.xlabel('Predicted Relationship')
+    plt.ylabel('True Relationship')
+    plt.title('Normalized Confusion Matrix (Calibrated)')
+    
+    # 4. ROC curves or precision-recall curves (simplified)
+    plt.subplot(2, 2, 4)
+    # Plot precision vs recall for each relationship type
+    for rel in rel_types:
+        uncal_precision = uncal_metrics['by_relationship'][rel]['precision']
+        uncal_recall = uncal_metrics['by_relationship'][rel]['recall']
+        
+        cal_precision = cal_metrics['by_relationship'][rel]['precision']
+        cal_recall = cal_metrics['by_relationship'][rel]['recall']
+        
+        plt.scatter(uncal_recall, uncal_precision, marker='o', 
+                   label=f"{rel} (uncal)", alpha=0.7)
+        plt.scatter(cal_recall, cal_precision, marker='x',
+                   label=f"{rel} (cal)", alpha=0.7)
+        
+        # Connect uncalibrated to calibrated with arrow
+        plt.arrow(uncal_recall, uncal_precision, 
+                 cal_recall - uncal_recall, cal_precision - uncal_precision,
+                 width=0.01, head_width=0.03, head_length=0.05, 
+                 length_includes_head=True, alpha=0.5)
+    
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision vs Recall by Relationship Type')
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    
+    plt.tight_layout()
+    plt.savefig('calibration_effects.png', dpi=300)
+    plt.show()</code></pre>
+
+            <h3>Integrating Calibration into Bonsai Workflow</h3>
+            
+            <p>Calibration should be seamlessly integrated into the Bonsai workflow for optimal results.</p>
+            
+            <h4>Automated Calibration Pipeline</h4>
+            <p>A complete calibration pipeline includes:</p>
+            <ol>
+                <li>Preprocessing IBD segment data to ensure quality</li>
+                <li>Identifying training data with known relationships</li>
+                <li>Estimating initial parameters from theoretical models</li>
+                <li>Refining parameters using empirical observations</li>
+                <li>Cross-validating to select optimal parameters</li>
+                <li>Applying the calibrated model to the full dataset</li>
+                <li>Evaluating and visualizing the results</li>
+            </ol>
+            
+            <p>This systematic approach ensures that calibration enhances rather than degrades Bonsai's performance.</p>
+
+            <h4>Calibration File Format</h4>
+            <p>Calibration parameters can be saved and loaded using a standardized format:</p>
+            
+            <pre><code># Example of calibration file format (JSON)
+{
+    "calibration_version": "1.2",
+    "dataset_info": {
+        "name": "ExampleDataset",
+        "population": "mixed",
+        "genotyping_platform": "IlluminaGSA",
+        "num_samples": 1000,
+        "date_created": "2025-02-15"
+    },
+    "ibd_detection": {
+        "method": "refined-ibd",
+        "min_segment_length": 7.0,
+        "false_positive_rate": 0.03,
+        "false_negative_rate": 0.12
+    },
+    "relationship_parameters": {
+        "parent_child": {
+            "expected_segments": 23.5,
+            "expected_length": 3400.0,
+            "segment_count_variance": 5.2,
+            "length_variance": 3000.0,
+            "segment_length_distribution": {
+                "type": "normal",
+                "mean": 144.7,
+                "std": 22.3
+            }
+        },
+        "full_siblings": {
+            "expected_segments": 37.2,
+            "expected_length": 2520.0,
+            "segment_count_variance": 12.8,
+            "length_variance": 8500.0,
+            "ibd0_proportion": 0.24,
+            "ibd1_proportion": 0.51,
+            "ibd2_proportion": 0.25
+        },
+        # ... additional relationship types ...
+    },
+    "population_adjustments": {
+        "EUR": {
+            "scaling_factor": 1.0
+        },
+        "AFR": {
+            "scaling_factor": 1.12
+        },
+        # ... additional populations ...
+    },
+    "validation_metrics": {
+        "overall_accuracy": 0.93,
+        "cross_validation_folds": 5,
+        "f1_scores": {
+            "parent_child": 0.99,
+            "full_siblings": 0.97,
+            # ... additional relationship types ...
+        }
+    }
+}</code></pre>
+            
+            <p>This format allows for reproducible analysis and facilitates sharing calibration parameters between researchers.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement a minimum segment length calibration function and evaluate its performance on a dataset with known relationships.</li>
+                <li>Develop a regularization method that balances theoretical and empirical relationship parameters.</li>
+                <li>Compare the performance of calibrated and uncalibrated models on different relationship types.</li>
+                <li>Create a visualization tool to explore how calibration affects the distribution of IBD sharing metrics.</li>
+                <li>Design a cross-validation approach to identify the optimal regularization parameter for a given dataset.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When calibrating Bonsai models, start with a subset of data that has known, validated relationships. This ground truth allows you to quantitatively assess the impact of your calibration. Once validated, the calibration can be applied to the full dataset.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab14_bonsai_data_structures.html" class="prev-lab">Data Structures</a>
+                <a href="lab16_bonsai_architecture.html" class="next-lab">Architecture & Implementation</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

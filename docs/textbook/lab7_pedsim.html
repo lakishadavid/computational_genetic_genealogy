@@ -3,470 +3,206 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 8: Ped-Sim | Computational Genetic Genealogy</title>
+    <title>Lab 7: Ped-Sim | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
     <header>
         <h1>Computational Genetic Genealogy</h1>
-        <p>Simulating Data with Ped-Sim</p>
+        <p>Simulating Genetic Inheritance with Ped-Sim</p>
     </header>
 
     <nav class="main-nav">
         <a href="../index.html">Home</a>
         <a href="contents.html">Contents</a>
-        <a href="lab8_pedsim.html" class="active">Lab 8: Ped-Sim</a>
+        <a href="lab7_pedsim.html" class="active">Lab 7: Ped-Sim</a>
     </nav>
 
     <main class="container">
         <article class="section lab-content">
-            <h2>Lab 8: Simulating Genetic Data with Ped-Sim</h2>
+            <h2>Lab 7: Simulating Genetic Inheritance with Ped-Sim</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Simulated genetic data allows us to evaluate the accuracy of IBD detection methods and pedigree reconstruction techniques. Using Ped-Sim, we can create genetic data for complex pedigrees with known relationships, providing a ground truth to assess our analytical methods.</p>
+                <p><strong>Conceptual Foundations:</strong> This lab explores how genetic material flows through family trees across generations. Understanding this transmission process is crucial for interpreting genetic relationships and reconstructing genealogical connections from DNA data.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the principles behind genetic simulation using pedigrees</li>
-                <li>Create pedigree structure definitions for simulation</li>
-                <li>Use Ped-Sim to generate simulated genetic data</li>
-                <li>Validate the simulated data against expected genetic patterns</li>
-                <li>Prepare simulated data for IBD detection and evaluation</li>
-            </ul>
-
-            <h3>Key Concepts</h3>
+            <h3>Core Concepts</h3>
             
-            <h4>Genetic Simulation</h4>
-            <p>Genetic simulation is a powerful technique for testing analytical methods and understanding genetic processes:</p>
-            
-            <table>
-                <tr>
-                    <th>Simulation Approach</th>
-                    <th>Description</th>
-                    <th>Best For</th>
-                </tr>
-                <tr>
-                    <td>Forward-time (Ped-Sim)</td>
-                    <td>Simulates genetic transmission through specified pedigrees</td>
-                    <td>Recent family relationships, complex pedigrees</td>
-                </tr>
-                <tr>
-                    <td>Coalescent (MSPrime)</td>
-                    <td>Simulates genetic history by working backward from present</td>
-                    <td>Population-level patterns, ancient demography</td>
-                </tr>
-                <tr>
-                    <td>Admixture simulation</td>
-                    <td>Simulates genetic data from admixed populations</td>
-                    <td>Population mixtures, ancestry inference</td>
-                </tr>
-            </table>
-
-            <h4>Ped-Sim Overview</h4>
-            <p>Ped-Sim is a forward-time genetic simulator that:</p>
-            <ul>
-                <li>Simulates the transmission of genetic material through specified pedigrees</li>
-                <li>Models recombination, gene conversion, and mutation accurately</li>
-                <li>Generates phased genotype data for all individuals in the pedigree</li>
-                <li>Produces output in standard formats (VCF, PLINK) compatible with analysis tools</li>
-                <li>Allows simulation of complex, multi-generational pedigrees</li>
-            </ul>
-
-            <h3>Creating Pedigree Definitions</h3>
-            
-            <h4>Pedigree Definition Format</h4>
-            <p>Ped-Sim requires a pedigree definition file that specifies family relationships:</p>
-            
-            <pre><code># Pedigree definition format: child father mother sex
-# Sex: 1=male, 2=female
-
-# Founder generation (parents don't exist = 0)
-F1_1 0 0 1    # Founder male 1
-F1_2 0 0 2    # Founder female 1
-F1_3 0 0 1    # Founder male 2
-F1_4 0 0 2    # Founder female 2
-
-# Generation 2 (children of founders)
-F2_1 F1_1 F1_2 1    # Child 1 (male) of founder couple 1
-F2_2 F1_1 F1_2 2    # Child 2 (female) of founder couple 1
-F2_3 F1_3 F1_4 1    # Child 1 (male) of founder couple 2
-F2_4 F1_3 F1_4 2    # Child 2 (female) of founder couple 2
-
-# Generation 3 (cousins marry)
-F3_1 F2_1 F2_4 1    # Child of first male from couple 1 and second female from couple 2
-F3_2 F2_3 F2_2 2    # Child of first male from couple 2 and second female from couple 1</code></pre>
-
-            <h4>Python Script for Pedigree Creation</h4>
-            <p>We can create more complex pedigrees programmatically:</p>
-            
-            <pre><code>def create_pedigree_definition(output_path, num_founders=10, num_generations=5):
-    """Create a pedigree definition file with multiple generations."""
-    # Tracking individuals
-    individuals = []
-    founder_males = []
-    founder_females = []
-    current_gen_males = []
-    current_gen_females = []
-    next_id = 1
-    
-    # Create founders
-    for i in range(num_founders):
-        if i % 2 == 0:  # Male founders
-            individual_id = f"F{next_id}"
-            individuals.append((individual_id, "0", "0", "1"))  # id, father, mother, sex
-            founder_males.append(individual_id)
-            current_gen_males.append(individual_id)
-        else:  # Female founders
-            individual_id = f"F{next_id}"
-            individuals.append((individual_id, "0", "0", "2"))
-            founder_females.append(individual_id)
-            current_gen_females.append(individual_id)
-        next_id += 1
-    
-    # Create subsequent generations
-    for gen in range(2, num_generations + 1):
-        next_gen_males = []
-        next_gen_females = []
-        
-        # For simplicity, create marriages between consecutive individuals in the current generation
-        for i in range(0, min(len(current_gen_males), len(current_gen_females)), 1):
-            father = current_gen_males[i]
-            mother = current_gen_females[i]
-            
-            # Create 2 children per couple
-            for j in range(2):
-                individual_id = f"F{next_id}"
-                sex = "1" if j % 2 == 0 else "2"  # Alternate male/female children
-                individuals.append((individual_id, father, mother, sex))
-                
-                if sex == "1":
-                    next_gen_males.append(individual_id)
-                else:
-                    next_gen_females.append(individual_id)
-                    
-                next_id += 1
-        
-        # Update current generation for the next iteration
-        current_gen_males = next_gen_males
-        current_gen_females = next_gen_females
-    
-    # Write the pedigree definition to file
-    with open(output_path, 'w') as f:
-        f.write("# Pedigree definition: child father mother sex (1=male, 2=female)\n")
-        for individual in individuals:
-            f.write(" ".join(individual) + "\n")
-    
-    print(f"Created pedigree definition with {len(individuals)} individuals across {num_generations} generations")
-    
-    return output_path</code></pre>
-
-            <h3>Running Ped-Sim</h3>
-            
-            <h4>Basic Ped-Sim Command</h4>
-            <p>The basic Ped-Sim command requires several inputs:</p>
-            
-            <pre><code>./ped-sim \
-    --pedigree pedigree_definition.txt \
-    --map genetic_map.txt \
-    --founder-vcf founder_haplotypes.vcf.gz \
-    --out simulated_data</code></pre>
-
-            <p>Key parameters:</p>
-            <ul>
-                <li><code>--pedigree</code>: Pedigree definition file</li>
-                <li><code>--map</code>: Genetic map providing recombination rates</li>
-                <li><code>--founder-vcf</code>: VCF file with haplotypes for founder individuals</li>
-                <li><code>--out</code>: Output prefix for the simulated data</li>
-            </ul>
-
-            <h4>Automating Ped-Sim</h4>
-            <p>Let's create a Python function to automate the Ped-Sim process:</p>
-            
-            <pre><code>def run_ped_sim(pedigree_file, genetic_map_file, founder_vcf, output_prefix, utils_directory):
-    """Run Ped-Sim to generate simulated genetic data based on a pedigree."""
-    ped_sim_path = os.path.join(utils_directory, "ped-sim/ped-sim")
-    
-    # Construct the Ped-Sim command
-    cmd = [
-        ped_sim_path,
-        "--pedigree", pedigree_file,
-        "--map", genetic_map_file,
-        "--founder-vcf", founder_vcf,
-        "--out", output_prefix,
-        "--write-vcf",          # Output VCF file
-        "--write-map-file",     # Output MAP file for PLINK
-        "--write-genealogy"     # Output actual genetic segments
-    ]
-    
-    print(f"Running Ped-Sim: {' '.join(cmd)}")
-    
-    try:
-        subprocess.run(cmd, check=True)
-        print(f"Ped-Sim completed successfully. Output files at: {output_prefix}*")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Error running Ped-Sim: {e}")
-        return False</code></pre>
-
-            <h4>Preparing Founder Haplotypes</h4>
-            <p>Ped-Sim requires haplotypes for the founder individuals:</p>
-            
-            <pre><code>def prepare_founder_haplotypes(phased_vcf, pedigree_file, output_vcf):
-    """Extract or create haplotypes for founder individuals in the pedigree."""
-    # Identify founder individuals from the pedigree file
-    founders = set()
-    with open(pedigree_file, 'r') as f:
-        for line in f:
-            if line.startswith('#'):
-                continue  # Skip comments
-            
-            parts = line.strip().split()
-            if len(parts) >= 4 and parts[1] == '0' and parts[2] == '0':
-                founders.add(parts[0])  # Add founder ID
-    
-    print(f"Identified {len(founders)} founders in the pedigree")
-    
-    # Use bcftools to create a VCF with random samples from the phased VCF
-    # This approach assumes we're randomly assigning haplotypes to founders
-    samples_in_vcf = subprocess.check_output(
-        ["bcftools", "query", "-l", phased_vcf], text=True).strip().split('\n')
-    
-    # Select random samples from the VCF to represent founders
-    if len(samples_in_vcf) >= len(founders):
-        selected_samples = np.random.choice(samples_in_vcf, size=len(founders), replace=False)
-    else:
-        # If not enough samples, reuse some
-        selected_samples = np.random.choice(samples_in_vcf, size=len(founders), replace=True)
-    
-    # Create a mapping from founder IDs to sample names
-    founder_to_sample = dict(zip(founders, selected_samples))
-    
-    # Create a sample mapping file for bcftools reheader
-    mapping_file = output_vcf + ".mapping"
-    with open(mapping_file, 'w') as f:
-        for old_name, new_name in zip(selected_samples, founders):
-            f.write(f"{old_name}\t{new_name}\n")
-    
-    # Extract the samples and rename them
-    subprocess.run([
-        "bcftools", "view", "-Ou", "-s", ",".join(selected_samples), phased_vcf,
-        "|", "bcftools", "reheader", "-s", mapping_file,
-        "|", "bcftools", "view", "-Oz", "-o", output_vcf
-    ], shell=True, check=True)
-    
-    # Index the output VCF
-    subprocess.run(["tabix", "-p", "vcf", output_vcf], check=True)
-    
-    print(f"Created founder haplotypes VCF at: {output_vcf}")
-    return output_vcf</code></pre>
-
-            <h3>Understanding Ped-Sim Output</h3>
-            
-            <h4>Output Files</h4>
-            <p>Ped-Sim generates several output files:</p>
-            
-            <table>
-                <tr>
-                    <th>File Extension</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td><code>.vcf</code></td>
-                    <td>Simulated genotypes in VCF format</td>
-                </tr>
-                <tr>
-                    <td><code>.seg</code></td>
-                    <td>Actual IBD segments between all pairs of individuals</td>
-                </tr>
-                <tr>
-                    <td><code>.seg_dict.txt</code></td>
-                    <td>Dictionary mapping IDs in .seg file to individual IDs</td>
-                </tr>
-                <tr>
-                    <td><code>.map</code></td>
-                    <td>Genetic map for the simulated variants</td>
-                </tr>
-            </table>
-
-            <h4>Analyzing Simulated IBD Segments</h4>
-            <p>Let's examine the true IBD segments from the simulation:</p>
-            
-            <pre><code>def analyze_true_ibd_segments(seg_file, seg_dict_file):
-    """Analyze the true IBD segments from Ped-Sim output."""
-    # Load the ID mapping dictionary
-    id_mapping = {}
-    with open(seg_dict_file, 'r') as f:
-        for line in f:
-            if ':' in line:
-                key, value = line.strip().split(': ')
-                id_mapping[key] = value
-    
-    # Load the segment file
-    segments = []
-    with open(seg_file, 'r') as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) >= 7:
-                ind1 = id_mapping.get(parts[0], parts[0])
-                ind2 = id_mapping.get(parts[1], parts[1])
-                chrom = parts[2]
-                start_bp = int(parts[3])
-                end_bp = int(parts[4])
-                start_cm = float(parts[5])
-                end_cm = float(parts[6])
-                length_cm = end_cm - start_cm
-                
-                segments.append({
-                    'ind1': ind1,
-                    'ind2': ind2,
-                    'chrom': chrom,
-                    'start_bp': start_bp,
-                    'end_bp': end_bp,
-                    'start_cm': start_cm,
-                    'end_cm': end_cm,
-                    'length_cm': length_cm
-                })
-    
-    # Convert to DataFrame for analysis
-    segments_df = pd.DataFrame(segments)
-    
-    # Basic statistics
-    print(f"Total true IBD segments: {len(segments_df)}")
-    print("\nSegment length statistics (cM):")
-    print(segments_df['length_cm'].describe())
-    
-    # Count segments per pair
-    pair_counts = segments_df.groupby(['ind1', 'ind2']).size()
-    print(f"\nTotal pairs with IBD: {len(pair_counts)}")
-    print(f"Average segments per pair: {len(segments_df) / len(pair_counts):.2f}")
-    
-    # Distribution of segment lengths
-    plt.figure(figsize=(10, 6))
-    sns.histplot(segments_df['length_cm'], bins=30, kde=True)
-    plt.title('Distribution of True IBD Segment Lengths')
-    plt.xlabel('Segment Length (cM)')
-    plt.ylabel('Frequency')
-    plt.grid(alpha=0.3)
-    plt.savefig('results/true_ibd_length_distribution.png', dpi=300)
-    plt.close()
-    
-    return segments_df</code></pre>
-
-            <h4>Visualizing the Pedigree and IBD Sharing</h4>
-            <p>We can visualize the pedigree structure and the pattern of IBD sharing:</p>
-            
-            <pre><code>def visualize_pedigree_ibd(pedigree_file, true_ibd_df, output_dir):
-    """Visualize the pedigree structure and IBD sharing pattern."""
-    import networkx as nx
-    
-    # Create a directed graph for the pedigree
-    G = nx.DiGraph()
-    
-    # Read the pedigree file
-    with open(pedigree_file, 'r') as f:
-        for line in f:
-            if line.startswith('#'):
-                continue
-            
-            parts = line.strip().split()
-            if len(parts) >= 4:
-                child, father, mother, sex = parts[:4]
-                
-                # Add nodes with attributes
-                G.add_node(child, sex=int(sex))
-                
-                # Add edges for parental relationships
-                if father != '0':
-                    G.add_edge(father, child)
-                if mother != '0':
-                    G.add_edge(mother, child)
-    
-    # Create a Figure and GridSpec for complex layout
-    fig = plt.figure(figsize=(15, 10))
-    gs = fig.add_gridspec(2, 2)
-    
-    # 1. Plot pedigree structure
-    ax1 = fig.add_subplot(gs[0, :])
-    pos = nx.nx_agraph.graphviz_layout(G, prog='dot')  # Hierarchical layout
-    
-    # Node colors based on sex
-    node_colors = ['lightblue' if G.nodes[n]['sex'] == 1 else 'lightpink' for n in G.nodes()]
-    
-    nx.draw(G, pos, with_labels=True, node_color=node_colors, node_size=500, 
-            font_size=10, arrowsize=15, ax=ax1)
-    ax1.set_title('Pedigree Structure')
-    
-    # 2. Heatmap of IBD sharing
-    ax2 = fig.add_subplot(gs[1, 0])
-    
-    # Create a matrix of total IBD sharing between pairs
-    individuals = sorted(list(G.nodes()))
-    n = len(individuals)
-    ibd_matrix = np.zeros((n, n))
-    
-    # Fill the matrix with total IBD sharing
-    for i, ind1 in enumerate(individuals):
-        for j, ind2 in enumerate(individuals):
-            if i == j:
-                continue  # Skip self comparisons
-            
-            # Get segments for this pair (in either direction)
-            pair_segs = true_ibd_df[
-                ((true_ibd_df['ind1'] == ind1) & (true_ibd_df['ind2'] == ind2)) |
-                ((true_ibd_df['ind1'] == ind2) & (true_ibd_df['ind2'] == ind1))
-            ]
-            
-            # Sum the segment lengths
-            total_ibd = pair_segs['length_cm'].sum()
-            ibd_matrix[i, j] = total_ibd
-    
-    # Create heatmap
-    sns.heatmap(ibd_matrix, xticklabels=individuals, yticklabels=individuals,
-               cmap='viridis', ax=ax2)
-    ax2.set_title('Total IBD Sharing (cM)')
-    
-    # 3. Histogram of segment lengths
-    ax3 = fig.add_subplot(gs[1, 1])
-    sns.histplot(true_ibd_df['length_cm'], bins=30, kde=True, ax=ax3)
-    ax3.set_title('Distribution of IBD Segment Lengths')
-    ax3.set_xlabel('Segment Length (cM)')
-    ax3.set_ylabel('Frequency')
-    ax3.grid(alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(output_dir, 'pedigree_ibd_visualization.png'), dpi=300)
-    plt.close(fig)</code></pre>
-
-            <h3>Anthropological Context</h3>
-            <p>Simulating genetic data with known pedigrees is valuable for anthropological research in several ways:</p>
-            
-            <ul>
-                <li><strong>Method Validation:</strong> Anthropologists can validate IBD detection and pedigree reconstruction methods before applying them to real data from communities of interest</li>
-                <li><strong>Cultural Hypothesis Testing:</strong> Simulation allows testing of hypotheses about how different cultural marriage patterns (endogamy, cousin marriage, polygyny) affect genetic patterns</li>
-                <li><strong>Historical Reconstruction:</strong> For populations with limited historical records (such as those affected by the transatlantic slave trade), simulation can test plausible historical scenarios against observed genetic patterns</li>
-                <li><strong>Privacy Protection:</strong> Using simulated data for method development avoids privacy concerns associated with real genetic data from living individuals</li>
-            </ul>
-            
-            <p>By creating simulated genetic data that mirrors real-world complexities, anthropologists can develop and refine methods for reconstructing biological relationships in culturally meaningful contexts, providing a bridge between genetics and social anthropology.</p>
-
-            <h3>Exercises</h3>
-            <ol>
-                <li>Create a pedigree definition file for a multi-generational family</li>
-                <li>Run Ped-Sim to generate simulated genetic data based on the pedigree</li>
-                <li>Analyze the true IBD segments from the simulation</li>
-                <li>Visualize the pedigree structure and pattern of IBD sharing</li>
-                <li>Apply IBD detection methods to the simulated data and compare to the ground truth</li>
-                <li>Discuss how different pedigree structures affect patterns of genetic sharing</li>
-            </ol>
-
-            <div class="alert alert-success">
-                <p><strong>Tip:</strong> Try creating pedigrees with different structures (e.g., cousin marriages, multiple generations, half-siblings) to understand how these relationship patterns affect IBD sharing and detection accuracy.</p>
+            <div class="concept-section">
+                <h4>The Generational Flow of Genetic Material</h4>
+                <p>The fundamental process of genetic inheritance involves several key mechanisms:</p>
+                <ul>
+                    <li><strong>DNA Transmission:</strong> Each parent passes approximately 50% of their autosomal DNA to each child</li>
+                    <li><strong>Recombination:</strong> During gamete formation, the parental chromosomes exchange segments, creating unique combinations in each child</li>
+                    <li><strong>Random Assortment:</strong> The specific portions of DNA inherited from each grandparent are randomly determined</li>
+                    <li><strong>Dilution Across Generations:</strong> The percentage of DNA from a specific ancestor decreases by approximately half each generation</li>
+                </ul>
+                <p>The Ped-Sim software you'll use in this lab mathematically models these biological processes, allowing you to visualize and analyze exactly how DNA segments flow through a family tree over multiple generations.</p>
             </div>
+
+            <div class="concept-section">
+                <h4>Simulation as a Bridge Between Theory and Reality</h4>
+                <p>Genetic simulation serves a crucial role in genetic genealogy for several reasons:</p>
+                <ul>
+                    <li><strong>Ground Truth Creation:</strong> Simulations provide known relationships and IBD segments that serve as a "gold standard" to evaluate detection methods</li>
+                    <li><strong>Counterfactual Exploration:</strong> Simulations allow exploration of hypothetical scenarios (e.g., "What if this historical migration pattern had been different?")</li>
+                    <li><strong>Complex Pattern Generation:</strong> Some relationship patterns (e.g., endogamy, multiple half-relationships) are difficult to find in real data but easy to simulate</li>
+                    <li><strong>Privacy Protection:</strong> Simulated data allows method development without privacy concerns associated with real genetic data</li>
+                </ul>
+                <p>When you create simulated data in this lab, you're generating a controlled environment where you can directly observe genetic inheritance patterns that would be impossible to track precisely in real human populations.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Forward vs. Backward Genetic Simulation</h4>
+                <p>Different genetic simulation approaches model inheritance from different temporal perspectives:</p>
+                <ul>
+                    <li><strong>Forward Simulation (Ped-Sim):</strong> 
+                        <ul>
+                            <li>Starts with founder individuals and follows genetic transmission through specified family relationships</li>
+                            <li>Directly mimics the biological process of meiosis and recombination</li>
+                            <li>Particularly useful for recent genealogical relationships (7-10 generations)</li>
+                            <li>Computationally efficient for modeling specific pedigree structures</li>
+                        </ul>
+                    </li>
+                    <li><strong>Backward/Coalescent Simulation (MSPrime):</strong>
+                        <ul>
+                            <li>Starts with present-day individuals and traces their genetic lineages backward in time</li>
+                            <li>More computationally efficient for modeling population-level processes</li>
+                            <li>Better suited for deeper time scales and demographic modeling</li>
+                            <li>Less intuitive for visualizing recent family relationships</li>
+                        </ul>
+                    </li>
+                </ul>
+                <p>The forward simulation approach used by Ped-Sim aligns particularly well with genealogical applications because it directly models the actual process of genetic inheritance through known pedigree structures.</p>
+            </div>
+
+            <h3>Mathematical and Computational Frameworks</h3>
+            
+            <div class="concept-section">
+                <h4>The Mathematics of Genetic Recombination</h4>
+                <p>Recombination—the exchange of genetic material between chromosomes during meiosis—is the key process that creates unique genetic combinations in each generation:</p>
+                <ul>
+                    <li><strong>Poisson Process:</strong> Recombination events are typically modeled as a Poisson process along the chromosome</li>
+                    <li><strong>Genetic Distance:</strong> Measured in centimorgans (cM), where 1 cM represents approximately a 1% chance of recombination</li>
+                    <li><strong>Position-Dependent Rates:</strong> Recombination rates vary across the genome (hotspots and coldspots)</li>
+                    <li><strong>Interference:</strong> One recombination event reduces the probability of another nearby event</li>
+                </ul>
+                <p>Ped-Sim implements these mathematical models to realistically simulate how recombination creates the mosaic pattern of ancestral DNA segments in each individual's genome. When you run the simulation, the underlying code is executing these mathematical processes to determine precisely which segments of DNA are transmitted from parents to children.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Modeling Family Structures Computationally</h4>
+                <p>Family relationships form a directed graph structure (a pedigree) that guides the flow of genetic material:</p>
+                <ul>
+                    <li><strong>Directed Acyclic Graphs:</strong> Pedigrees are mathematically represented as directed acyclic graphs</li>
+                    <li><strong>Topological Ordering:</strong> Simulations must process individuals in a topological order (parents before children)</li>
+                    <li><strong>State Vectors:</strong> Each individual's genome is represented as a vector of ancestry states along chromosomes</li>
+                    <li><strong>Transition Matrices:</strong> Recombination is modeled using state transition matrices between adjacent positions</li>
+                </ul>
+                <p>The pedigree definition file you'll create in this lab provides the structural framework that determines how genetic material flows from founders to descendants. The attention to detail in this structure—correctly specifying parents, children, and their relationships—is crucial for accurate simulation.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Generating Realistic Founder Haplotypes</h4>
+                <p>To create realistic simulated data, the starting genetic material for founder individuals must reflect actual human genetic diversity:</p>
+                <ul>
+                    <li><strong>Reference Panels:</strong> Real human genetic data (like 1000 Genomes) provides realistic starting haplotypes</li>
+                    <li><strong>Linkage Disequilibrium (LD):</strong> The correlation structure between nearby variants must be preserved</li>
+                    <li><strong>Population Structure:</strong> Founder haplotypes should reflect appropriate population genetic characteristics</li>
+                    <li><strong>Variant Density:</strong> The density and distribution of genetic variants affects detectability of relationships</li>
+                </ul>
+                <p>When the simulation procedure selects and assigns founder haplotypes, it's establishing the genetic baseline from which all subsequent inheritance patterns will develop. This foundation determines the realism and applicability of the simulated data to real-world genetic genealogy scenarios.</p>
+            </div>
+
+            <h3>Applications to Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Validating IBD Detection Methods</h4>
+                <p>A primary application of genetic simulation is to validate the accuracy of IBD detection algorithms:</p>
+                <ul>
+                    <li><strong>Known Ground Truth:</strong> Simulations provide exact knowledge of true IBD segments</li>
+                    <li><strong>Performance Metrics:</strong> Sensitivity (what percentage of true segments are detected) and specificity (what percentage of detected segments are true)</li>
+                    <li><strong>Error Patterns:</strong> Systematic evaluation of where and why IBD detection methods fail</li>
+                    <li><strong>Parameter Optimization:</strong> Tuning algorithm parameters to maximize accuracy for specific relationship types</li>
+                </ul>
+                <p>The comparison between true IBD segments (known from the simulation) and detected IBD segments (from algorithms like IBIS) provides crucial information about which genealogical relationships are likely to be accurately detected in real-world data.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Exploring Relationship Detection Limits</h4>
+                <p>Simulation helps establish theoretical and practical limits of relationship detection:</p>
+                <ul>
+                    <li><strong>Distance Thresholds:</strong> At what genealogical distance do relationships become undetectable?</li>
+                    <li><strong>Data Requirements:</strong> How does SNP density affect the ability to detect distant relationships?</li>
+                    <li><strong>Algorithm Comparison:</strong> Which IBD detection methods perform best for specific relationship types?</li>
+                    <li><strong>Confidence Metrics:</strong> How certain can we be about detected relationships of different types?</li>
+                </ul>
+                <p>By systematically varying relationship configurations in simulated pedigrees, you can establish expected patterns of IBD sharing for different types of relationships, creating a reference framework for interpreting real genetic data.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Modeling Complex Family Structures</h4>
+                <p>Simulation is particularly valuable for understanding genetic patterns in complex family structures:</p>
+                <ul>
+                    <li><strong>Endogamy:</strong> Marriage within small communities over multiple generations</li>
+                    <li><strong>Cousin Marriages:</strong> The genetic effects of marriages between related individuals</li>
+                    <li><strong>Half-Relationships:</strong> Patterns of IBD sharing in half-siblings, half-cousins, etc.</li>
+                    <li><strong>Multiple Ancestral Paths:</strong> Situations where two individuals are related through multiple lines of descent</li>
+                </ul>
+                <p>These complex structures are often encountered in real-world genetic genealogy, particularly in historically isolated communities or cultural contexts where cousin marriage was common. Simulation provides a controlled way to understand the distinctive genetic signatures of these complex relationships.</p>
+            </div>
+
+            <h3>Anthropological and Historical Contexts</h3>
+            
+            <div class="concept-section">
+                <h4>Modeling Historical Displacement and Reconnection</h4>
+                <p>In the context of this course's focus on African diaspora connections, simulation offers powerful tools for understanding genetic patterns resulting from historical displacement:</p>
+                <ul>
+                    <li><strong>Family Separation Models:</strong> Simulating the genetic consequences of families separated during the transatlantic slave trade</li>
+                    <li><strong>Reconnection Signatures:</strong> The expected patterns of genetic sharing between descendants of separated family members</li>
+                    <li><strong>Time Calibration:</strong> Using IBD segment lengths to date ancestral connections to specific historical periods</li>
+                    <li><strong>Community Structure:</strong> Modeling how genetic relationships cluster within historically displaced communities</li>
+                </ul>
+                <p>By simulating specific historical scenarios of family separation and subsequent generational inheritance, you can develop frameworks for interpreting genetic connections that bridge the historical disruption of family records during the transatlantic slave trade.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Cultural Practices and Genetic Patterns</h4>
+                <p>Different cultural marriage and family formation practices leave distinctive signatures in genetic data:</p>
+                <ul>
+                    <li><strong>Polygyny:</strong> The practice of men having multiple wives creates distinctive patterns of half-sibling relationships</li>
+                    <li><strong>Preferential Cousin Marriage:</strong> Cultural preferences for certain types of cousin marriages create specific endogamy patterns</li>
+                    <li><strong>Matrilineal/Patrilineal Descent:</strong> Different inheritance and residence patterns affect how families cluster geographically</li>
+                    <li><strong>Naming Practices:</strong> Correlations between naming traditions and genetic relationships</li>
+                </ul>
+                <p>Simulation allows anthropologists to develop models that connect specific cultural practices to expected genetic relationship patterns, creating a bridge between cultural anthropology and genetic analysis.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Ethical Dimensions of Simulation</h4>
+                <p>Genetic simulation also addresses important ethical considerations in genetic genealogy:</p>
+                <ul>
+                    <li><strong>Privacy Protection:</strong> Method development using simulated data avoids potential privacy issues with real genetic data</li>
+                    <li><strong>Unexpected Relationship Discovery:</strong> Simulating various scenarios helps prepare for sensitive relationship discoveries</li>
+                    <li><strong>Interpretation Frameworks:</strong> Developing culturally appropriate frameworks for interpreting genetic relationships</li>
+                    <li><strong>Methodological Transparency:</strong> Clear documentation of simulation parameters supports reproducible research</li>
+                </ul>
+                <p>By using simulation to develop and validate methods before applying them to real community data, researchers can ensure that their approaches are technically sound and ethically responsible, particularly when working with communities with complex histories of displacement and reconnection.</p>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you work through the Ped-Sim simulation exercises, consider these broader implications:</p>
+            <ul>
+                <li><strong>Theoretical/Practical Gap:</strong> How do idealized simulations differ from messy real-world genetic data?</li>
+                <li><strong>Historical Insight:</strong> How can simulated genetic patterns help recover historical relationships lost to the documentary record?</li>
+                <li><strong>Inference Limitations:</strong> What types of relationships remain challenging to detect even in ideal simulated conditions?</li>
+                <li><strong>Interpretation Frameworks:</strong> How should detected genetic relationships be contextualized within cultural and historical frameworks?</li>
+            </ul>
+            <p>These considerations connect the technical processes of genetic simulation to the broader anthropological questions about how genetic relationships inform our understanding of family, community, and history across generations and geographic displacements.</p>
             
             <div class="lab-navigation">
-                <a href="lab7_refinedibd.html" class="prev-lab">Refined-IBD</a>
-                <a href="lab9_evaluation.html" class="next-lab">IBD Evaluation</a>
+                <a href="lab6_refinedibd.html" class="prev-lab">Refined-IBD</a>
+                <a href="lab8_evaluation.html" class="next-lab">IBD Evaluation</a>
             </div>
         </article>
     </main>

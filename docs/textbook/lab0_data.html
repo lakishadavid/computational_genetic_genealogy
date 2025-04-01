@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab 0: Getting Data | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body class="textbook-page">
     <header class="textbook-header">
@@ -32,139 +36,201 @@
 
             <h3>Core Concepts</h3>
             
-            <h4>Data as Cultural Construction</h4>
-            <p>Genetic data is not a neutral scientific resource—it represents a particular way of knowing that is culturally and historically situated. The types of genetic information we collect, how we organize and categorize this data, and the questions we ask of it all reflect specific cultural priorities and scientific traditions.</p>
-            
-            <p>Different data sources embody different approaches to knowledge:</p>
-            <ul>
-                <li><strong>Community-Contributed Data</strong> (like OpenSNP) represents a democratic, participatory approach where individuals maintain agency over their genetic information and choose to share it for collective benefit</li>
-                <li><strong>Institutional Reference Collections</strong> (like the 1000 Genomes Project) reflect a more traditional scientific model with expert curation and standardized categorization systems</li>
-                <li><strong>Ancient DNA Archives</strong> represent historical perspectives, allowing us to connect contemporary genetics to past populations</li>
-                <li><strong>Indigenous Community Biobanks</strong> embody knowledge systems that may prioritize community governance and collective benefit sharing</li>
-            </ul>
-            
-            <p>When we choose data sources for computational genetic genealogy, we're making implicit statements about whose genetic information matters, how we understand human diversity, and what types of relationships we prioritize in our analyses.</p>
+            <div class="concept-section">
+                <h4>Data as Cultural Construction</h4>
+                <p>Genetic data is not a neutral scientific resource—it represents a particular way of knowing that is culturally and historically situated. The types of genetic information we collect, how we organize and categorize this data, and the questions we ask of it all reflect specific cultural priorities and scientific traditions.</p>
+                
+                <p>Different data sources embody different approaches to knowledge:</p>
+                <ul>
+                    <li><strong>Community-Contributed Data</strong> (like OpenSNP) represents a democratic, participatory approach where individuals maintain agency over their genetic information and choose to share it for collective benefit</li>
+                    <li><strong>Institutional Reference Collections</strong> (like the 1000 Genomes Project) reflect a more traditional scientific model with expert curation and standardized categorization systems</li>
+                    <li><strong>Ancient DNA Archives</strong> represent historical perspectives, allowing us to connect contemporary genetics to past populations</li>
+                    <li><strong>Indigenous Community Biobanks</strong> embody knowledge systems that may prioritize community governance and collective benefit sharing</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>When we choose data sources for computational genetic genealogy, we're making implicit statements about whose genetic information matters, how we understand human diversity, and what types of relationships we prioritize in our analyses.</p>
+                </div>
+            </div>
 
-            <h4>The Politics of Representation</h4>
-            <p>The composition of genetic datasets profoundly influences whose ancestry can be accurately traced and whose histories remain obscured. Most large-scale reference collections have historically overrepresented European genetic diversity, creating disparities in analytical precision across different ancestral backgrounds.</p>
-            
-            <p>These disparities manifest in several ways:</p>
-            <ul>
-                <li>More precise ancestry estimation for individuals with European heritage</li>
-                <li>Better detection of genetic variants associated with health conditions in European populations</li>
-                <li>More accurate IBD detection and relationship inference for European pedigrees</li>
-                <li>More comprehensive reference populations for European geographic regions</li>
-            </ul>
-            
-            <p>The datasets we'll be working with reflect these historical imbalances, which requires critical awareness when interpreting results. The 1000 Genomes Project has made deliberate efforts to improve global representation, but gaps remain. Similarly, OpenSNP's user-contributed data reflects patterns of access to direct-to-consumer genetic testing, which varies significantly across global populations.</p>
-            
-            <p>Recognizing these imbalances is the first step toward developing more inclusive approaches to computational genetic genealogy that can serve diverse communities.</p>
+            <div class="concept-section">
+                <h4>The Politics of Representation</h4>
+                <p>The composition of genetic datasets profoundly influences whose ancestry can be accurately traced and whose histories remain obscured. Most large-scale reference collections have historically overrepresented European genetic diversity, creating disparities in analytical precision across different ancestral backgrounds.</p>
+                
+                <p>These disparities manifest in several ways:</p>
+                <ul>
+                    <li>More precise ancestry estimation for individuals with European heritage</li>
+                    <li>Better detection of genetic variants associated with health conditions in European populations</li>
+                    <li>More accurate IBD detection and relationship inference for European pedigrees</li>
+                    <li>More comprehensive reference populations for European geographic regions</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>Recognizing these imbalances is the first step toward developing more inclusive approaches to computational genetic genealogy that can serve diverse communities.</p>
+                </div>
+            </div>
 
             <h3>Data Sources and Their Contexts</h3>
             
-            <h4 id="opensnp">OpenSNP: Citizen Science and Data Sovereignty</h4>
-            <p>OpenSNP represents a paradigm shift in how genetic data is gathered and shared. Unlike traditional biomedical research collections, OpenSNP is built on principles of individual data sovereignty, informed consent, and open science.</p>
-            
-            <p>Key anthropological dimensions of OpenSNP include:</p>
-            <ul>
-                <li><strong>Agency and Consent</strong>: Contributors make active, informed choices about sharing their genetic information, retaining control over their biological data</li>
-                <li><strong>Motivational Diversity</strong>: People contribute for various reasons—advancing science, connecting with relatives, curiosity about their own genetics—reflecting different relationships to personal genetic information</li>
-                <li><strong>Demographic Patterns</strong>: The dataset reflects patterns of who has access to direct-to-consumer genetic testing and who is motivated to share results, creating specific representation patterns</li>
-                <li><strong>Varying Data Quality</strong>: Different testing companies use different genotyping arrays with varying coverage, creating heterogeneity in the data that reflects market forces in genetic testing</li>
-            </ul>
-            
-            <p>When working with OpenSNP data, we're engaging with a community-driven knowledge repository that challenges traditional scientific hierarchies while introducing its own patterns of inclusion and exclusion.</p>
+            <div class="concept-section">
+                <h4 id="opensnp">OpenSNP: Citizen Science and Data Sovereignty</h4>
+                <p>OpenSNP represents a paradigm shift in how genetic data is gathered and shared. Unlike traditional biomedical research collections, OpenSNP is built on principles of individual data sovereignty, informed consent, and open science.</p>
+                
+                <p>Key anthropological dimensions of OpenSNP include:</p>
+                <ul>
+                    <li><strong>Agency and Consent</strong>: Contributors make active, informed choices about sharing their genetic information, retaining control over their biological data</li>
+                    <li><strong>Motivational Diversity</strong>: People contribute for various reasons—advancing science, connecting with relatives, curiosity about their own genetics—reflecting different relationships to personal genetic information</li>
+                    <li><strong>Demographic Patterns</strong>: The dataset reflects patterns of who has access to direct-to-consumer genetic testing and who is motivated to share results, creating specific representation patterns</li>
+                    <li><strong>Varying Data Quality</strong>: Different testing companies use different genotyping arrays with varying coverage, creating heterogeneity in the data that reflects market forces in genetic testing</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>When working with OpenSNP data, we're engaging with a community-driven knowledge repository that challenges traditional scientific hierarchies while introducing its own patterns of inclusion and exclusion.</p>
+                </div>
+            </div>
 
-            <h4 id="1000genomes">1000 Genomes Project: Institutional Knowledge Production</h4>
-            <p>The 1000 Genomes Project exemplifies a different approach to genetic data collection—one grounded in institutional scientific practice, standardized protocols, and expert curation. This international research effort represents a deliberate attempt to catalog human genetic variation with careful attention to population sampling and sequencing quality.</p>
-            
-            <p>The anthropological dimensions of this dataset include:</p>
-            <ul>
-                <li><strong>Population Categories</strong>: The project uses specific definitions of populations and ancestral groups that reflect particular understandings of human diversity</li>
-                <li><strong>Sampling Politics</strong>: Decisions about which communities to include, how many individuals to sample, and how to categorize them reflect both scientific and political considerations</li>
-                <li><strong>Data Depth</strong>: Whole-genome sequencing provides a comprehensive view of genetic variation but requires sophisticated interpretation</li>
-                <li><strong>Institutional Access</strong>: While publicly available, the data format and size require technical expertise and computational resources, creating implicit barriers to usage</li>
-            </ul>
-            
-            <p>This dataset represents a particular scientific tradition with its own values, assumptions, and practices—one that prioritizes comprehensive coverage, standardization, and technical precision.</p>
+            <div class="concept-section">
+                <h4 id="1000genomes">1000 Genomes Project: Institutional Knowledge Production</h4>
+                <p>The 1000 Genomes Project exemplifies a different approach to genetic data collection—one grounded in institutional scientific practice, standardized protocols, and expert curation. This international research effort represents a deliberate attempt to catalog human genetic variation with careful attention to population sampling and sequencing quality.</p>
+                
+                <p>The anthropological dimensions of this dataset include:</p>
+                <ul>
+                    <li><strong>Population Categories</strong>: The project uses specific definitions of populations and ancestral groups that reflect particular understandings of human diversity</li>
+                    <li><strong>Sampling Politics</strong>: Decisions about which communities to include, how many individuals to sample, and how to categorize them reflect both scientific and political considerations</li>
+                    <li><strong>Data Depth</strong>: Whole-genome sequencing provides a comprehensive view of genetic variation but requires sophisticated interpretation</li>
+                    <li><strong>Institutional Access</strong>: While publicly available, the data format and size require technical expertise and computational resources, creating implicit barriers to usage</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>This dataset represents a particular scientific tradition with its own values, assumptions, and practices—one that prioritizes comprehensive coverage, standardization, and technical precision.</p>
+                </div>
+            </div>
 
             <h3>Data Formats and Their Meanings</h3>
             
-            <h4 id="formats">The Language of Genetic Data</h4>
-            <p>Genetic data formats are not merely technical specifications—they embody particular ways of representing biological information and reflect specific research priorities. Different formats highlight different aspects of genetic variation and enable different types of analyses.</p>
-            
-            <p>Key formats we'll encounter include:</p>
-            <ul>
-                <li><strong>Variant Call Format (VCF)</strong>: Focuses on differences from a reference genome, reflecting a perspective that emphasizes variation rather than similarities. This format prioritizes comprehensive variant documentation with rich metadata.</li>
-                <li><strong>Consumer Test Formats</strong>: Typically simplified formats focusing on specific genetic markers of interest for ancestry or health, reflecting commercial priorities and consumer accessibility.</li>
-                <li><strong>PLINK Formats</strong>: Optimized for computational efficiency in population genetics, these formats reflect priorities of genome-wide association studies and statistical genetics.</li>
-                <li><strong>FASTA/FASTQ</strong>: Sequence-centric formats that represent genetic information as complete strings of nucleotides, emphasizing the continuity of genetic information.</li>
-            </ul>
-            
-            <p>The choice of format shapes what aspects of genetic information are foregrounded or backgrounded, what analyses are facilitated, and who can effectively work with the data. Format conversion is not merely a technical process but one that often involves substantive decisions about what information to prioritize.</p>
+            <div class="concept-section">
+                <h4 id="formats">The Language of Genetic Data</h4>
+                <p>Genetic data formats are not merely technical specifications—they embody particular ways of representing biological information and reflect specific research priorities. Different formats highlight different aspects of genetic variation and enable different types of analyses.</p>
+                
+                <p>Key formats we'll encounter include:</p>
+                <ul>
+                    <li><strong>Variant Call Format (VCF)</strong>: Focuses on differences from a reference genome, reflecting a perspective that emphasizes variation rather than similarities. This format prioritizes comprehensive variant documentation with rich metadata.</li>
+                    <li><strong>Consumer Test Formats</strong>: Typically simplified formats focusing on specific genetic markers of interest for ancestry or health, reflecting commercial priorities and consumer accessibility.</li>
+                    <li><strong>PLINK Formats</strong>: Optimized for computational efficiency in population genetics, these formats reflect priorities of genome-wide association studies and statistical genetics.</li>
+                    <li><strong>FASTA/FASTQ</strong>: Sequence-centric formats that represent genetic information as complete strings of nucleotides, emphasizing the continuity of genetic information.</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>The choice of format shapes what aspects of genetic information are foregrounded or backgrounded, what analyses are facilitated, and who can effectively work with the data. Format conversion is not merely a technical process but one that often involves substantive decisions about what information to prioritize.</p>
+                </div>
+            </div>
 
             <h3>Practical Approaches</h3>
             
-            <h4>Ethical Data Acquisition and Management</h4>
-            <p>Working with genetic data requires thoughtful attention to ethical considerations throughout the acquisition and management process:</p>
-            <ul>
-                <li><strong>Participant Consent</strong>: When using community-contributed data like OpenSNP, respect the conditions under which individuals shared their information</li>
-                <li><strong>Data Security</strong>: Store genetic data securely to protect the privacy of individuals whose information is contained in the dataset</li>
-                <li><strong>Appropriate Usage</strong>: Use the data for purposes aligned with the intended uses of the repository and the expectations of contributors</li>
-                <li><strong>Data Provenance</strong>: Maintain clear documentation about data sources, versions, and transformations to ensure transparency and reproducibility</li>
-            </ul>
-            
-            <p>These practices ensure that our technical work with genetic data respects the human dimensions of this information and maintains trust with the communities whose genetic information we analyze.</p>
+            <div class="concept-section">
+                <h4>Ethical Data Acquisition and Management</h4>
+                <p>Working with genetic data requires thoughtful attention to ethical considerations throughout the acquisition and management process:</p>
+                <ul>
+                    <li><strong>Participant Consent</strong>: When using community-contributed data like OpenSNP, respect the conditions under which individuals shared their information</li>
+                    <li><strong>Data Security</strong>: Store genetic data securely to protect the privacy of individuals whose information is contained in the dataset</li>
+                    <li><strong>Appropriate Usage</strong>: Use the data for purposes aligned with the intended uses of the repository and the expectations of contributors</li>
+                    <li><strong>Data Provenance</strong>: Maintain clear documentation about data sources, versions, and transformations to ensure transparency and reproducibility</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>These practices ensure that our technical work with genetic data respects the human dimensions of this information and maintains trust with the communities whose genetic information we analyze.</p>
+                </div>
+            </div>
 
-            <h4>Working with Available Data</h4>
-            <p>For this course, we'll be working with pre-processed subsets of data from both OpenSNP and the 1000 Genomes Project. This approach balances several considerations:</p>
-            <ul>
-                <li>Computational feasibility for classroom learning</li>
-                <li>Privacy protection through careful selection and filtering</li>
-                <li>Pedagogical clarity by focusing on manageable examples</li>
-                <li>Ethical usage of publicly available resources</li>
-            </ul>
-            
-            <p>While we won't need to download the full datasets ourselves, understanding the process of data acquisition and preparation is essential for developing a complete picture of the research workflow and its implicit assumptions.</p>
+            <div class="concept-section">
+                <h4>Working with Available Data</h4>
+                <p>For this course, we'll be working with pre-processed subsets of data from both OpenSNP and the 1000 Genomes Project. This approach balances several considerations:</p>
+                <ul>
+                    <li>Computational feasibility for classroom learning</li>
+                    <li>Privacy protection through careful selection and filtering</li>
+                    <li>Pedagogical clarity by focusing on manageable examples</li>
+                    <li>Ethical usage of publicly available resources</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>While we won't need to download the full datasets ourselves, understanding the process of data acquisition and preparation is essential for developing a complete picture of the research workflow and its implicit assumptions.</p>
+                </div>
+            </div>
 
             <h3>Broader Context</h3>
             
-            <h4>Decolonizing Genetic Data</h4>
-            <p>The field of genetic anthropology is increasingly engaging with questions about how to decolonize genetic data practices—moving away from extractive research models toward approaches that center community priorities, indigenous knowledge systems, and equitable benefit sharing.</p>
-            
-            <p>Key developments in this area include:</p>
-            <ul>
-                <li>Community-governed biobanks where genetic data is managed according to a group's cultural protocols</li>
-                <li>Research partnerships that involve communities as co-investigators rather than subjects</li>
-                <li>Integration of oral histories and cultural knowledge alongside genetic information</li>
-                <li>More diverse reference datasets that better represent global genetic diversity</li>
-                <li>Critical examination of population labels and classification systems</li>
-            </ul>
-            
-            <p>While the datasets we're using in this course largely pre-date these developments, keeping these perspectives in mind helps us engage critically with genetic data and consider how future research might evolve toward more equitable and inclusive practices.</p>
+            <div class="concept-section">
+                <h4>Decolonizing Genetic Data</h4>
+                <p>The field of genetic anthropology is increasingly engaging with questions about how to decolonize genetic data practices—moving away from extractive research models toward approaches that center community priorities, indigenous knowledge systems, and equitable benefit sharing.</p>
+                
+                <p>Key developments in this area include:</p>
+                <ul>
+                    <li>Community-governed biobanks where genetic data is managed according to a group's cultural protocols</li>
+                    <li>Research partnerships that involve communities as co-investigators rather than subjects</li>
+                    <li>Integration of oral histories and cultural knowledge alongside genetic information</li>
+                    <li>More diverse reference datasets that better represent global genetic diversity</li>
+                    <li>Critical examination of population labels and classification systems</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>While the datasets we're using in this course largely pre-date these developments, keeping these perspectives in mind helps us engage critically with genetic data and consider how future research might evolve toward more equitable and inclusive practices.</p>
+                </div>
+            </div>
 
-            <h4>Data and Identity</h4>
-            <p>Genetic data has profound implications for how individuals and communities understand their identities, ancestral connections, and place in human history. The technical processes we're learning are increasingly being used by individuals to explore questions of personal identity and by communities to reclaim disrupted historical narratives.</p>
-            
-            <p>The relationship between genetic data and identity raises important questions:</p>
-            <ul>
-                <li>How do biological patterns of relationship interact with cultural understandings of kinship?</li>
-                <li>What happens when genetic findings challenge historical narratives or family stories?</li>
-                <li>How do different cultural traditions interpret and integrate genetic information?</li>
-                <li>What responsibility do researchers have when their findings affect how people understand themselves?</li>
-            </ul>
-            
-            <p>These questions remind us that genetic data is never just technical information—it's deeply entangled with human self-understanding, cultural narratives, and social relationships.</p>
+            <div class="concept-section">
+                <h4>Data and Identity</h4>
+                <p>Genetic data has profound implications for how individuals and communities understand their identities, ancestral connections, and place in human history. The technical processes we're learning are increasingly being used by individuals to explore questions of personal identity and by communities to reclaim disrupted historical narratives.</p>
+                
+                <p>The relationship between genetic data and identity raises important questions:</p>
+                <ul>
+                    <li>How do biological patterns of relationship interact with cultural understandings of kinship?</li>
+                    <li>What happens when genetic findings challenge historical narratives or family stories?</li>
+                    <li>How do different cultural traditions interpret and integrate genetic information?</li>
+                    <li>What responsibility do researchers have when their findings affect how people understand themselves?</li>
+                </ul>
+                
+                <div class="key-takeaway">
+                    <p>These questions remind us that genetic data is never just technical information—it's deeply entangled with human self-understanding, cultural narratives, and social relationships.</p>
+                </div>
+            </div>
 
-            <h3>Exercises</h3>
-            <ol>
-                <li>Analyze the population composition of the 1000 Genomes Project and discuss potential implications for research with diverse communities</li>
-                <li>Compare the different formats used by various consumer genetic testing companies and consider how these formats reflect different priorities</li>
-                <li>Explore the metadata associated with OpenSNP contributors and reflect on patterns of participation</li>
-                <li>Discuss how genetic data repositories might be designed to better incorporate diverse cultural understandings of kinship and ancestry</li>
-                <li>Consider how different data access models (open, restricted, community-governed) serve different ethical priorities</li>
-                <li>Reflect on how your own cultural background might influence how you interpret and work with genetic data</li>
-            </ol>
+            <div class="learning-pathway">
+                <p>This lab builds on your environment setup and prepares you for processing and analyzing genetic data:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Step 1</h5>
+                        <p>Environment Setup</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Step 2</h5>
+                        <p>Data Acquisition</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 3</h5>
+                        <p>Data Processing</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 4</h5>
+                        <p>Quality Control</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 5</h5>
+                        <p>IBD Detection</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="exercises-section">
+                <h3>Exercises</h3>
+                <ol>
+                    <li>Analyze the population composition of the 1000 Genomes Project and discuss potential implications for research with diverse communities</li>
+                    <li>Compare the different formats used by various consumer genetic testing companies and consider how these formats reflect different priorities</li>
+                    <li>Explore the metadata associated with OpenSNP contributors and reflect on patterns of participation</li>
+                    <li>Discuss how genetic data repositories might be designed to better incorporate diverse cultural understandings of kinship and ancestry</li>
+                    <li>Consider how different data access models (open, restricted, community-governed) serve different ethical priorities</li>
+                    <li>Reflect on how your own cultural background might influence how you interpret and work with genetic data</li>
+                </ol>
+            </div>
 
             <div class="alert alert-success">
                 <p><strong>Tip:</strong> When working with genetic data, regularly step back from technical details to consider the human stories embedded in the information. This practice helps maintain awareness of the ethical dimensions of computational genetic genealogy and ensures that technical work serves human understanding.</p>

@@ -303,15 +303,19 @@ img {
 }
 
 .structure-item {
-    background-color: rgba(233, 236, 239, 0.5);
+    background-color: var(--light);
+    border: 2px solid rgba(229, 177, 81, 0.3);
     border-radius: 8px;
     padding: 1.5rem;
     position: relative;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
 }
 
 .structure-item:hover {
     transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08);
+    border-color: rgba(229, 177, 81, 0.6);
 }
 
 .structure-number {
@@ -334,16 +338,38 @@ img {
 .structure-item h4 {
     color: var(--primary);
     margin-bottom: 0.5rem;
+    /* No underline decoration or color change that would suggest a link */
+    text-decoration: none;
+    font-weight: 600;
 }
 
 .structure-item p {
     font-size: 0.95rem;
     margin-bottom: 0;
+    color: var(--dark);
+}
+
+.structure-note {
+    text-align: center;
+    margin: 1.5rem 0 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+    background-color: rgba(229, 177, 81, 0.08);
+    padding: 0.6rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.structure-note i {
+    margin-right: 0.5rem;
+    color: var(--secondary);
 }
 
 .textbook-link {
     text-align: center;
-    margin-top: 2rem;
+    margin-top: 1.5rem;
 }
 
 .btn {
@@ -429,9 +455,22 @@ img {
 .lab-list li a {
     display: flex;
     align-items: center;
-    background-color: rgba(233, 236, 239, 0.5);
+    background-color: rgba(57, 135, 123, 0.05);
     padding: 1rem;
     border-radius: 6px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(57, 135, 123, 0.2);
+    color: var(--accent);
+    text-decoration: none;
+    position: relative;
+}
+
+.lab-list li a:after {
+    content: '→';
+    position: absolute;
+    right: 1rem;
+    opacity: 0;
+    transform: translateX(-5px);
     transition: all 0.3s ease;
 }
 
@@ -439,6 +478,13 @@ img {
     background-color: rgba(57, 135, 123, 0.1);
     transform: translateY(-2px);
     text-decoration: none;
+    border-color: var(--accent);
+    padding-right: 2rem;
+}
+
+.lab-list li a:hover:after {
+    opacity: 1;
+    transform: translateX(0);
 }
 
 .lab-number {
@@ -726,6 +772,376 @@ footer {
         font-size: 0.8rem;
     }
  }
+
+/* Additional Lab Content Styling */
+.lab-content {
+    max-width: 900px;
+    margin: 0 auto;
+    line-height: 1.7;
+    font-size: 1.05rem;
+}
+
+.lab-content h2 {
+    font-size: 2.3rem;
+    color: var(--primary);
+    margin: 1.5rem 0 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.lab-content h2:after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 3px;
+    background-color: var(--secondary);
+}
+
+.lab-content h3 {
+    font-size: 1.8rem;
+    color: var(--primary);
+    margin: 2.5rem 0 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--secondary);
+}
+
+.lab-content h4 {
+    font-size: 1.4rem;
+    color: var(--accent);
+    margin: 1.8rem 0 1rem;
+    position: relative;
+    padding-left: 1rem;
+}
+
+.lab-content h4:before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0.3rem;
+    height: 70%;
+    width: 4px;
+    background-color: var(--secondary);
+    border-radius: 4px;
+}
+
+.lab-content p {
+    margin-bottom: 1.2rem;
+    color: var(--dark);
+}
+
+.lab-content ul, .lab-content ol {
+    margin: 1.2rem 0 1.5rem 1.8rem;
+}
+
+.lab-content ul li, .lab-content ol li {
+    margin-bottom: 0.7rem;
+    position: relative;
+}
+
+.lab-content ul {
+    list-style-type: none;
+}
+
+.lab-content ul li:before {
+    content: "•";
+    color: var(--secondary);
+    font-weight: bold;
+    font-size: 1.2rem;
+    position: absolute;
+    left: -1.2rem;
+    top: -0.1rem;
+}
+
+.lab-content ol {
+    counter-reset: item;
+    list-style-type: none;
+}
+
+.lab-content ol li {
+    counter-increment: item;
+    position: relative;
+}
+
+.lab-content ol li:before {
+    content: counter(item) ".";
+    font-weight: 600;
+    color: var(--accent);
+    position: absolute;
+    left: -1.5rem;
+}
+
+.concept-section {
+    background-color: rgba(248, 249, 250, 0.7);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-left: 4px solid var(--accent);
+}
+
+.concept-section h4 {
+    margin-top: 0;
+    color: var(--primary);
+    padding-left: 0;
+}
+
+.concept-section h4:before {
+    display: none;
+}
+
+.alert {
+    padding: 1.5rem;
+    margin: 2rem 0;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.alert p {
+    margin-bottom: 0;
+}
+
+.alert strong {
+    color: inherit;
+}
+
+.alert-info {
+    background-color: rgba(57, 135, 123, 0.1);
+    border-left: 5px solid var(--accent);
+}
+
+.alert-warning {
+    background-color: rgba(229, 177, 81, 0.15);
+    border-left: 5px solid var(--secondary);
+}
+
+.alert-success {
+    background-color: rgba(76, 175, 80, 0.1);
+    border-left: 5px solid #4CAF50;
+}
+
+/* Learning Pathway */
+.learning-pathway {
+    margin: 3rem 0;
+    position: relative;
+    padding: 2rem;
+    background-color: rgba(248, 249, 250, 0.7);
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.learning-pathway:before {
+    content: "Learning Pathway";
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background-color: var(--accent);
+    color: white;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pathway-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    position: relative;
+}
+
+.pathway-step {
+    flex: 1;
+    min-width: 170px;
+    text-align: center;
+    padding: 1rem;
+    background-color: white;
+    border-radius: 8px;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    border-bottom: 3px solid var(--secondary);
+}
+
+.pathway-step h5 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary);
+}
+
+.pathway-step p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.pathway-step.active {
+    border-color: var(--accent);
+    background-color: rgba(57, 135, 123, 0.05);
+}
+
+.pathway-step.active h5 {
+    color: var(--accent);
+}
+
+/* Exercise Section */
+.exercises-section {
+    background-color: rgba(229, 177, 81, 0.05);
+    border-radius: 10px;
+    padding: 1.5rem 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-top: 3px solid var(--secondary);
+}
+
+.exercises-section h3 {
+    color: var(--primary);
+    margin-top: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.exercises-section ol {
+    margin-left: 1rem;
+}
+
+.exercises-section ol li {
+    margin-bottom: 1rem;
+}
+
+/* Key Takeaways Box */
+.key-takeaway {
+    background-color: rgba(94, 48, 35, 0.05);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin: 2rem 0;
+    position: relative;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(94, 48, 35, 0.1);
+}
+
+.key-takeaway:before {
+    content: "Key Takeaway";
+    position: absolute;
+    top: -12px;
+    left: 20px;
+    background-color: var(--primary);
+    color: white;
+    padding: 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.key-takeaway p {
+    margin-bottom: 0;
+    font-weight: 500;
+}
+
+/* Definition Lists in Glossary */
+dl {
+    margin: 1.5rem 0;
+}
+
+dt {
+    font-weight: 600;
+    color: var(--primary);
+    margin-top: 1.2rem;
+    font-size: 1.1rem;
+}
+
+dd {
+    margin-left: 1.5rem;
+    margin-bottom: 1rem;
+    position: relative;
+    line-height: 1.6;
+}
+
+dd:before {
+    content: "→";
+    position: absolute;
+    left: -1.2rem;
+    color: var(--secondary);
+    font-weight: bold;
+}
+
+/* Code Blocks */
+pre {
+    background-color: #f6f8fa;
+    padding: 1.2rem 1.5rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    border-left: 4px solid var(--secondary);
+    margin: 1.5rem 0;
+    font-size: 0.9rem;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.05);
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: rgba(248, 249, 250, 0.8);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: var(--accent);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+pre code {
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    color: inherit;
+}
+
+/* Lab Navigation Improvements */
+.lab-navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--gray);
+}
+
+.prev-lab, .next-lab {
+    padding: 0.8rem 1.2rem;
+    border-radius: 6px;
+    background-color: white;
+    color: var(--accent);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--gray);
+    display: inline-flex;
+    align-items: center;
+}
+
+.prev-lab:before {
+    content: '←';
+    margin-right: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.next-lab:after {
+    content: '→';
+    margin-left: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.prev-lab:hover, .next-lab:hover {
+    background-color: var(--accent);
+    color: white;
+    transform: translateY(-2px);
+    text-decoration: none;
+    box-shadow: 0 4px 8px rgba(57, 135, 123, 0.2);
+    border-color: var(--accent);
+}
 
 /* --- End of Textbook Styles --- */
 

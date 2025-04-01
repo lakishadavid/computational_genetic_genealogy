@@ -24,725 +24,193 @@
             <h2>Lab 15: Model Calibration in Bonsai</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> The accuracy of pedigree reconstruction depends critically on how well statistical models match the biological reality of genetic inheritance. Model calibration bridges the gap between theoretical expectations and observed data patterns, ensuring that Bonsai can handle real-world genetic data with its inherent noise and biases.</p>
+                <p><strong>Why This Matters:</strong> Calibration represents the critical intersection where abstract mathematical models meet the messy reality of human genetic diversity. This process embodies the fundamental anthropological insight that models must adapt to human variation rather than forcing human data to conform to idealized theories. As we calibrate algorithms to different populations and contexts, we acknowledge the richness of human diversity while striving for tools that serve all communities equitably.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the importance of model calibration in pedigree reconstruction</li>
-                <li>Master techniques for calibrating IBD detection thresholds</li>
-                <li>Learn how to estimate parameters for relationship likelihood models</li>
-                <li>Develop methods to validate and refine calibration using known relationships</li>
-                <li>Apply cross-validation techniques to evaluate calibration effectiveness</li>
-                <li>Implement custom calibration approaches for specific populations or datasets</li>
-            </ul>
-
-            <h3>The Need for Model Calibration</h3>
+            <h3>Core Concepts</h3>
             
-            <p>Genetic data in the real world rarely follows perfectly the theoretical distributions we expect. Several factors introduce systematic biases that must be accounted for:</p>
+            <h4>The Tension Between Theory and Reality</h4>
+            <p>At the heart of model calibration lies a profound tension between theoretical simplicity and empirical complexity. Mathematical models of genetic inheritance provide elegant, tractable frameworks for understanding relationships, but these models necessarily simplify the intricate reality of human genetic variation across populations, geographies, and histories.</p>
             
-            <h4>Sources of Model Discrepancy</h4>
+            <p>This tension manifests in several key dimensions:</p>
             <ul>
-                <li><strong>IBD Detection Errors:</strong> False positives and false negatives in IBD detection</li>
-                <li><strong>Population-Specific Recombination:</strong> Variation in recombination rates across populations</li>
-                <li><strong>Genotyping Technology:</strong> Systematic biases introduced by different genotyping platforms</li>
-                <li><strong>Background Relatedness:</strong> Low-level shared ancestry in endogamous populations</li>
-                <li><strong>Ascertainment Bias:</strong> Non-random sampling of individuals for analysis</li>
+                <li><strong>Idealized vs. Actual Recombination</strong>: Theoretical models assume uniform recombination rates, while actual patterns vary significantly across genomic regions and populations</li>
+                <li><strong>Random vs. Structured Mating</strong>: Models often assume random mating, but human populations exhibit complex patterns of assortative mating, endogamy, and cultural marriage rules</li>
+                <li><strong>Perfect vs. Imperfect Detection</strong>: Theories presume perfect observation of genetic variation, while real data contains genotyping errors, phasing uncertainties, and detection biases</li>
+                <li><strong>Population Homogeneity vs. Diversity</strong>: Simplified models may assume homogeneous populations, yet human genetic diversity reflects complex histories of migration, admixture, and isolation</li>
             </ul>
             
-            <p>Calibration adjusts Bonsai's internal models to account for these discrepancies, ensuring accurate relationship inference despite these real-world complications.</p>
+            <p>Calibration represents a principled approach to navigating this tension—acknowledging the value of theoretical frameworks while adapting them to better reflect observed realities. This process embodies scientific humility, recognizing that our models are always approximations that must be continually refined through engagement with empirical data.</p>
 
-            <div class="figure">
-                <img src="../images/model_calibration.png" alt="Model Calibration Process" style="max-width: 700px;">
-                <p class="figure-caption">Model calibration adjusts theoretical expectations to match observed patterns in genetic data.</p>
-            </div>
-
-            <h3>Calibrating IBD Detection Thresholds</h3>
+            <h4>Calibration as Cultural Translation</h4>
+            <p>Calibration can be understood as a form of cultural translation—adapting general models to specific contexts while preserving their core insights. Just as languages must be translated with attention to cultural nuance rather than word-for-word literalism, genetic models must be calibrated with sensitivity to population histories and genetic architectures rather than rigidly applied across all contexts.</p>
             
-            <p>The first step in Bonsai calibration is determining appropriate thresholds for IBD segment detection.</p>
-            
-            <h4>Minimum Segment Length Calibration</h4>
-            
-            <p>The choice of minimum segment length threshold balances sensitivity and specificity:</p>
-            
-            <pre><code># Python implementation of threshold calibration
-def calibrate_min_segment_length(ibd_segments, known_relationships=None):
-    """Calibrate the minimum segment length threshold.
-    
-    Args:
-        ibd_segments: List of detected IBD segments
-        known_relationships: Dictionary mapping pairs to known relationship types (optional)
-        
-    Returns:
-        Recommended minimum segment length threshold
-    """
-    # Approach 1: ROC curve analysis (if known relationships available)
-    if known_relationships:
-        thresholds = range(3, 15)  # Test thresholds from 3-15 cM
-        results = []
-        
-        for threshold in thresholds:
-            # Filter segments by threshold
-            filtered_segments = [seg for seg in ibd_segments if seg.length_cm >= threshold]
-            
-            # Create pair-based index
-            pair_index = {}
-            for seg in filtered_segments:
-                pair = tuple(sorted([seg.ind1, seg.ind2]))
-                if pair not in pair_index:
-                    pair_index[pair] = []
-                pair_index[pair].append(seg)
-            
-            # Evaluate accuracy on known relationships
-            true_positives = 0
-            false_positives = 0
-            false_negatives = 0
-            
-            # Count pairs with segments above threshold
-            detected_pairs = set(pair_index.keys())
-            
-            # Count pairs with known relationships
-            known_pairs = set(known_relationships.keys())
-            
-            # Calculate metrics
-            true_positives = len(detected_pairs & known_pairs)
-            false_positives = len(detected_pairs - known_pairs)
-            false_negatives = len(known_pairs - detected_pairs)
-            
-            precision = true_positives / (true_positives + false_positives) if (true_positives + false_positives) > 0 else 0
-            recall = true_positives / (true_positives + false_negatives) if (true_positives + false_negatives) > 0 else 0
-            f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-            
-            results.append({
-                'threshold': threshold,
-                'precision': precision,
-                'recall': recall,
-                'f1_score': f1_score
-            })
-        
-        # Find threshold with best F1 score
-        best_threshold = max(results, key=lambda x: x['f1_score'])['threshold']
-        return best_threshold
-    
-    # Approach 2: Distribution-based calibration (if no known relationships)
-    else:
-        # Analyze the distribution of segment lengths
-        lengths = [seg.length_cm for seg in ibd_segments]
-        
-        # Look for the inflection point in the distribution
-        # (This is a heuristic approach - the exact implementation depends on the dataset)
-        # A common approach is to look at the density histogram and find where
-        # there's a significant drop in the number of segments
-        
-        # Simple heuristic: 5th percentile
-        return max(7, np.percentile(lengths, 5))</code></pre>
-            
-            <p>Appropriate thresholds can vary based on:</p>
+            <p>This translation process requires several forms of knowledge:</p>
             <ul>
-                <li>The IBD detection algorithm used (IBIS, Refined-IBD, HAP-IBD, etc.)</li>
-                <li>Population density of the dataset</li>
-                <li>Genotyping density and quality</li>
-                <li>The specific relationships of interest</li>
+                <li><strong>Statistical Knowledge</strong>: Understanding how to estimate parameters, quantify uncertainty, and validate models</li>
+                <li><strong>Genetic Knowledge</strong>: Recognizing how inheritance patterns vary across populations and genomic regions</li>
+                <li><strong>Historical Knowledge</strong>: Appreciating how population histories shape patterns of genetic sharing</li>
+                <li><strong>Cultural Knowledge</strong>: Being sensitive to how cultural practices affect family structures and genetic patterns</li>
             </ul>
+            
+            <p>By integrating these knowledge forms, calibration becomes more than just a technical adjustment—it becomes a process of making algorithms culturally literate, capable of accurately interpreting genetic information within diverse human contexts.</p>
 
-            <h4>False Positive Control</h4>
-            <p>Additional filtering can be applied to reduce false positives:</p>
+            <h3>Theoretical Foundations</h3>
             
-            <pre><code># Filtering IBD segments for quality control
-def filter_ibd_segments(segments):
-    """Filter IBD segments to reduce false positives."""
-    filtered = []
-    
-    for seg in segments:
-        # Filter by minimum genetic length
-        if seg.length_cm < 7:
-            continue
+            <h4>The Diverse Landscape of Human Recombination</h4>
+            <p>Recombination—the process of genetic exchange during meiosis—is the fundamental biological mechanism that shapes IBD segment patterns. But contrary to simplified models, recombination rates vary substantially across:</p>
             
-        # Filter by minimum physical length
-        if (seg.end_pos - seg.start_pos) < 500000:  # 500kb minimum
-            continue
-            
-        # Filter by SNP density
-        if seg.snp_count < 400:  # Minimum SNPs for confidence
-            continue
-            
-        # Filter by LOD score if available
-        if hasattr(seg, 'lod_score') and seg.lod_score < 5:
-            continue
-            
-        # Filter by chromosome (e.g., exclude problematic regions)
-        if seg.chrom in ['X', 'Y', 'MT']:  # Special handling for sex/mitochondrial chromosomes
-            # Apply more stringent criteria
-            if seg.length_cm < 10:  # Higher threshold for sex chromosomes
-                continue
-        
-        filtered.append(seg)
-    
-    return filtered</code></pre>
-
-            <h3>Calibrating Relationship Likelihood Models</h3>
-            
-            <p>The core of Bonsai's accuracy lies in its relationship likelihood models, which must be calibrated to match observed data patterns.</p>
-            
-            <h4>Model Parameter Estimation</h4>
-            <p>Key parameters in Bonsai's models can be estimated from observed data:</p>
-            
-            <pre><code># Estimating parameters for IBD sharing models
-def estimate_model_parameters(segments_by_relationship):
-    """Estimate parameters for relationship likelihood models.
-    
-    Args:
-        segments_by_relationship: Dictionary mapping relationship types
-                                to lists of segment data
-        
-    Returns:
-        Dictionary of calibrated parameters for each relationship type
-    """
-    calibrated_params = {}
-    
-    for relationship, segments_list in segments_by_relationship.items():
-        # Calculate observed statistics
-        num_pairs = len(segments_list)
-        total_segments = sum(len(segs) for segs in segments_list)
-        avg_segments_per_pair = total_segments / num_pairs if num_pairs > 0 else 0
-        
-        total_length = sum(sum(seg.length_cm for seg in segs) for segs in segments_list)
-        avg_length_per_pair = total_length / num_pairs if num_pairs > 0 else 0
-        
-        # Calculate variance (important for calibration)
-        segment_counts = [len(segs) for segs in segments_list]
-        count_variance = np.var(segment_counts) if len(segment_counts) > 1 else 0
-        
-        length_values = [sum(seg.length_cm for seg in segs) for segs in segments_list]
-        length_variance = np.var(length_values) if len(length_values) > 1 else 0
-        
-        # Store calibrated parameters
-        calibrated_params[relationship] = {
-            'expected_segments': avg_segments_per_pair,
-            'expected_length': avg_length_per_pair,
-            'segment_count_variance': count_variance,
-            'length_variance': length_variance,
-            # Additional parameters specific to each relationship type
-            'ibd2_proportion': calculate_ibd2_proportion(segments_list, relationship),
-            'segment_length_distribution': fit_segment_length_distribution(segments_list)
-        }
-    
-    return calibrated_params</code></pre>
-            
-            <p>This calibration process adjusts theoretical expectations to match empirical observations, making the model more robust to real-world data variations.</p>
-
-            <h4>Relationship-Specific Calibration</h4>
-            <p>Different relationship types require different calibration approaches:</p>
-            
-            <table>
-                <tr>
-                    <th>Relationship</th>
-                    <th>Key Parameters</th>
-                    <th>Calibration Approach</th>
-                </tr>
-                <tr>
-                    <td>Parent-Child</td>
-                    <td>IBD1 coverage, segment count</td>
-                    <td>Adjust for genotyping gaps, chromosome edges</td>
-                </tr>
-                <tr>
-                    <td>Full Siblings</td>
-                    <td>IBD0/IBD1/IBD2 proportions</td>
-                    <td>Adjust for detection biases in IBD2 regions</td>
-                </tr>
-                <tr>
-                    <td>Grandparent</td>
-                    <td>Segment count, total length</td>
-                    <td>Adjust for false negatives in short segments</td>
-                </tr>
-                <tr>
-                    <td>Avuncular</td>
-                    <td>Segment count, length distribution</td>
-                    <td>Use empirical cumulative distribution functions</td>
-                </tr>
-                <tr>
-                    <td>First Cousins</td>
-                    <td>Segment count variance</td>
-                    <td>Adjust for higher-than-theoretical variance</td>
-                </tr>
-                <tr>
-                    <td>Distant Relatives</td>
-                    <td>Detection probability by length</td>
-                    <td>Calibrate using population-specific length thresholds</td>
-                </tr>
-            </table>
-
-            <h3>Population-Specific Calibration</h3>
-            
-            <p>Different human populations have distinct genetic characteristics that affect IBD patterns and require specific calibration.</p>
-            
-            <h4>Recombination Rate Variation</h4>
-            <p>Recombination rates vary across populations, affecting expected IBD segment length distributions:</p>
-            
-            <pre><code># Adjusting for population-specific recombination rates
-def adjust_for_population_recombination(params, population):
-    """Adjust model parameters for population-specific recombination rates.
-    
-    Args:
-        params: Dictionary of baseline model parameters
-        population: Population identifier (e.g., 'EUR', 'AFR', 'EAS')
-        
-    Returns:
-        Adjusted parameters dictionary
-    """
-    # Define population-specific scaling factors
-    # These values would be determined empirically for each population
-    scaling_factors = {
-        'EUR': 1.0,  # European (reference population)
-        'AFR': 1.12,  # African (higher recombination rate)
-        'EAS': 0.97,  # East Asian
-        'SAS': 0.98,  # South Asian
-        'AMR': 1.02,  # Admixed American
-        'MID': 0.99   # Middle Eastern
-    }
-    
-    # Default to reference population if unknown
-    scale = scaling_factors.get(population, 1.0)
-    
-    # Create a copy of parameters to modify
-    adjusted = {rel: param.copy() for rel, param in params.items()}
-    
-    # Adjust parameters related to segment lengths and counts
-    for rel in adjusted:
-        # Segment counts scale inversely with recombination rate
-        adjusted[rel]['expected_segments'] /= scale
-        
-        # Average segment length scales inversely with recombination rate
-        adjusted[rel]['expected_length'] /= scale
-        
-        # Segment length distribution needs to be scaled
-        if 'segment_length_distribution' in adjusted[rel]:
-            dist = adjusted[rel]['segment_length_distribution']
-            # The exact adjustment depends on the distribution type
-            if dist['type'] == 'exponential':
-                # For exponential, scale the rate parameter
-                dist['rate'] *= scale
-            elif dist['type'] == 'gamma':
-                # For gamma, scale the scale parameter
-                dist['scale'] /= scale
-    
-    return adjusted</code></pre>
-            
-            <p>Populations with higher recombination rates (e.g., African populations) will tend to have more, but shorter IBD segments compared to populations with lower rates (e.g., East Asian populations).</p>
-
-            <h4>Endogamy and Background Relatedness</h4>
-            <p>Endogamous populations require special handling due to elevated background relatedness:</p>
-            
-            <pre><code># Adjusting for endogamy
-def adjust_for_endogamy(params, endogamy_factor):
-    """Adjust model parameters for endogamous populations.
-    
-    Args:
-        params: Dictionary of baseline model parameters
-        endogamy_factor: Measure of population endogamy (1.0 = no endogamy)
-        
-    Returns:
-        Adjusted parameters dictionary
-    """
-    adjusted = {rel: param.copy() for rel, param in params.items()}
-    
-    for rel in adjusted:
-        # Background IBD increases the expected number of segments
-        # between distantly related individuals
-        if rel in ['distant', 'unrelated']:
-            adjusted[rel]['expected_segments'] *= endogamy_factor
-            adjusted[rel]['expected_length'] *= endogamy_factor
-        
-        # Increase variance in segment counts for all relationships
-        adjusted[rel]['segment_count_variance'] *= endogamy_factor**2
-        adjusted[rel]['length_variance'] *= endogamy_factor**2
-        
-        # Adjust detection thresholds for background IBD
-        if 'min_significant_length' in adjusted[rel]:
-            adjusted[rel]['min_significant_length'] += (endogamy_factor - 1) * 2
-    
-    return adjusted</code></pre>
-            
-            <p>Highly endogamous populations (like Ashkenazi Jewish, Finnish, or Pacific Islander) may require substantial adjustment to avoid inferring relationships that are actually due to population-wide background sharing.</p>
-
-            <h3>Cross-Validation and Model Selection</h3>
-            
-            <p>To ensure that calibration improves rather than degrades performance, cross-validation techniques should be applied.</p>
-            
-            <h4>K-Fold Cross-Validation</h4>
-            <p>K-fold cross-validation helps avoid overfitting during model calibration:</p>
-            
-            <pre><code># Performing k-fold cross-validation for model selection
-def cross_validate_calibration(segments_by_relationship, k=5):
-    """Perform k-fold cross-validation to select optimal calibration parameters.
-    
-    Args:
-        segments_by_relationship: Dictionary mapping relationship types to segment data
-        k: Number of folds for cross-validation
-        
-    Returns:
-        Best calibration parameters across folds
-    """
-    # Flatten the data for easier partitioning
-    flattened_data = []
-    for rel, segments_list in segments_by_relationship.items():
-        for i, segments in enumerate(segments_list):
-            flattened_data.append({
-                'relationship': rel,
-                'pair_id': f"{rel}_{i}",
-                'segments': segments
-            })
-    
-    # Shuffle the data
-    random.shuffle(flattened_data)
-    
-    # Split into k folds
-    fold_size = len(flattened_data) // k
-    folds = [flattened_data[i*fold_size:(i+1)*fold_size] for i in range(k)]
-    
-    # If there are remaining items, add them to the last fold
-    if len(flattened_data) % k != 0:
-        folds[-1].extend(flattened_data[k*fold_size:])
-    
-    # For each fold, use k-1 folds for training and 1 for validation
-    results = []
-    for i in range(k):
-        # Create training and validation sets
-        validation = folds[i]
-        training = [item for fold in folds[:i] + folds[i+1:] for item in fold]
-        
-        # Convert back to the format needed for parameter estimation
-        train_by_rel = {}
-        for item in training:
-            rel = item['relationship']
-            if rel not in train_by_rel:
-                train_by_rel[rel] = []
-            train_by_rel[rel].append(item['segments'])
-        
-        # Estimate parameters from training data
-        params = estimate_model_parameters(train_by_rel)
-        
-        # Validate on the held-out fold
-        validation_accuracy = evaluate_calibration(params, validation)
-        
-        results.append({
-            'fold': i,
-            'params': params,
-            'accuracy': validation_accuracy
-        })
-    
-    # Find the best parameters across folds
-    best_result = max(results, key=lambda x: x['accuracy'])
-    return best_result['params']</code></pre>
-            
-            <p>This process helps identify the most robust calibration parameters that generalize well to unseen data, rather than just fitting the peculiarities of the training set.</p>
-
-            <h4>Model Complexity and Regularization</h4>
-            <p>When calibrating models, it's important to balance accuracy with model complexity:</p>
+            <p><strong>Human Populations</strong>: Different continental ancestries show distinct recombination landscapes:</p>
             <ul>
-                <li><strong>Simple Models:</strong> More robust, less prone to overfitting, but may miss important patterns</li>
-                <li><strong>Complex Models:</strong> Can capture nuanced patterns, but risk overfitting to noise</li>
-                <li><strong>Regularization:</strong> Techniques to constrain model complexity and prevent overfitting</li>
+                <li><strong>African Populations</strong>: Typically exhibit ~10-15% higher recombination rates, resulting in more numerous but shorter IBD segments</li>
+                <li><strong>East Asian Populations</strong>: Often show slightly lower recombination rates in certain genomic regions</li>
+                <li><strong>European Populations</strong>: Frequently used as the reference for recombination maps, potentially creating Eurocentric bias in uncalibrated models</li>
             </ul>
             
-            <pre><code># Implementing regularization in model calibration
-def regularized_parameter_estimation(observed_data, theoretical_model, lambda_reg=0.5):
-    """Estimate model parameters with regularization.
-    
-    Args:
-        observed_data: Observed IBD statistics from real data
-        theoretical_model: Theoretical expectations from genetic theory
-        lambda_reg: Regularization parameter (0-1, higher values favor theoretical model)
-        
-    Returns:
-        Regularized parameter estimates
-    """
-    # Initialize parameters
-    regularized_params = {}
-    
-    # For each parameter, blend observed and theoretical values
-    for param_name in theoretical_model:
-        observed_value = observed_data.get(param_name, theoretical_model[param_name])
-        theoretical_value = theoretical_model[param_name]
-        
-        # Weighted average between observed and theoretical
-        regularized_params[param_name] = (
-            lambda_reg * theoretical_value + (1 - lambda_reg) * observed_value
-        )
-    
-    return regularized_params</code></pre>
+            <p><strong>Genomic Regions</strong>: Recombination hotspots create uneven distributions of exchange points:</p>
+            <ul>
+                <li>Some chromosomal regions have recombination rates 10-100 times higher than average</li>
+                <li>These hotspots are not always conserved across populations, creating population-specific patterns</li>
+                <li>Centromeric and telomeric regions have distinct recombination properties that affect IBD detection</li>
+            </ul>
             
-            <p>This regularization approach blends theoretical expectations with empirical observations, finding a middle ground that's both accurate and robust.</p>
+            <p><strong>Sex Differences</strong>: Recombination varies significantly between biological sexes:</p>
+            <ul>
+                <li>Female meiosis typically exhibits ~1.6 times more recombination events than male meiosis</li>
+                <li>These differences create sex-specific patterns in IBD transmission that may need to be modeled separately</li>
+            </ul>
+            
+            <p>Calibrating for these recombination variations is essential for accurate relationship inference across diverse human groups. Models calibrated only on European recombination patterns will systematically misjudge relationship distances in non-European populations unless properly adjusted.</p>
 
-            <h3>Evaluating Calibration Effectiveness</h3>
+            <h4>The Social Architecture of Genetic Sharing</h4>
+            <p>Human mating patterns are shaped by complex social structures that create distinctive patterns of genetic sharing that deviate from theoretical expectations based on random mating:</p>
             
-            <p>After calibration, it's essential to evaluate how well the calibrated models perform on relationship inference tasks.</p>
+            <p><strong>Endogamy</strong>: The practice of marrying within a specific community creates elevated background relatedness:</p>
+            <ul>
+                <li>In endogamous populations, even "unrelated" individuals share significant IBD segments</li>
+                <li>The magnitude of this effect varies dramatically—from slight elevation in large populations with mild endogamy to substantial sharing in small, isolated communities</li>
+                <li>This background relatedness creates systematic biases in relationship inference unless properly calibrated</li>
+            </ul>
             
-            <h4>Relationship Classification Metrics</h4>
-            <p>Standard metrics can quantify classification performance:</p>
+            <p><strong>Consanguinity</strong>: Marriage between biological relatives occurs at varying rates globally:</p>
+            <ul>
+                <li>Rates of cousin marriage range from &lt;1% in some Western societies to >50% in parts of North Africa, the Middle East, and South Asia</li>
+                <li>These patterns create complicated pedigree structures with multiple relationship paths that simple models may misinterpret</li>
+                <li>The resulting autozygosity (regions inherited identically from both parents) affects IBD patterns in ways that require specialized calibration</li>
+            </ul>
             
-            <pre><code># Evaluating relationship classification performance
-def evaluate_relationship_classification(true_relationships, predicted_relationships):
-    """Evaluate the accuracy of relationship classification.
-    
-    Args:
-        true_relationships: Dictionary mapping pairs to true relationship types
-        predicted_relationships: Dictionary mapping pairs to predicted relationship types
-        
-    Returns:
-        Dictionary of evaluation metrics
-    """
-    # Count correct and incorrect classifications
-    correct = 0
-    incorrect = 0
-    pairs = set(true_relationships.keys())
-    
-    # Initialize confusion matrix
-    relationship_types = set(true_relationships.values()).union(set(predicted_relationships.values()))
-    confusion_matrix = {true_rel: {pred_rel: 0 for pred_rel in relationship_types} 
-                        for true_rel in relationship_types}
-    
-    # Fill confusion matrix and count correct/incorrect
-    for pair in pairs:
-        true_rel = true_relationships.get(pair)
-        pred_rel = predicted_relationships.get(pair)
-        
-        if pred_rel is None:
-            continue  # Skip pairs without predictions
+            <p><strong>Population Bottlenecks</strong>: Historical events that dramatically reduce population size create distinctive genetic signatures:</p>
+            <ul>
+                <li>Groups that experienced severe bottlenecks (like Ashkenazi Jewish, Finnish, or Québécois populations) show elevated IBD sharing</li>
+                <li>This elevated sharing reflects recent common ancestry rather than close family relationships</li>
+                <li>Without calibration, algorithms may systematically overestimate relationship closeness in these populations</li>
+            </ul>
             
-        if true_rel == pred_rel:
-            correct += 1
-        else:
-            incorrect += 1
-            
-        # Update confusion matrix
-        confusion_matrix[true_rel][pred_rel] += 1
-    
-    # Calculate metrics
-    total = correct + incorrect
-    accuracy = correct / total if total > 0 else 0
-    
-    # Calculate precision, recall, F1 for each relationship type
-    metrics_by_type = {}
-    for rel_type in relationship_types:
-        # True positives, false positives, false negatives
-        tp = confusion_matrix[rel_type][rel_type]
-        fp = sum(confusion_matrix[other][rel_type] for other in relationship_types if other != rel_type)
-        fn = sum(confusion_matrix[rel_type][other] for other in relationship_types if other != rel_type)
-        
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-        
-        metrics_by_type[rel_type] = {
-            'precision': precision,
-            'recall': recall,
-            'f1_score': f1
-        }
-    
-    return {
-        'overall_accuracy': accuracy,
-        'by_relationship': metrics_by_type,
-        'confusion_matrix': confusion_matrix
-    }</code></pre>
-            
-            <p>These metrics help identify which relationship types benefit most from calibration and which may require further adjustment.</p>
+            <p>These social and historical factors shape the genetic architecture of populations in ways that must be explicitly accounted for in relationship inference models. Calibration becomes a way of incorporating social history into computational models—teaching algorithms to recognize the genetic footprints of these cultural and historical patterns.</p>
 
-            <h4>Visualizing Calibration Effects</h4>
-            <p>Visualization can provide intuitive understanding of how calibration affects model performance:</p>
+            <h3>Applications and Implications</h3>
             
-            <pre><code># Visualizing calibration effects
-def visualize_calibration_effects(uncalibrated_predictions, calibrated_predictions, true_relationships):
-    """Create visualizations to compare uncalibrated and calibrated models.
-    
-    Args:
-        uncalibrated_predictions: Relationship predictions before calibration
-        calibrated_predictions: Relationship predictions after calibration
-        true_relationships: True relationship types
-        
-    Returns:
-        None (generates plots)
-    """
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    
-    # Set up the figure
-    plt.figure(figsize=(15, 10))
-    
-    # 1. Compare overall accuracy
-    uncal_metrics = evaluate_relationship_classification(true_relationships, uncalibrated_predictions)
-    cal_metrics = evaluate_relationship_classification(true_relationships, calibrated_predictions)
-    
-    plt.subplot(2, 2, 1)
-    accuracies = [uncal_metrics['overall_accuracy'], cal_metrics['overall_accuracy']]
-    plt.bar(['Uncalibrated', 'Calibrated'], accuracies)
-    plt.title('Overall Accuracy Comparison')
-    plt.ylabel('Accuracy')
-    plt.ylim(0, 1)
-    
-    # 2. Compare F1 scores by relationship type
-    plt.subplot(2, 2, 2)
-    common_types = set(uncal_metrics['by_relationship'].keys()) & set(cal_metrics['by_relationship'].keys())
-    rel_types = sorted(list(common_types))
-    
-    uncal_f1 = [uncal_metrics['by_relationship'][rel]['f1_score'] for rel in rel_types]
-    cal_f1 = [cal_metrics['by_relationship'][rel]['f1_score'] for rel in rel_types]
-    
-    x = range(len(rel_types))
-    width = 0.35
-    
-    plt.bar([i - width/2 for i in x], uncal_f1, width, label='Uncalibrated')
-    plt.bar([i + width/2 for i in x], cal_f1, width, label='Calibrated')
-    
-    plt.xlabel('Relationship Type')
-    plt.ylabel('F1 Score')
-    plt.title('F1 Score by Relationship Type')
-    plt.xticks(x, rel_types, rotation=45)
-    plt.legend()
-    plt.ylim(0, 1)
-    
-    # 3. Confusion matrix heatmap for calibrated model
-    plt.subplot(2, 2, 3)
-    cm = cal_metrics['confusion_matrix']
-    rel_types = sorted(cm.keys())
-    
-    # Convert to numpy array for heatmap
-    cm_array = np.array([[cm[true][pred] for pred in rel_types] for true in rel_types])
-    # Normalize by row (true relationships)
-    row_sums = cm_array.sum(axis=1, keepdims=True)
-    cm_norm = cm_array / row_sums
-    
-    sns.heatmap(cm_norm, annot=True, fmt='.2f', cmap='Blues',
-                xticklabels=rel_types, yticklabels=rel_types)
-    plt.xlabel('Predicted Relationship')
-    plt.ylabel('True Relationship')
-    plt.title('Normalized Confusion Matrix (Calibrated)')
-    
-    # 4. ROC curves or precision-recall curves (simplified)
-    plt.subplot(2, 2, 4)
-    # Plot precision vs recall for each relationship type
-    for rel in rel_types:
-        uncal_precision = uncal_metrics['by_relationship'][rel]['precision']
-        uncal_recall = uncal_metrics['by_relationship'][rel]['recall']
-        
-        cal_precision = cal_metrics['by_relationship'][rel]['precision']
-        cal_recall = cal_metrics['by_relationship'][rel]['recall']
-        
-        plt.scatter(uncal_recall, uncal_precision, marker='o', 
-                   label=f"{rel} (uncal)", alpha=0.7)
-        plt.scatter(cal_recall, cal_precision, marker='x',
-                   label=f"{rel} (cal)", alpha=0.7)
-        
-        # Connect uncalibrated to calibrated with arrow
-        plt.arrow(uncal_recall, uncal_precision, 
-                 cal_recall - uncal_recall, cal_precision - uncal_precision,
-                 width=0.01, head_width=0.03, head_length=0.05, 
-                 length_includes_head=True, alpha=0.5)
-    
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.title('Precision vs Recall by Relationship Type')
-    plt.xlim(0, 1)
-    plt.ylim(0, 1)
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    
-    plt.tight_layout()
-    plt.savefig('calibration_effects.png', dpi=300)
-    plt.show()</code></pre>
+            <h4>Population-Specific Calibration: Toward Algorithmic Equity</h4>
+            <p>The need for population-specific calibration highlights important questions about equity and representation in genetic analysis tools. When models are built primarily on data from European populations (as has historically been the case), they may perform less accurately for individuals from other ancestral backgrounds unless properly calibrated.</p>
+            
+            <p>This creates a multi-layered challenge:</p>
+            <ul>
+                <li><strong>Data Representation</strong>: Reference datasets used for calibration often underrepresent global genetic diversity</li>
+                <li><strong>Model Assumption</strong>: Core mathematical models may embed assumptions that align better with some population histories than others</li>
+                <li><strong>Validation Imbalance</strong>: Testing and validation efforts may focus disproportionately on populations that are easier to study</li>
+                <li><strong>Feedback Loops</strong>: Poor performance on underrepresented groups can discourage their participation, further reducing representation</li>
+            </ul>
+            
+            <p>Addressing these challenges requires several approaches:</p>
+            <ul>
+                <li><strong>Diverse Reference Data</strong>: Creating and using calibration reference panels that represent global human diversity</li>
+                <li><strong>Flexible Models</strong>: Developing mathematical frameworks that can accommodate diverse population histories</li>
+                <li><strong>Communal Validation</strong>: Working with diverse communities to validate and refine calibration approaches</li>
+                <li><strong>Transparent Documentation</strong>: Clearly communicating the populations for which models have been calibrated and their expected performance</li>
+            </ul>
+            
+            <p>Through thoughtful calibration, we can work toward algorithmic equity—ensuring that genetic analysis tools serve all communities with comparable accuracy rather than privileging those populations most represented in reference datasets and model development.</p>
 
-            <h3>Integrating Calibration into Bonsai Workflow</h3>
+            <h4>Calibration and Uncertainty: The Limits of Knowledge</h4>
+            <p>Even with optimal calibration, some fundamental uncertainties in relationship inference persist. Calibration allows us not just to improve accuracy but also to better understand and communicate these inherent limitations:</p>
             
-            <p>Calibration should be seamlessly integrated into the Bonsai workflow for optimal results.</p>
+            <p><strong>Statistical Uncertainty</strong>: The randomness of genetic inheritance creates unavoidable variance:</p>
+            <ul>
+                <li>Even with perfect data and models, the random nature of recombination creates significant variation in IBD sharing</li>
+                <li>This variation increases with relationship distance—second cousins show more variance than siblings</li>
+                <li>Calibration helps quantify this uncertainty, allowing more meaningful confidence intervals</li>
+            </ul>
             
-            <h4>Automated Calibration Pipeline</h4>
-            <p>A complete calibration pipeline includes:</p>
-            <ol>
-                <li>Preprocessing IBD segment data to ensure quality</li>
-                <li>Identifying training data with known relationships</li>
-                <li>Estimating initial parameters from theoretical models</li>
-                <li>Refining parameters using empirical observations</li>
-                <li>Cross-validating to select optimal parameters</li>
-                <li>Applying the calibrated model to the full dataset</li>
-                <li>Evaluating and visualizing the results</li>
-            </ol>
+            <p><strong>Historical Depth Limitations</strong>: IBD signals degrade over generations:</p>
+            <ul>
+                <li>Beyond ~5-7 generations, IBD segments become too fragmented and numerous for reliable relationship identification</li>
+                <li>This creates a fundamental "horizon limit" to genetic genealogy that calibration cannot overcome</li>
+                <li>Different populations may have different effective horizons due to their recombination landscapes</li>
+            </ul>
             
-            <p>This systematic approach ensures that calibration enhances rather than degrades Bonsai's performance.</p>
+            <p><strong>Complex Relationship Ambiguity</strong>: Some relationship configurations are inherently difficult to distinguish:</p>
+            <ul>
+                <li>Certain relationship pairs (like half-siblings vs. grandparent-grandchild) produce similar IBD patterns</li>
+                <li>Complex pedigrees with multiple relationship paths create distinctive but challenging patterns</li>
+                <li>Calibration can help identify which relationship distinctions are most ambiguous in specific contexts</li>
+            </ul>
+            
+            <p>Recognizing these limitations is not a weakness but a strength of well-calibrated models. By quantifying uncertainty and communicating it clearly, we provide more useful and responsible tools for interpreting genetic relationships.</p>
 
-            <h4>Calibration File Format</h4>
-            <p>Calibration parameters can be saved and loaded using a standardized format:</p>
+            <h3>Broader Context</h3>
             
-            <pre><code># Example of calibration file format (JSON)
-{
-    "calibration_version": "1.2",
-    "dataset_info": {
-        "name": "ExampleDataset",
-        "population": "mixed",
-        "genotyping_platform": "IlluminaGSA",
-        "num_samples": 1000,
-        "date_created": "2025-02-15"
-    },
-    "ibd_detection": {
-        "method": "refined-ibd",
-        "min_segment_length": 7.0,
-        "false_positive_rate": 0.03,
-        "false_negative_rate": 0.12
-    },
-    "relationship_parameters": {
-        "parent_child": {
-            "expected_segments": 23.5,
-            "expected_length": 3400.0,
-            "segment_count_variance": 5.2,
-            "length_variance": 3000.0,
-            "segment_length_distribution": {
-                "type": "normal",
-                "mean": 144.7,
-                "std": 22.3
-            }
-        },
-        "full_siblings": {
-            "expected_segments": 37.2,
-            "expected_length": 2520.0,
-            "segment_count_variance": 12.8,
-            "length_variance": 8500.0,
-            "ibd0_proportion": 0.24,
-            "ibd1_proportion": 0.51,
-            "ibd2_proportion": 0.25
-        },
-        # ... additional relationship types ...
-    },
-    "population_adjustments": {
-        "EUR": {
-            "scaling_factor": 1.0
-        },
-        "AFR": {
-            "scaling_factor": 1.12
-        },
-        # ... additional populations ...
-    },
-    "validation_metrics": {
-        "overall_accuracy": 0.93,
-        "cross_validation_folds": 5,
-        "f1_scores": {
-            "parent_child": 0.99,
-            "full_siblings": 0.97,
-            # ... additional relationship types ...
-        }
-    }
-}</code></pre>
+            <h4>Calibration as Reflective Practice</h4>
+            <p>Model calibration embodies a reflective approach to scientific knowledge—acknowledging that our theories and models are provisional, situated, and always subject to refinement. This perspective has deep resonance with anthropological approaches to knowledge production.</p>
             
-            <p>This format allows for reproducible analysis and facilitates sharing calibration parameters between researchers.</p>
+            <p>Calibration invites us to engage in several important reflective practices:</p>
+            <ul>
+                <li><strong>Acknowledging Positionality</strong>: Recognizing that models embed particular perspectives and priorities</li>
+                <li><strong>Valuing Diverse Knowledge</strong>: Incorporating insights from various disciplines and knowledge traditions</li>
+                <li><strong>Embracing Complexity</strong>: Resisting oversimplification of human diversity</li>
+                <li><strong>Practicing Humility</strong>: Accepting the limitations of our models and methods</li>
+                <li><strong>Committing to Iteration</strong>: Viewing knowledge as an ongoing process of refinement rather than a fixed achievement</li>
+            </ul>
+            
+            <p>These practices align with anthropology's commitment to understanding human diversity in its full complexity, avoiding reductive generalizations while still seeking meaningful patterns. Calibration becomes not just a technical necessity but an ethical practice—a way of ensuring that our computational methods respect and accurately represent the communities they study.</p>
+
+            <h4>The Ethics of Alignment</h4>
+            <p>The process of calibrating models to different populations raises important ethical questions about how we define and represent human groups in computational systems:</p>
+            
+            <p><strong>Population Categories</strong>: How we define population groups for calibration purposes has significant implications:</p>
+            <ul>
+                <li>Broad continental categories may obscure important within-group variation</li>
+                <li>Too many specific categories may be impractical and reinforce problematic notions of discrete races</li>
+                <li>The choice of reference populations reflects implicit decisions about which groups are considered standard and which are treated as variations</li>
+            </ul>
+            
+            <p><strong>Informed Consent</strong>: Calibration often relies on reference data from specific communities:</p>
+            <ul>
+                <li>Have these communities consented to this use of their genetic information?</li>
+                <li>Do they have ongoing input into how population-specific calibrations are developed and applied?</li>
+                <li>Are benefits from improved calibration shared equitably with contributing communities?</li>
+            </ul>
+            
+            <p><strong>Stigmatization Risks</strong>: Population-specific calibrations could potentially reinforce stereotypes:</p>
+            <ul>
+                <li>Discussions of endogamy or consanguinity can be stigmatizing if not carefully contextualized</li>
+                <li>Differences in model parameters might be misinterpreted as indicating inherent biological differences rather than historical patterns</li>
+                <li>The very language used to describe calibration needs careful consideration</li>
+            </ul>
+            
+            <p>Navigating these ethical dimensions requires ongoing dialogue between computational geneticists, anthropologists, ethicists, and most importantly, the communities whose genetic histories are being modeled. Calibration should be approached not just as a technical problem but as a relational practice that respects the agency and dignity of all involved.</p>
 
             <h3>Exercises</h3>
             <ol>
-                <li>Implement a minimum segment length calibration function and evaluate its performance on a dataset with known relationships.</li>
-                <li>Develop a regularization method that balances theoretical and empirical relationship parameters.</li>
-                <li>Compare the performance of calibrated and uncalibrated models on different relationship types.</li>
-                <li>Create a visualization tool to explore how calibration affects the distribution of IBD sharing metrics.</li>
-                <li>Design a cross-validation approach to identify the optimal regularization parameter for a given dataset.</li>
+                <li>Research and compare recombination rate variations across human populations, and discuss how these differences might affect IBD patterns and relationship inference</li>
+                <li>Analyze how different social systems of marriage and family formation might create distinctive genetic signatures that would require specialized calibration approaches</li>
+                <li>Consider how you would design a calibration reference panel that represents global human diversity while avoiding problematic racial categorizations</li>
+                <li>Explore how uncertainty in relationship inference could be visually represented to communicate both confidence and limitations to non-specialist users</li>
+                <li>Discuss how the concepts of algorithmic fairness and equity apply to population-specific calibration in genetic genealogy</li>
+                <li>Propose an ethical framework for developing population-specific calibrations that respects community autonomy, prevents stigmatization, and promotes equitable benefits</li>
             </ol>
 
             <div class="alert alert-success">
-                <p><strong>Tip:</strong> When calibrating Bonsai models, start with a subset of data that has known, validated relationships. This ground truth allows you to quantitatively assess the impact of your calibration. Once validated, the calibration can be applied to the full dataset.</p>
+                <p><strong>Tip:</strong> When approaching calibration, remember that it is both a technical and an ethical practice. The mathematical adjustments we make reflect decisions about whose genetic histories matter and how diverse human populations should be represented in computational systems. Bringing technical precision together with cultural sensitivity creates more accurate and more respectful tools for understanding human relationships.</p>
             </div>
             
             <div class="lab-navigation">

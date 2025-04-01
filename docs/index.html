@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>African Genetic Genealogy Lab | Dr. LaKisha David</title>
+    <title>ANTH 499: Computational Genetic Genealogy | Dr. LaKisha David</title> <!-- Updated Title -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,16 +14,17 @@
     <nav class="navbar">
         <div class="container">
             <div class="logo">
-                <a href="#">AGGL</a>
+                <a href="#">AGGL</a> <!-- Keep lab acronym for brevity -->
             </div>
             <div class="nav-toggle" id="navToggle">
                 <i class="fas fa-bars"></i>
             </div>
             <ul class="nav-menu">
-                <li><a href="#research">Research</a></li>
+                <!-- Update links to reflect section order if needed, but IDs are stable -->
                 <li><a href="#course">Course</a></li>
                 <li><a href="#structure">Structure</a></li>
                 <li><a href="#labs">Labs</a></li>
+                <li><a href="#research">Research</a></li>
                 <li><a href="https://anthro.illinois.edu/directory/profile/ltdavid2" target="_blank">Dr. David</a></li>
             </ul>
         </div>
@@ -31,8 +32,12 @@
 
     <header class="hero">
         <div class="hero-content">
-            <h1>African Genetic Genealogy Lab</h1>
-            <p>Connecting generations through computational genetic genealogy</p>
+            <!-- Course Title is now the main H1 -->
+            <h1>ANTH 499: Computational Genetic Genealogy</h1>
+            <!-- Lab name as a subtitle -->
+            <p class="hero-subtitle">African Genetic Genealogy Lab</p>
+            <!-- Updated description focused on the course -->
+            <p class="hero-description">Explore human lineage and kinship through the power of computational genetic genealogy.</p>
             <div class="hero-attribution">
                 <span>Dr. LaKisha David</span>
                 <span>Department of Anthropology</span>
@@ -42,17 +47,8 @@
     </header>
 
     <main class="container">
-        <section id="research" class="section">
-            <div class="section-header">
-                <i class="fas fa-dna section-icon"></i>
-                <h2>Research Overview</h2>
-            </div>
-            <div class="content-card">
-                <p>Our lab explores the intersection of biological and sociocultural anthropology through genetic genealogy, focusing on connections between Africa and its historic diaspora. We employ computational techniques to reconstruct genetic genealogy networks spanning up to nine generations, creating powerful links that connect Africans and members of the historic African diaspora in a continuum of shared family, community, and population history.</p>
-                <p>This research examines both the biological and social dimensions of genetic genealogy among persons with recent ancestors from Africa. We investigate family and ethnic identity development among African Americans using genetic genealogy to identify and interact with genetic relatives in Africa, while also studying African perspectives on these genealogical connections with descendants of ancestors displaced during the Transatlantic Slave Trade.</p>
-            </div>
-        </section>
 
+        <!-- SECTION MOVED UP: Course Information -->
         <section id="course" class="section">
             <div class="section-header">
                 <i class="fas fa-graduation-cap section-icon"></i>
@@ -78,12 +74,16 @@
                     </div>
                     <div class="course-description">
                         <h4>About This Course</h4>
-                        <p>This course equips students with computational tools to analyze familial lineages. Using Python, Java, and Bash-based genetic analyses, students will explore family structures and genetic genealogy inferences spanning the last seven generations. The course emphasizes practical applications in anthropology, enabling students to assist in the analysis and interpretation of complex genetic genealogy studies. Students will learn to apply these skills in the real-world historical context of mass transatlantic human trafficking from Africa.</p>
+                        <!-- NEW TEXT INSERTED HERE -->
+                        <p>This course equips students with the computational tools necessary to analyze genetic data and infer family trees, offering an approach to understanding human lineage through genetic genealogy. Students will apply advanced computational methods using Python, Java, and Bash to trace genetic relationships over multiple generations.</p>
+                        <p>The focus on genetic data, particularly within the context of mass human trafficking from Africa, enables students to explore critical anthropological questions about kinship, migration, and human adaptation in the face of historical disruptions. Genetic genealogy represents a focused exploration of recent ancestry (last ~7 generations), providing a refined approach to studying human history and migration patterns. Unlike studies rooted in evolutionary timescales, this method allows us to trace the impact of social, political, and environmental factors on family lineages, enriching anthropological inquiry with a level of precision previously unavailable.</p>
+                        <p>By linking genetic data with genealogical records, students can enhance their understanding of human history in ways that complement archaeological findings and historical documentation taught in other courses. This course prepares students not only for roles in genealogical research, forensic anthropology, and bioinformatics but also for future work in developing the computational tools that drive genetic family tree inference. By mastering these methods, students will be positioned to contribute to the advancement of computational genetics and genealogical research.</p>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- SECTION: Course Structure (Remains the Same) -->
         <section id="structure" class="section">
             <div class="section-header">
                 <i class="fas fa-sitemap section-icon"></i>
@@ -91,7 +91,7 @@
             </div>
             <div class="content-card">
                 <p>This course follows a lab-based approach, guiding students through:</p>
-                
+
                 <div class="structure-grid">
                     <div class="structure-item">
                         <div class="structure-number">01</div>
@@ -124,7 +124,7 @@
                         <p>Mastering the Bonsai algorithm for advanced pedigree reconstruction</p>
                     </div>
                 </div>
-                
+
                 <div class="textbook-link">
                     <a href="textbook/contents.html" class="btn">
                         <i class="fas fa-book"></i> Explore Course Textbook
@@ -133,6 +133,7 @@
             </div>
         </section>
 
+        <!-- SECTION: Lab Series (Remains the Same) -->
         <section id="labs" class="section">
             <div class="section-header">
                 <i class="fas fa-flask section-icon"></i>
@@ -145,7 +146,7 @@
                     <button class="tab-btn" data-target="pedigree">Pedigree Reconstruction</button>
                     <button class="tab-btn" data-target="bonsai">Bonsai Specialization</button>
                 </div>
-                
+
                 <div id="fundamentals" class="tab-content active">
                     <ul class="lab-list">
                         <li><a href="textbook/lab0_environment.html"><span class="lab-number">0.1</span> Environment Setup</a></li>
@@ -157,7 +158,7 @@
                         <li><a href="textbook/lab3_qc.html"><span class="lab-number">3</span> Quality Control</a></li>
                     </ul>
                 </div>
-                
+
                 <div id="ibd" class="tab-content">
                     <ul class="lab-list">
                         <li><a href="textbook/lab4_ibis.html"><span class="lab-number">4</span> IBIS</a></li>
@@ -167,7 +168,7 @@
                         <li><a href="textbook/lab8_evaluation.html"><span class="lab-number">8</span> IBD Evaluation</a></li>
                     </ul>
                 </div>
-                
+
                 <div id="pedigree" class="tab-content">
                     <ul class="lab-list">
                         <li><a href="textbook/lab9_msprime.html"><span class="lab-number">9</span> MSPrime</a></li>
@@ -175,7 +176,7 @@
                         <li><a href="textbook/lab11_bonsai.html"><span class="lab-number">11</span> Bonsai</a></li>
                     </ul>
                 </div>
-                
+
                 <div id="bonsai" class="tab-content">
                     <ul class="lab-list">
                         <li><a href="textbook/lab12_bonsai_fundamentals.html"><span class="lab-number">12</span> Bonsai Fundamentals</a></li>
@@ -192,13 +193,27 @@
                 </div>
             </div>
         </section>
+
+         <!-- SECTION MOVED DOWN: Research Overview -->
+         <section id="research" class="section">
+            <div class="section-header">
+                <i class="fas fa-dna section-icon"></i>
+                <h2>Research Context</h2> <!-- Slightly rephrased header -->
+            </div>
+            <div class="content-card">
+                <p>The methods taught in this course stem from research exploring the intersection of biological and sociocultural anthropology through genetic genealogy, focusing on connections between Africa and its historic diaspora. We employ computational techniques to reconstruct genetic genealogy networks spanning up to nine generations, creating powerful links that connect Africans and members of the historic African diaspora in a continuum of shared family, community, and population history.</p>
+                <p>This research examines both the biological and social dimensions of genetic genealogy among persons with recent ancestors from Africa. We investigate family and ethnic identity development among African Americans using genetic genealogy to identify and interact with genetic relatives in Africa, while also studying African perspectives on these genealogical connections with descendants of ancestors displaced during the Transatlantic Slave Trade.</p>
+            </div>
+        </section>
+
     </main>
 
     <footer>
         <div class="container">
             <div class="footer-content">
                 <div class="footer-info">
-                    <h3>African Genetic Genealogy Lab</h3>
+                     <!-- Use Course Name here or keep Lab Name -->
+                    <h3>ANTH 499 / AGGL</h3>
                     <p>University of Illinois Urbana-Champaign</p>
                     <p>Department of Anthropology</p>
                 </div>
@@ -207,6 +222,7 @@
                     <ul>
                         <li><a href="https://anthro.illinois.edu/" target="_blank">Anthropology Department</a></li>
                         <li><a href="https://anthro.illinois.edu/directory/profile/ltdavid2" target="_blank">Dr. LaKisha David</a></li>
+                        <li><a href="https://www.takir.org/" target="_blank">TAKIR</a></li> <!-- Added TAKIR link -->
                         <li><a href="textbook/contents.html">Course Textbook</a></li>
                     </ul>
                 </div>
@@ -217,7 +233,7 @@
                 </div>
             </div>
             <div class="footer-bottom">
-                <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+                <p>© 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
             </div>
         </div>
     </footer>
@@ -240,7 +256,7 @@
                 // Remove active class from all buttons and content
                 tabBtns.forEach(b => b.classList.remove('active'));
                 tabContents.forEach(c => c.classList.remove('active'));
-                
+
                 // Add active class to clicked button and corresponding content
                 btn.classList.add('active');
                 const target = btn.getAttribute('data-target');

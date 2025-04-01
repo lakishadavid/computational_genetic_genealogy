@@ -131,25 +131,40 @@ img {
     margin: 0 auto;
 }
 
+/* MODIFIED: Hero Section Adjustments */
 .hero h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 3.5rem; /* Make course title larger */
+    margin-bottom: 0.5rem; /* Reduce space below main title */
     color: white;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6);
 }
 
-.hero p {
-    font-size: 1.5rem;
+/* ADDED: Hero Subtitle Style */
+.hero .hero-subtitle {
+    font-size: 1.8rem; /* Style for the lab name subtitle */
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: var(--secondary); /* Use gold color for emphasis */
+    margin-bottom: 1.5rem;
+    opacity: 0.95;
+}
+
+/* ADDED: Hero Description Style */
+.hero .hero-description {
+    font-size: 1.3rem; /* Slightly larger description */
     margin-bottom: 2rem;
     opacity: 0.9;
+    max-width: 750px; /* Keep description width reasonable */
+    margin-left: auto;
+    margin-right: auto;
 }
 
+/* MODIFIED: Hero Attribution Style */
 .hero-attribution {
-    display: flex;
-    flex-direction: column;
-    font-size: 1.2rem;
+    /* Optional: Slightly smaller/more subtle if needed */
+    font-size: 1.1rem;
     opacity: 0.8;
-    margin-top: 2rem;
+    margin-top: 1.5rem;
 }
 
 .hero-attribution span {
@@ -243,6 +258,15 @@ img {
     width: 20px;
     text-align: center;
 }
+
+/* ADDED: Course Description Readability */
+.course-description p {
+    margin-bottom: 1.5rem; /* Add more space between paragraphs */
+}
+.course-description p:last-child {
+    margin-bottom: 0; /* No margin after the last paragraph */
+}
+
 
 /* Structure Grid */
 .structure-grid {
@@ -477,69 +501,76 @@ footer {
         padding: 1rem 0;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    
+
     .nav-menu.show {
         display: flex;
     }
-    
+
     .nav-menu li {
         margin: 0;
     }
-    
+
     .nav-menu a {
         display: block;
         padding: 0.8rem 1.5rem;
         border-bottom: none;
     }
-    
+
     .nav-toggle {
         display: block;
     }
-    
+
+    /* ADDED: Responsive Adjustments for Hero Title */
     .hero h1 {
-        font-size: 2.5rem;
+        font-size: 2.8rem;
     }
-    
-    .hero p {
-        font-size: 1.2rem;
+    .hero .hero-subtitle {
+        font-size: 1.5rem;
     }
-    
+    .hero .hero-description {
+        font-size: 1.1rem;
+    }
+
+    /* MODIFIED: Removed old generic hero p rule as specific ones handle text size */
+    /* .hero p { ... } removed */
+
+
     .section-header {
         flex-direction: column;
         text-align: center;
     }
-    
+
     .section-icon {
         margin-right: 0;
         margin-bottom: 0.5rem;
     }
-    
+
     .course-details {
         grid-template-columns: 1fr;
     }
-    
+
     .course-logistics {
         order: 2;
     }
-    
+
     .course-description {
         order: 1;
         margin-bottom: 2rem;
     }
-    
+
     .tabs {
         justify-content: center;
     }
-    
+
     .tab-btn {
         padding: 0.8rem 1rem;
         font-size: 0.9rem;
     }
-    
+
     .lab-list {
         grid-template-columns: 1fr;
     }
-    
+
     .structure-grid {
         grid-template-columns: 1fr;
     }
@@ -549,24 +580,35 @@ footer {
     .hero {
         padding: 4rem 1rem;
     }
-    
+
+    /* ADDED: Responsive Adjustments for Hero Title */
     .hero h1 {
-        font-size: 2rem;
+        font-size: 2.2rem;
     }
-    
+    .hero .hero-subtitle {
+        font-size: 1.3rem;
+    }
+
     .section h2 {
         font-size: 1.7rem;
     }
-    
+
     .content-card {
         padding: 1.5rem;
     }
-    
+
     .course-meta {
         flex-direction: column;
         gap: 0.5rem;
+        align-items: flex-start; /* Align items left on smallest screens */
     }
-    
+
+     .course-meta span {
+        /* Ensure badges don't stretch full width */
+        display: inline-flex;
+     }
+
+
     .tab-btn {
         padding: 0.6rem 0.8rem;
         font-size: 0.8rem;
@@ -574,41 +616,15 @@ footer {
 }
 
 /* Additional Utility Classes */
-.text-center {
-    text-align: center;
-}
-
-.mt-1 {
-    margin-top: 0.5rem;
-}
-
-.mt-2 {
-    margin-top: 1rem;
-}
-
-.mt-3 {
-    margin-top: 1.5rem;
-}
-
-.mt-4 {
-    margin-top: 2rem;
-}
-
-.mb-1 {
-    margin-bottom: 0.5rem;
-}
-
-.mb-2 {
-    margin-bottom: 1rem;
-}
-
-.mb-3 {
-    margin-bottom: 1.5rem;
-}
-
-.mb-4 {
-    margin-bottom: 2rem;
-}
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.5rem; }
+.mt-2 { margin-top: 1rem; }
+.mt-3 { margin-top: 1.5rem; }
+.mt-4 { margin-top: 2rem; }
+.mb-1 { margin-bottom: 0.5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.mb-3 { margin-bottom: 1.5rem; }
+.mb-4 { margin-bottom: 2rem; }
 
 /* Code Styles (maintaining from your original CSS) */
 pre {
@@ -639,21 +655,9 @@ pre code {
     border-radius: 4px;
     border-left: 4px solid;
 }
-
-.alert-info {
-    background-color: rgba(33, 150, 243, 0.1);
-    border-left-color: #2196F3;
-}
-
-.alert-warning {
-    background-color: rgba(255, 193, 7, 0.1);
-    border-left-color: #FFC107;
-}
-
-.alert-success {
-    background-color: rgba(76, 175, 80, 0.1);
-    border-left-color: #4CAF50;
-}
+.alert-info { background-color: rgba(33, 150, 243, 0.1); border-left-color: #2196F3; }
+.alert-warning { background-color: rgba(255, 193, 7, 0.1); border-left-color: #FFC107; }
+.alert-success { background-color: rgba(76, 175, 80, 0.1); border-left-color: #4CAF50; }
 
 /* Table Styles (maintaining from your original CSS) */
 table {
@@ -661,19 +665,16 @@ table {
     border-collapse: collapse;
     margin: 1.5rem 0;
 }
-
 th, td {
     padding: 0.75rem;
     text-align: left;
     border-bottom: 1px solid #ddd;
 }
-
 th {
     background-color: #f5f5f5;
     font-weight: bold;
     color: var(--primary);
 }
-
 tr:nth-child(even) {
     background-color: #f9f9f9;
 }
@@ -686,7 +687,6 @@ tr:nth-child(even) {
     padding-top: 1rem;
     border-top: 1px solid #ddd;
 }
-
 .prev-lab, .next-lab {
     padding: 0.5rem 1rem;
     border-radius: 4px;
@@ -695,16 +695,9 @@ tr:nth-child(even) {
     color: var(--primary);
     transition: background-color 0.3s ease;
 }
-
 .prev-lab:hover, .next-lab:hover {
     background-color: var(--secondary);
     color: white;
 }
-
-.prev-lab:before {
-    content: '← ';
-}
-
-.next-lab:after {
-    content: ' →';
-}
+.prev-lab:before { content: '← '; }
+.next-lab:after { content: ' →'; }

@@ -23,169 +23,138 @@
             <h2>Lab 0: Setting Up Your Computational Environment</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Computational genetic genealogy requires specialized tools to process and analyze genetic data. This lab ensures you have the correct environment to work with throughout the course.</p>
+                <p><strong>Why This Matters:</strong> The infrastructure we build shapes the questions we can ask. In computational anthropology, our digital tools and environments determine our ability to bridge biological data and human stories across generations. Proper setup ensures we can ethically, accurately, and efficiently transform genetic patterns into meaningful insights about human connections.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the tools and frameworks used in computational genetics</li>
-                <li>Set up a reproducible environment using Docker or local installation</li>
-                <li>Verify proper installation of bioinformatics tools</li>
-                <li>Organize project directories for genetic analysis</li>
-            </ul>
-
-            <h3>Key Concepts</h3>
+            <h3>Core Concepts</h3>
             
-            <h4>Reproducible Environments</h4>
-            <p>Genetic analysis requires multiple specialized bioinformatics tools working together. We use containerization (Docker) or detailed local setup instructions to ensure everyone has identical, working environments.</p>
+            <h4>The Digital Infrastructure of Genetic Anthropology</h4>
+            <p>Computational environments are more than just collections of software—they are the foundation upon which genetic anthropology builds its understanding of human connections. The tools we use shape not only what we can discover but also how we interpret our findings and the ethical boundaries of our work.</p>
             
-            <div class="figure">
-                <img src="../images/docker_diagram.png" alt="Docker environment diagram" style="max-width: 600px;">
-                <p class="figure-caption">Docker containers package all necessary tools and dependencies to ensure consistent analysis environments.</p>
-            </div>
-
-            <h4>Core Bioinformatics Tools</h4>
-            <p>The following tools are essential for genetic data processing and analysis:</p>
-            
-            <table>
-                <tr>
-                    <th>Tool</th>
-                    <th>Purpose</th>
-                    <th>Version</th>
-                </tr>
-                <tr>
-                    <td>bcftools</td>
-                    <td>Manipulate variant call format (VCF) files</td>
-                    <td>1.18</td>
-                </tr>
-                <tr>
-                    <td>samtools</td>
-                    <td>Process sequence alignment/map (SAM) files</td>
-                    <td>1.18</td>
-                </tr>
-                <tr>
-                    <td>PLINK2</td>
-                    <td>Whole genome association analysis</td>
-                    <td>2.0 alpha</td>
-                </tr>
-                <tr>
-                    <td>IBIS</td>
-                    <td>Identity-by-descent segment detection</td>
-                    <td>Latest</td>
-                </tr>
-                <tr>
-                    <td>Beagle</td>
-                    <td>Phasing and imputation of genetic data</td>
-                    <td>5.4</td>
-                </tr>
-                <tr>
-                    <td>Hap-IBD</td>
-                    <td>Haplotype-based IBD detection</td>
-                    <td>Latest</td>
-                </tr>
-                <tr>
-                    <td>Refined-IBD</td>
-                    <td>Identity-by-descent detection</td>
-                    <td>Latest</td>
-                </tr>
-                <tr>
-                    <td>Ped-Sim</td>
-                    <td>Pedigree-based genetic simulation</td>
-                    <td>Latest</td>
-                </tr>
-                <tr>
-                    <td>BonsaiTree</td>
-                    <td>Reconstructing pedigrees from IBD data</td>
-                    <td>Latest</td>
-                </tr>
-            </table>
-
-            <h4>Project Organization</h4>
-            <p>Proper organization of directories and files is crucial for managing genetic data analysis:</p>
-            
-            <pre><code>computational_genetic_genealogy/
-├── data/            # Input genetic data
-├── references/      # Reference files and genetic maps
-├── results/         # Analysis outputs
-├── utils/           # Utility tools and binaries
-└── scripts_work/    # Analysis scripts</code></pre>
-
-            <h3>Environment Setup Options</h3>
-            
-            <h4>Option 1: Docker Setup (Recommended)</h4>
-            <p>Using Docker provides a consistent, reproducible environment with all tools pre-installed.</p>
-            
-            <ol>
-                <li>Install <a href="https://docs.docker.com/get-docker/" target="_blank">Docker</a> for your operating system</li>
-                <li>Pull the course image: <code>docker pull lakishadavid/cgg_image:latest</code></li>
-                <li>Launch the container with your local directories mapped:</li>
-            </ol>
-            
-            <pre><code>docker run -it --rm \
-   -v "$(pwd)/data:/home/ubuntu/computational_genetic_genealogy/data" \
-   -v "$(pwd)/references:/home/ubuntu/computational_genetic_genealogy/references" \
-   -v "$(pwd)/results:/home/ubuntu/computational_genetic_genealogy/results" \
-   -v "$(pwd):/home/ubuntu/computational_genetic_genealogy" \
-   lakishadavid/cgg_image:latest bash</code></pre>
-
-            <div class="alert alert-warning">
-                <p><strong>Note:</strong> You must be in your project directory when running this command, or adjust the paths accordingly.</p>
-            </div>
-
-            <h4>Option 2: Ubuntu Local Setup</h4>
-            <p>For those who prefer a local installation, follow these steps on Ubuntu 24.04:</p>
-            
-            <ol>
-                <li>Install system packages:</li>
-            </ol>
-            
-            <pre><code>sudo apt update && sudo apt upgrade -y && sudo apt install -y software-properties-common
-sudo apt-add-repository -y universe && sudo apt-add-repository -y multiverse 
-sudo apt update -y
-
-# Install main dependencies
-sudo apt install -y build-essential g++ gcc make python3.12 python3.12-dev 
-python3.12-venv python3-pip pipx wget curl git unzip [additional packages...]</code></pre>
-
-            <p>Additional steps include:</p>
+            <p>In genetic genealogy, our computational infrastructure must balance several critical requirements:</p>
             <ul>
-                <li>Building samtools, bcftools, and htslib from source</li>
-                <li>Setting up Poetry for Python dependency management</li>
-                <li>Installing Java tools (Beagle, Hap-IBD, etc.)</li>
-                <li>Building analysis tools from source (IBIS, Ped-Sim, etc.)</li>
+                <li><strong>Scientific Reproducibility</strong>: Results must be replicable across different researchers and settings</li>
+                <li><strong>Data Security</strong>: Genetic information requires robust protection due to its sensitive nature</li>
+                <li><strong>Computational Efficiency</strong>: Analyses must scale to handle large genomic datasets</li>
+                <li><strong>Interdisciplinary Integration</strong>: Tools must bridge biological, computational, and anthropological perspectives</li>
+                <li><strong>Ethical Compliance</strong>: Infrastructure must support responsible handling of culturally and personally sensitive information</li>
             </ul>
-
-            <p>The complete setup instructions are provided in the <a href="https://github.com/lakishadavid/computational_genetic_genealogy" target="_blank">GitHub repository README</a>.</p>
-
-            <h3>Environment Verification</h3>
-            <p>After setup, verify your environment by checking tool versions:</p>
             
-            <pre><code># Check core tools are available
-bcftools --version
-samtools --version
+            <p>The environment we construct is not neutral—it embodies choices about whose data matters, which methods we privilege, and what kinds of questions we can explore. Recognizing this helps us build more inclusive and ethically robust research practices.</p>
 
-# Verify Python environment
-python --version
-poetry --version
+            <h4>Containerization as Cultural Exchange</h4>
+            <p>Docker containerization represents more than just a technical solution—it embodies a fundamental anthropological principle: cultural transmission of complex knowledge systems. Containers allow us to package entire technological ecosystems, complete with their interdependencies and configurations, and share them across diverse computing environments.</p>
+            
+            <p>This approach parallels traditional knowledge systems where specialized tools, practices, and understandings are transmitted as integrated packages. In both cases, the goal is to preserve the integrity of a knowledge practice while allowing its application in new contexts.</p>
+            
+            <p>For genetic genealogy specifically, containerization ensures that:</p>
+            <ul>
+                <li>Analytical results aren't artifacts of different computing environments</li>
+                <li>Communities can collaborate across diverse technical backgrounds</li>
+                <li>Research methods become more accessible to scholars from different disciplines</li>
+                <li>Knowledge is democratized rather than restricted to those with specialized infrastructure</li>
+            </ul>
+            
+            <p>This infrastructure approach aligns with anthropology's commitment to preserving knowledge diversity while facilitating cross-cultural exchange.</p>
 
-# Test Java-based tools
-java -Xmx1g -jar "${UTILS_DIR}/beagle.jar" </code></pre>
+            <h3>Technical Foundations</h3>
+            
+            <h4>The Bioinformatics Toolkit</h4>
+            <p>The specialized tools used in computational genetic genealogy represent the intersection of multiple knowledge traditions: population genetics, computer science, statistical modeling, and information visualization. Each tool encapsulates theoretical frameworks and assumptions that shape our analytical possibilities.</p>
+            
+            <p>Key tools in our environment include:</p>
+            <ul>
+                <li><strong>Data Processing Tools</strong> (bcftools, samtools): These transform raw genetic data into structured formats, reflecting decisions about what genetic information is relevant and how it should be represented</li>
+                <li><strong>Statistical Analysis Tools</strong> (PLINK): These implement mathematical models of genetic inheritance and variation, embodying theoretical frameworks for understanding population structure</li>
+                <li><strong>IBD Detection Algorithms</strong> (IBIS, Hap-IBD, Refined-IBD): These identify shared genetic segments, operationalizing biological concepts of genetic relatedness through computational methods</li>
+                <li><strong>Simulation Frameworks</strong> (Ped-Sim): These create synthetic data based on models of genetic inheritance, allowing us to test hypotheses about genetic transmission</li>
+                <li><strong>Pedigree Reconstruction Tools</strong> (BonsaiTree): These infer family relationships from genetic patterns, bridging biological data and genealogical structures</li>
+            </ul>
+            
+            <p>Each tool represents a theoretical position on how genetic information relates to human relationships. Understanding these positions helps us interpret results with appropriate nuance and recognize the limitations of our analyses.</p>
 
-            <p>A properly configured environment will show confirmation messages for each tool.</p>
+            <h4>Digital Organization as Methodology</h4>
+            <p>The organization of our digital workspace reflects methodological choices about how we understand the relationship between genetic data and human stories. Our directory structure embodies a conceptual framework that separates:</p>
+            <ul>
+                <li><strong>Raw Data</strong>: The biological information extracted from genetic samples</li>
+                <li><strong>Reference Materials</strong>: The comparative standards against which we interpret individual variation</li>
+                <li><strong>Analytical Results</strong>: The derived patterns that connect genetic information to kinship narratives</li>
+                <li><strong>Methodological Tools</strong>: The processes through which we transform data into meaningful relationships</li>
+            </ul>
+            
+            <p>This organization isn't merely convenient—it reflects a philosophical position about the transformation of biological information into anthropological knowledge. By separating raw data from interpretations, we acknowledge that genetic information doesn't speak for itself but requires contextual interpretation to become meaningful for understanding human relationships.</p>
 
-            <h3>Anthropological Context</h3>
-            <p>The computational tools we're setting up will allow us to analyze genetic data in ways that reveal historical family relationships and population movements. For anthropologists, these tools provide a window into human migration, kinship structures, and family ties that may have been disrupted by historical events like the transatlantic slave trade.</p>
+            <h3>Practical Applications</h3>
+            
+            <h4>Setting Up Your Research Environment</h4>
+            <p>The process of establishing your computational environment involves several key steps:</p>
+            
+            <p><strong>Docker Approach (Recommended)</strong></p>
+            <p>This approach uses containerization to create a standardized environment that works consistently across different computing systems:</p>
+            <ol>
+                <li>Install Docker on your local system</li>
+                <li>Pull the course image (<code>docker pull lakishadavid/cgg_image:latest</code>)</li>
+                <li>Launch a container with your local directories mapped for data persistence</li>
+            </ol>
+            
+            <p><strong>Local Installation Alternative</strong></p>
+            <p>This approach builds the environment directly on your local system:</p>
+            <ol>
+                <li>Install core system dependencies</li>
+                <li>Compile bioinformatics tools from source</li>
+                <li>Configure Python and Java environments</li>
+                <li>Install specialized genetic analysis tools</li>
+            </ol>
+            
+            <p>These approaches represent different philosophies about research infrastructure—containerization prioritizes consistency and reproducibility, while local installation offers more customization and direct system integration. The choice between them often reflects broader research values around standardization versus flexibility.</p>
+
+            <h4>Verifying Your Environment</h4>
+            <p>Environment verification isn't merely a technical step but a process of establishing trust in your research infrastructure. By checking tool versions and functionality, you're ensuring that your analytical results will be:</p>
+            <ul>
+                <li><strong>Reproducible</strong>: Others can replicate your findings using the same tools</li>
+                <li><strong>Comparable</strong>: Your results can be meaningfully compared to other studies</li>
+                <li><strong>Reliable</strong>: Your analyses utilize tools as their developers intended</li>
+                <li><strong>Transparent</strong>: The specific implementations that produced your results are clearly documented</li>
+            </ul>
+            
+            <p>This verification process embodies scientific values of transparency and reproducibility, creating a foundation for trustworthy knowledge production about human genetic relationships.</p>
+
+            <h3>Broader Context</h3>
+            
+            <h4>Technological Infrastructure and Knowledge Production</h4>
+            <p>The computational environment we establish shapes what kinds of questions we can ask about human genetic relationships. Different infrastructures privilege different forms of knowledge:</p>
+            <ul>
+                <li>High-performance computing environments enable population-scale analyses that reveal broad migration patterns</li>
+                <li>Interactive visualization tools support exploration of specific family connections</li>
+                <li>Secure data handling systems protect privacy while allowing collaborative research</li>
+                <li>Open-source frameworks democratize access to genetic analysis across diverse communities</li>
+            </ul>
+            
+            <p>By recognizing how infrastructure shapes knowledge, we can make more intentional choices about our research environments, ensuring they align with our values and research questions.</p>
+
+            <h4>Ethical Dimensions of Computational Infrastructure</h4>
+            <p>Our technical choices have profound ethical implications for genetic anthropology:</p>
+            <ul>
+                <li><strong>Data Security</strong>: How we configure our environment affects our ability to protect sensitive genetic information</li>
+                <li><strong>Accessibility</strong>: Technical requirements can create barriers that determine who can participate in research</li>
+                <li><strong>Transparency</strong>: Our infrastructure choices affect whether others can validate or critique our methods</li>
+                <li><strong>Inclusivity</strong>: Reference data and analytical assumptions may reflect biases that affect whose genetic histories can be accurately reconstructed</li>
+            </ul>
+            
+            <p>Building an ethical computational environment requires ongoing attention to these dimensions, ensuring that our infrastructure supports responsible research practices that respect the communities whose genetic histories we study.</p>
 
             <h3>Exercises</h3>
             <ol>
-                <li>Set up your environment using either Docker or local installation</li>
-                <li>Verify all tools are installed correctly by running version checks</li>
-                <li>Create the proper directory structure for your data and analysis</li>
-                <li>Run a simple test command with each major tool to confirm functionality</li>
+                <li>Reflect on how different computational environments might shape the types of questions we can ask about human genetic relationships</li>
+                <li>Consider how containerization relates to broader questions of knowledge transmission in anthropology</li>
+                <li>Set up your environment using either Docker or local installation, documenting any challenges you encounter</li>
+                <li>Examine the bioinformatics tools in our environment and research their development history and theoretical foundations</li>
+                <li>Discuss how different organizational schemes for genetic data might reflect different understandings of the relationship between biology and culture</li>
+                <li>Develop a plan for ensuring that your computational environment supports ethical research practices throughout your work</li>
             </ol>
 
             <div class="alert alert-success">
-                <p><strong>Tip:</strong> If you encounter issues during setup, check the "Troubleshooting" section in the repository README or post your question in the course forum.</p>
+                <p><strong>Tip:</strong> Remember that your computational environment is not just a technical necessity but a methodological choice that shapes your research. Be intentional about how you configure and document your environment, recognizing that these choices affect what kinds of knowledge you can produce and how others can engage with your work.</p>
             </div>
             
             <div class="lab-navigation">

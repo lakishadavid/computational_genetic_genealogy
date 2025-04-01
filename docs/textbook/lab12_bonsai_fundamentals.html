@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12: Bonsai Fundamentals | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Fundamentals of Genetic Genealogy and IBD Segments</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab11_bonsai.html">Lab 11: Bonsai</a>
+        <a href="lab12_bonsai_fundamentals.html" class="active">Lab 12: Bonsai Fundamentals</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 12: Fundamentals of Genetic Genealogy and IBD Segments</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Understanding the theoretical foundations of Identity-By-Descent (IBD) segments is crucial for effectively applying pedigree reconstruction algorithms like Bonsai. This knowledge enables researchers to interpret results accurately, optimize algorithm parameters, and recognize the biological meaning behind mathematical models.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Develop a comprehensive understanding of Identity-By-Descent (IBD) segments and their role in genetic genealogy</li>
+                <li>Differentiate between IBD1 and IBD2 segments and understand their significance in relationship inference</li>
+                <li>Analyze the mathematical models that describe IBD segment inheritance patterns</li>
+                <li>Explore the statistical distributions of IBD segments across different relationship degrees</li>
+                <li>Apply visualization techniques to interpret IBD sharing patterns</li>
+                <li>Connect theoretical IBD segment models to practical pedigree reconstruction applications</li>
+            </ul>
+
+            <h3>IBD Segments: The Foundation of Genetic Genealogy</h3>
+            
+            <p>Identity-By-Descent (IBD) segments are stretches of DNA that are identical between two individuals because they inherited this segment from a common ancestor. These segments form the basis for computational genetic genealogy and pedigree reconstruction algorithms like Bonsai.</p>
+            
+            <div class="figure">
+                <img src="../images/ibd_inheritance.png" alt="IBD Inheritance Pattern" style="max-width: 700px;">
+                <p class="figure-caption">IBD segments are inherited from common ancestors and serve as genetic evidence of relatedness.</p>
+            </div>
+
+            <h4>Key Properties of IBD Segments</h4>
+            <p>IBD segments have several important characteristics that make them useful for relationship inference:</p>
+            
+            <table>
+                <tr>
+                    <th>Property</th>
+                    <th>Description</th>
+                    <th>Relevance to Bonsai</th>
+                </tr>
+                <tr>
+                    <td>Length Distribution</td>
+                    <td>IBD segments follow a predictable length distribution based on the relationship degree</td>
+                    <td>Enables probabilistic relationship inference based on segment patterns</td>
+                </tr>
+                <tr>
+                    <td>Recombination</td>
+                    <td>Segments break down through recombination over generations</td>
+                    <td>Allows estimation of relationship distance based on segment length</td>
+                </tr>
+                <tr>
+                    <td>Inheritance Pattern</td>
+                    <td>Segments are inherited following Mendelian principles</td>
+                    <td>Provides constraints for pedigree structure</td>
+                </tr>
+                <tr>
+                    <td>IBD Type (IBD1 vs IBD2)</td>
+                    <td>IBD1: shared on one chromosome pair; IBD2: shared on both pairs</td>
+                    <td>Helps distinguish between different relationship types</td>
+                </tr>
+                <tr>
+                    <td>Genomic Position</td>
+                    <td>Location on the chromosome affects recombination rate</td>
+                    <td>Incorporated into statistical models for better accuracy</td>
+                </tr>
+            </table>
+
+            <h3>Mathematical Models of IBD Segment Inheritance</h3>
+            
+            <p>The inheritance of IBD segments follows specific mathematical models that can be used to predict the expected patterns of sharing between relatives.</p>
+            
+            <h4>The Exponential Model of Segment Length</h4>
+            <p>For distant relationships, the length of IBD segments follows an exponential distribution:</p>
+            
+            <div class="equation">
+                <p>P(L > x) = e<sup>-rx</sup></p>
+                <p>where:</p>
+                <ul>
+                    <li>L is the length of an IBD segment (in centiMorgans)</li>
+                    <li>x is a specific length threshold</li>
+                    <li>r is the number of meioses (i.e., twice the number of generations to the common ancestor)</li>
+                </ul>
+            </div>
+            
+            <p>This model has important implications:</p>
+            <ul>
+                <li>Longer segments are more likely to be inherited from recent common ancestors</li>
+                <li>Shorter segments typically come from more distant ancestors</li>
+                <li>The total amount of IBD sharing decreases by approximately half with each generation</li>
+            </ul>
+
+            <h4>IBD Moments: Understanding Segment Count and Length</h4>
+            <p>The Bonsai algorithm relies heavily on "IBD moments" – statistical expectations of segment counts and total lengths:</p>
+            
+            <div class="equation">
+                <p>First moment (μ<sub>1</sub>): Expected number of IBD segments</p>
+                <p>Second moment (μ<sub>2</sub>): Expected total length of IBD segments</p>
+            </div>
+            
+            <p>For a given relationship type, these moments follow predictable patterns that can be calculated from coalescent theory:</p>
+            
+            <pre><code># Python code to calculate IBD moments (simplified example)
+import numpy as np
+
+def expected_ibd_segments(relationship_coefficient, min_segment_length=7):
+    """Calculate expected number of IBD segments above min_segment_length"""
+    # r represents the number of meioses
+    r = -np.log(relationship_coefficient) / np.log(2)
+    
+    # Expected number of segments (first moment)
+    expected_segments = (100 * relationship_coefficient) * np.exp(-r * min_segment_length)
+    
+    return expected_segments
+
+def expected_total_length(relationship_coefficient, min_segment_length=7):
+    """Calculate expected total length of IBD segments"""
+    # r represents the number of meioses
+    r = -np.log(relationship_coefficient) / np.log(2)
+    
+    # Expected total length (second moment)
+    expected_length = (100 * relationship_coefficient) * (1/r) * np.exp(-r * min_segment_length)
+    
+    return expected_length
+
+# Example: Compare first cousins vs second cousins
+first_cousin_coef = 0.125  # 1/8
+second_cousin_coef = 0.03125  # 1/32
+
+print(f"First cousins: {expected_ibd_segments(first_cousin_coef):.1f} segments, {expected_total_length(first_cousin_coef):.1f} cM")
+print(f"Second cousins: {expected_ibd_segments(second_cousin_coef):.1f} segments, {expected_total_length(second_cousin_coef):.1f} cM")</code></pre>
+
+            <h3>Visualizing IBD Sharing Patterns</h3>
+            
+            <p>Visualization plays a crucial role in understanding IBD sharing patterns and interpreting pedigree reconstruction results.</p>
+            
+            <h4>IBD Sharing vs. Relationship Degree</h4>
+            <p>One of the most informative visualizations is a plot of IBD sharing (total length or segment count) against relationship degree:</p>
+            
+            <div class="figure">
+                <img src="../images/ibd_vs_relationship.png" alt="IBD Sharing vs Relationship Degree" style="max-width: 700px;">
+                <p class="figure-caption">IBD sharing decreases predictably with increasing relationship distance, but with considerable variance.</p>
+            </div>
+            
+            <p>Key insights from this visualization:</p>
+            <ul>
+                <li>There is a clear negative correlation between relationship degree and total IBD sharing</li>
+                <li>The variance increases for more distant relationships, making them harder to distinguish</li>
+                <li>Overlapping distributions highlight the challenge of precise relationship inference</li>
+            </ul>
+
+            <h4>Segment Length Distributions</h4>
+            <p>The distribution of IBD segment lengths provides additional insights into relationship types:</p>
+            
+            <div class="figure">
+                <img src="../images/segment_length_distributions.png" alt="Segment Length Distributions" style="max-width: 700px;">
+                <p class="figure-caption">Different relationships produce characteristic distributions of segment lengths.</p>
+            </div>
+            
+            <p>These distributions show that:</p>
+            <ul>
+                <li>Close relatives share more long segments</li>
+                <li>Distant relatives share primarily short segments</li>
+                <li>The shape of the distribution can help distinguish between different relationship types</li>
+            </ul>
+
+            <h3>Relationship Between IBD Patterns and Pedigree Structure</h3>
+            
+            <p>The ultimate goal of analyzing IBD segments is to reconstruct pedigree structures. The connection between observed IBD patterns and possible pedigree configurations is central to algorithms like Bonsai.</p>
+            
+            <h4>From Pairwise Relationships to Complete Pedigrees</h4>
+            <p>While IBD sharing between two individuals provides evidence for their relationship, constructing a complete pedigree requires integrating information across multiple pairs:</p>
+            
+            <pre><code># Pseudocode for pedigree construction from pairwise relationships
+def build_pedigree_from_pairwise_relationships(pairwise_relationships):
+    pedigree = empty_pedigree()
+    
+    # Sort relationships by confidence (most likely first)
+    sorted_relationships = sort_by_confidence(pairwise_relationships)
+    
+    for relationship in sorted_relationships:
+        individual1, individual2, rel_type = relationship
+        
+        # Check if this relationship is consistent with existing pedigree
+        if is_consistent(pedigree, individual1, individual2, rel_type):
+            # Add relationship to pedigree
+            pedigree.add_relationship(individual1, individual2, rel_type)
+        else:
+            # Either reject this relationship or revise the pedigree
+            # The exact strategy depends on the algorithm
+            resolve_conflict(pedigree, relationship)
+    
+    return pedigree</code></pre>
+            
+            <p>This process involves several challenges:</p>
+            <ul>
+                <li><strong>Consistency constraints:</strong> The pedigree must satisfy biological constraints (e.g., no cycles, appropriate age relationships)</li>
+                <li><strong>Ambiguity resolution:</strong> Multiple pedigree configurations may explain the same IBD patterns</li>
+                <li><strong>Missing data handling:</strong> Not all relevant individuals may be sampled</li>
+                <li><strong>Error tolerance:</strong> IBD detection errors can lead to inconsistent relationship inferences</li>
+            </ul>
+
+            <h3>From Theory to Practice: IBD in Bonsai</h3>
+            
+            <p>The Bonsai algorithm implements these theoretical principles in a practical framework for pedigree reconstruction.</p>
+            
+            <h4>How Bonsai Uses IBD Information</h4>
+            <ul>
+                <li><strong>Building an up-node dictionary:</strong> Bonsai constructs a data structure that encodes potential pedigree relationships based on IBD sharing patterns</li>
+                <li><strong>Likelihood calculation:</strong> It uses the mathematical models of IBD inheritance to calculate the likelihood of different relationship configurations</li>
+                <li><strong>Optimizing pedigree structure:</strong> It searches for the pedigree configuration that maximizes the likelihood given the observed IBD patterns</li>
+                <li><strong>Inferring missing ancestors:</strong> It can infer the presence of unsampled ancestors to explain observed IBD sharing</li>
+            </ul>
+            
+            <div class="alert alert-warning">
+                <p><strong>Important Consideration:</strong> Bonsai's performance depends on accurate IBD detection. When preparing data for Bonsai, it's essential to use high-quality IBD detection methods with appropriate filtering to minimize false positives and negatives.</p>
+            </div>
+
+            <h3>Hands-On Application</h3>
+            
+            <p>In the next sections, we'll apply these theoretical concepts in a hands-on manner using simulated and real genetic data:</p>
+            
+            <ol>
+                <li>Analyze the distribution of IBD segments across different relationship types</li>
+                <li>Visualize the relationship between IBD sharing and genealogical distance</li>
+                <li>Explore how Bonsai uses IBD information to reconstruct pedigrees</li>
+                <li>Develop metrics to evaluate the accuracy of pedigree reconstruction</li>
+            </ol>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Using the IBD segments detected in previous labs, create visualizations of segment length distributions for different pairs of individuals.</li>
+                <li>Calculate the expected IBD sharing for common relationship types (siblings, parent-child, first cousins, etc.) using the mathematical models described above.</li>
+                <li>Compare the observed IBD sharing in your dataset with theoretical expectations and discuss reasons for any discrepancies.</li>
+                <li>Implement a simple function to predict relationship type from IBD sharing patterns and evaluate its accuracy on known relationships.</li>
+                <li>Discuss how the understanding of IBD segment inheritance can be used to improve pedigree reconstruction quality.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When analyzing IBD sharing patterns, always consider the variability inherent in genetic inheritance. Due to recombination's random nature, even individuals with the same relationship type can show significant differences in their IBD sharing.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab11_bonsai.html" class="prev-lab">Bonsai Introduction</a>
+                <a href="lab13_bonsai_mathematical.html" class="next-lab">Mathematical Foundations</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

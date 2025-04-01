@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 14: Bonsai Data Structures | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Data Structures and Algorithmic Design in Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab13_bonsai_mathematical.html">Lab 13: Mathematical Foundations</a>
+        <a href="lab14_bonsai_data_structures.html" class="active">Lab 14: Data Structures</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 14: Data Structures and Algorithmic Design in Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> The efficacy of pedigree reconstruction algorithms depends heavily on the design of their underlying data structures. Understanding how Bonsai organizes and processes genetic data allows researchers to optimize algorithm performance, implement custom extensions, and interpret complex outputs accurately.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Analyze the core data structures that power the Bonsai algorithm</li>
+                <li>Understand how IBD segment data is preprocessed and organized for efficient access</li>
+                <li>Explore the up-node dictionary structure and its role in representing pedigree relationships</li>
+                <li>Examine the graph-theoretical foundations of pedigree representation</li>
+                <li>Learn how Bonsai's data structures enable efficient search and optimization</li>
+                <li>Implement key data structures and operations used in pedigree reconstruction</li>
+            </ul>
+
+            <h3>Core Data Structures in Bonsai</h3>
+            
+            <p>Bonsai's effectiveness stems from its carefully designed data structures that balance computational efficiency with biological accuracy. Let's examine the key structures that power the algorithm.</p>
+
+            <h4>IBD Segment Representation</h4>
+            <p>The fundamental input to Bonsai is Identity-By-Descent (IBD) segment data, which is structured to facilitate rapid relationship inference:</p>
+            
+            <pre><code># Python representation of IBD segment data
+class IBDSegment:
+    def __init__(self, ind1, ind2, chrom, start_pos, end_pos, is_ibd2, length_cm):
+        self.ind1 = ind1          # First individual ID
+        self.ind2 = ind2          # Second individual ID
+        self.chrom = chrom        # Chromosome number
+        self.start_pos = start_pos  # Start position (base pairs)
+        self.end_pos = end_pos    # End position (base pairs)
+        self.is_ibd2 = is_ibd2    # Whether this is an IBD2 segment
+        self.length_cm = length_cm  # Genetic length in centiMorgans
+
+# Example of how segments are organized in Bonsai
+segments_by_pair = {}
+for seg in ibd_segments:
+    pair = tuple(sorted([seg.ind1, seg.ind2]))
+    if pair not in segments_by_pair:
+        segments_by_pair[pair] = []
+    segments_by_pair[pair].append(seg)</code></pre>
+            
+            <p>This organization allows Bonsai to efficiently access all IBD segments between a specific pair of individuals, which is crucial for calculating relationship likelihoods.</p>
+
+            <h4>The Up-Node Dictionary</h4>
+            <p>The core data structure for representing pedigrees in Bonsai is the "up-node dictionary," which encodes parent-child relationships in a compact format:</p>
+            
+            <pre><code># Example up-node dictionary structure
+up_node_dict = {
+    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
+    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents
+    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
+    -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
+    1005: {},                  # Individual 1005 has no recorded parents
+    1006: {},                  # Individual 1006 has no recorded parents
+    1001: {},                  # Individual 1001 has no recorded parents
+    1002: {}                   # Individual 1002 has no recorded parents
+}</code></pre>
+            
+            <p>Key features of the up-node dictionary:</p>
+            <ul>
+                <li>Each key represents an individual ID (positive for observed individuals, negative for inferred ancestors)</li>
+                <li>Each value is a dictionary mapping parent IDs to 1 (the value 1 is a placeholder; the structure could be extended to include additional information)</li>
+                <li>An empty dictionary indicates an individual with no recorded parents (either a founder or an individual with unknown parentage)</li>
+                <li>The structure supports efficient traversal of ancestors and descendants</li>
+                <li>It can represent complex multi-generational pedigrees with inferred latent ancestors</li>
+            </ul>
+
+            <h4>BioInfo Structure</h4>
+            <p>Bonsai incorporates biological metadata about individuals through the BioInfo structure:</p>
+            
+            <pre><code># Example BioInfo structure
+bio_info = [
+    {'genotype_id': 1000, 'age': 75, 'sex': 'F'},
+    {'genotype_id': 1001, 'age': 80, 'sex': 'M'},
+    {'genotype_id': 1002, 'age': 78, 'sex': 'F'},
+    {'genotype_id': 1003, 'age': 45, 'sex': 'M'},
+    {'genotype_id': 1004, 'age': 43, 'sex': 'F'},
+    {'genotype_id': 1005, 'age': 20, 'sex': 'M'}
+]</code></pre>
+            
+            <p>This structure is used to enforce biological constraints (e.g., age-appropriate relationships, sex-specific reproduction) and to enhance the accuracy of pedigree reconstruction.</p>
+
+            <h3>Preprocessing IBD Data for Efficient Access</h3>
+            
+            <p>Before pedigree reconstruction begins, Bonsai preprocesses the IBD data to optimize subsequent operations.</p>
+            
+            <h4>Indexing and Filtering</h4>
+            <p>The preprocessing pipeline includes several key steps:</p>
+            
+            <pre><code># Preprocessing pipeline for IBD segments
+def preprocess_ibd_segments(segments, min_cm=7):
+    """Preprocess IBD segments for efficient access."""
+    # 1. Filter by minimum length
+    filtered_segments = [seg for seg in segments if seg.length_cm >= min_cm]
+    
+    # 2. Create pair-based index
+    pair_index = {}
+    for seg in filtered_segments:
+        pair = tuple(sorted([seg.ind1, seg.ind2]))
+        if pair not in pair_index:
+            pair_index[pair] = []
+        pair_index[pair].append(seg)
+    
+    # 3. Create individual-based index
+    ind_index = {}
+    for seg in filtered_segments:
+        for ind in [seg.ind1, seg.ind2]:
+            if ind not in ind_index:
+                ind_index[ind] = []
+            ind_index[ind].append(seg)
+    
+    # 4. Calculate summary statistics
+    pair_stats = {}
+    for pair, segs in pair_index.items():
+        ind1, ind2 = pair
+        total_ibd1_cm = sum(seg.length_cm for seg in segs if not seg.is_ibd2)
+        total_ibd2_cm = sum(seg.length_cm for seg in segs if seg.is_ibd2)
+        ibd1_count = sum(1 for seg in segs if not seg.is_ibd2)
+        ibd2_count = sum(1 for seg in segs if seg.is_ibd2)
+        
+        pair_stats[pair] = {
+            'total_ibd1_cm': total_ibd1_cm,
+            'total_ibd2_cm': total_ibd2_cm,
+            'ibd1_count': ibd1_count,
+            'ibd2_count': ibd2_count,
+            'total_cm': total_ibd1_cm + total_ibd2_cm,
+            'segment_count': len(segs)
+        }
+    
+    return {
+        'filtered_segments': filtered_segments,
+        'pair_index': pair_index,
+        'ind_index': ind_index,
+        'pair_stats': pair_stats
+    }</code></pre>
+            
+            <p>This preprocessing creates several indexes that enable efficient data access during pedigree reconstruction:</p>
+            <ul>
+                <li>The pair index allows quick lookup of all segments between a specific pair of individuals</li>
+                <li>The individual index facilitates finding all segments involving a particular individual</li>
+                <li>The pair statistics cache frequently used summary metrics to avoid redundant calculations</li>
+            </ul>
+
+            <h4>Moment-Based Summary Statistics</h4>
+            <p>Bonsai relies heavily on "IBD moments" to summarize the IBD sharing between individuals:</p>
+            
+            <pre><code># Calculating IBD moments for a pair of individuals
+def calculate_ibd_moments(pair, pair_index, min_cm=7):
+    """Calculate IBD moments for a pair of individuals."""
+    if pair not in pair_index:
+        return {'m1': 0, 'm2': 0, 'm3': 0}  # No segments
+    
+    segments = pair_index[pair]
+    filtered_segments = [seg for seg in segments if seg.length_cm >= min_cm]
+    
+    # First moment: number of segments
+    m1 = len(filtered_segments)
+    
+    # Second moment: total length
+    m2 = sum(seg.length_cm for seg in filtered_segments)
+    
+    # Third moment: sum of squares (optional)
+    m3 = sum(seg.length_cm ** 2 for seg in filtered_segments)
+    
+    return {'m1': m1, 'm2': m2, 'm3': m3}</code></pre>
+            
+            <p>These moments are used in the likelihood calculations that drive pedigree reconstruction. By caching them, Bonsai avoids recalculating these statistics repeatedly during optimization.</p>
+
+            <h3>Graph-Theoretical Representation of Pedigrees</h3>
+            
+            <p>Pedigrees are fundamentally graph structures, with individuals as nodes and parent-child relationships as edges. Bonsai leverages graph theory to represent and manipulate pedigrees efficiently.</p>
+            
+            <h4>Directed Acyclic Graphs (DAGs)</h4>
+            <p>A valid pedigree forms a directed acyclic graph (DAG), where:</p>
+            <ul>
+                <li>Nodes represent individuals</li>
+                <li>Directed edges represent parent-child relationships (pointing from parent to child)</li>
+                <li>The graph is acyclic (no cycles allowed, as individuals cannot be their own ancestors)</li>
+            </ul>
+            
+            <p>Bonsai enforces these properties through constraints in its optimization algorithm:</p>
+            
+            <pre><code># Checking if adding a relationship would create a cycle
+def would_create_cycle(up_node_dict, child_id, proposed_parent_id):
+    """Check if adding a parent-child relationship would create a cycle."""
+    # If the proposed parent is already a descendant of the child,
+    # adding this relationship would create a cycle
+    
+    # Start with the proposed parent
+    current_ids = [proposed_parent_id]
+    visited = set(current_ids)
+    
+    # Traverse up the pedigree
+    while current_ids:
+        next_ids = []
+        for current_id in current_ids:
+            # If we've reached the child, a cycle would be created
+            if current_id == child_id:
+                return True
+                
+            # Add this individual's parents to the search
+            if current_id in up_node_dict:
+                parents = up_node_dict[current_id].keys()
+                for parent_id in parents:
+                    if parent_id not in visited:
+                        next_ids.append(parent_id)
+                        visited.add(parent_id)
+        
+        current_ids = next_ids
+    
+    # No cycle found
+    return False</code></pre>
+
+            <h4>Community Detection and Graph Partitioning</h4>
+            <p>For large datasets, Bonsai uses graph-based community detection algorithms (e.g., Louvain method) to partition the data into more manageable subproblems:</p>
+            
+            <pre><code># Using community detection to partition the pedigree problem
+import networkx as nx
+
+def partition_with_community_detection(segments):
+    """Partition individuals into communities based on IBD sharing."""
+    # Create a graph where nodes are individuals and edges represent IBD sharing
+    G = nx.Graph()
+    
+    # Add edges with weights based on IBD sharing
+    for seg in segments:
+        ind1, ind2 = seg.ind1, seg.ind2
+        weight = seg.length_cm
+        
+        if G.has_edge(ind1, ind2):
+            G[ind1][ind2]['weight'] += weight
+        else:
+            G.add_edge(ind1, ind2, weight=weight)
+    
+    # Apply Louvain community detection
+    communities = nx.community.louvain_communities(G, weight='weight')
+    
+    # Return communities as lists of individual IDs
+    return [list(community) for community in communities]</code></pre>
+            
+            <p>This partitioning strategy offers several advantages:</p>
+            <ul>
+                <li>Reduces computational complexity by breaking a large problem into smaller subproblems</li>
+                <li>Focuses reconstruction on groups of individuals that are likely related</li>
+                <li>Enables parallel processing of different communities</li>
+                <li>Improves scalability to handle large datasets with thousands of individuals</li>
+            </ul>
+
+            <h3>Building and Manipulating Pedigrees</h3>
+            
+            <p>Bonsai includes operations for building and modifying pedigree structures during the reconstruction process.</p>
+            
+            <h4>Pedigree Modification Operations</h4>
+            <p>These operations form the basis of Bonsai's optimization algorithm:</p>
+            
+            <pre><code># Core pedigree modification operations
+def add_parent(up_node_dict, child_id, parent_id):
+    """Add a parent-child relationship to the pedigree."""
+    # Ensure child exists in dictionary
+    if child_id not in up_node_dict:
+        up_node_dict[child_id] = {}
+    
+    # Check if adding this parent would create a cycle
+    if would_create_cycle(up_node_dict, child_id, parent_id):
+        return False  # Cannot add this relationship
+    
+    # Check if child already has two parents
+    if len(up_node_dict[child_id]) >= 2:
+        return False  # Child already has maximum number of parents
+    
+    # Add the parent
+    up_node_dict[child_id][parent_id] = 1
+    
+    # Ensure parent exists in dictionary
+    if parent_id not in up_node_dict:
+        up_node_dict[parent_id] = {}
+    
+    return True
+
+def remove_parent(up_node_dict, child_id, parent_id):
+    """Remove a parent-child relationship from the pedigree."""
+    if child_id not in up_node_dict or parent_id not in up_node_dict[child_id]:
+        return False  # Relationship doesn't exist
+    
+    # Remove the relationship
+    del up_node_dict[child_id][parent_id]
+    return True
+
+def swap_parent(up_node_dict, child_id, old_parent_id, new_parent_id):
+    """Replace one parent with another."""
+    # Remove old parent
+    if not remove_parent(up_node_dict, child_id, old_parent_id):
+        return False
+    
+    # Add new parent
+    if not add_parent(up_node_dict, child_id, new_parent_id):
+        # If adding new parent fails, restore old parent
+        add_parent(up_node_dict, child_id, old_parent_id)
+        return False
+    
+    return True</code></pre>
+            
+            <h4>Adding Inferred Ancestors</h4>
+            <p>A key feature of Bonsai is its ability to infer missing ancestors. This is implemented by creating "latent nodes" with negative IDs:</p>
+            
+            <pre><code># Creating a new latent ancestor
+def create_latent_ancestor(up_node_dict, next_latent_id=-1):
+    """Create a new latent ancestor node in the pedigree."""
+    # Find an unused negative ID
+    while next_latent_id in up_node_dict:
+        next_latent_id -= 1
+    
+    # Create the new latent node with no parents
+    up_node_dict[next_latent_id] = {}
+    
+    return next_latent_id
+
+def add_latent_parent_pair(up_node_dict, child_id):
+    """Add a pair of latent parents to a child."""
+    # Create two latent parents
+    latent_parent1 = create_latent_ancestor(up_node_dict)
+    latent_parent2 = create_latent_ancestor(up_node_dict, latent_parent1 - 1)
+    
+    # Add them as parents of the child
+    add_parent(up_node_dict, child_id, latent_parent1)
+    add_parent(up_node_dict, child_id, latent_parent2)
+    
+    return latent_parent1, latent_parent2</code></pre>
+            
+            <p>This capability allows Bonsai to reconstruct more complete pedigrees even when data for some ancestors is unavailable.</p>
+
+            <h3>Efficient Search and Optimization</h3>
+            
+            <p>Bonsai's data structures are designed to support efficient search and optimization of pedigree structures.</p>
+            
+            <h4>Caching and Memoization</h4>
+            <p>To avoid redundant calculations, Bonsai extensively uses caching and memoization:</p>
+            
+            <pre><code># Caching relationship coefficients for efficiency
+class RelationshipCalculator:
+    def __init__(self, up_node_dict):
+        self.up_node_dict = up_node_dict
+        self.coefficient_cache = {}  # Cache for relationship coefficients
+    
+    def get_coefficient(self, id1, id2):
+        """Get the relationship coefficient between two individuals."""
+        # Check cache first
+        pair = tuple(sorted([id1, id2]))
+        if pair in self.coefficient_cache:
+            return self.coefficient_cache[pair]
+        
+        # Calculate coefficient
+        coefficient = self._calculate_coefficient(id1, id2)
+        
+        # Cache the result
+        self.coefficient_cache[pair] = coefficient
+        return coefficient
+    
+    def _calculate_coefficient(self, id1, id2):
+        """Calculate the relationship coefficient (actual implementation)."""
+        # ... (calculation logic) ...
+        pass
+    
+    def invalidate_cache_for_individual(self, individual_id):
+        """Invalidate cache entries involving a specific individual."""
+        # When the pedigree changes, we need to invalidate affected cache entries
+        keys_to_remove = []
+        for key in self.coefficient_cache:
+            if individual_id in key:
+                keys_to_remove.append(key)
+        
+        for key in keys_to_remove:
+            del self.coefficient_cache[key]</code></pre>
+            
+            <p>This caching strategy dramatically improves performance, especially during optimization when many similar pedigree configurations are evaluated.</p>
+
+            <h4>Priority-Based Processing</h4>
+            <p>Bonsai processes relationships in order of confidence, focusing computational resources on the most reliable inferences:</p>
+            
+            <pre><code># Priority queue for processing relationships
+import heapq
+
+def process_relationships_by_priority(pair_stats):
+    """Process relationships in order of priority (higher IBD sharing first)."""
+    # Create priority queue
+    priority_queue = []
+    
+    # Add all pairs to the queue with priority based on IBD sharing
+    for pair, stats in pair_stats.items():
+        # Priority is negative of total IBD sharing (so higher sharing = higher priority)
+        priority = -stats['total_cm']
+        heapq.heappush(priority_queue, (priority, pair))
+    
+    # Process queue
+    processed_pairs = []
+    while priority_queue:
+        _, pair = heapq.heappop(priority_queue)
+        processed_pairs.append(pair)
+    
+    return processed_pairs</code></pre>
+            
+            <p>This approach helps Bonsai establish the most obvious relationships first, which constrains the search space for more ambiguous relationships.</p>
+
+            <h3>Data Structure Implementation Challenges</h3>
+            
+            <p>Implementing Bonsai's data structures involves several challenges that must be addressed for optimal performance.</p>
+            
+            <h4>Memory Efficiency</h4>
+            <p>For large datasets with thousands of individuals and millions of IBD segments, memory usage becomes a critical concern. Bonsai employs several strategies to minimize memory footprint:</p>
+            
+            <ul>
+                <li><strong>Sparse representation:</strong> The up-node dictionary only stores relationships that exist, making it memory-efficient for sparse pedigrees</li>
+                <li><strong>Data filtering:</strong> IBD segments below a minimum threshold are filtered out early in the preprocessing pipeline</li>
+                <li><strong>Community partitioning:</strong> By breaking the problem into communities, each subproblem can be processed with a smaller memory footprint</li>
+                <li><strong>Selective caching:</strong> Caching strategies that prioritize frequently used data while allowing less frequent data to be recalculated</li>
+            </ul>
+
+            <h4>Time Complexity Considerations</h4>
+            <p>The time complexity of key operations in Bonsai:</p>
+            
+            <table>
+                <tr>
+                    <th>Operation</th>
+                    <th>Time Complexity</th>
+                    <th>Notes</th>
+                </tr>
+                <tr>
+                    <td>Accessing IBD segments for a pair</td>
+                    <td>O(1)</td>
+                    <td>Using pair-based index</td>
+                </tr>
+                <tr>
+                    <td>Finding all pairs involving an individual</td>
+                    <td>O(d) where d is degree</td>
+                    <td>Using individual-based index</td>
+                </tr>
+                <tr>
+                    <td>Calculating relationship coefficient</td>
+                    <td>O(a) where a is number of ancestors</td>
+                    <td>With caching, subsequent lookups are O(1)</td>
+                </tr>
+                <tr>
+                    <td>Checking for cycles</td>
+                    <td>O(n) where n is individuals in pedigree</td>
+                    <td>Worst case, but typically much faster</td>
+                </tr>
+                <tr>
+                    <td>Community detection</td>
+                    <td>O(m log n) where m is number of IBD segments</td>
+                    <td>Using optimized Louvain algorithm</td>
+                </tr>
+                <tr>
+                    <td>Overall reconstruction</td>
+                    <td>O(i * p^2) where i is iterations, p is pairs</td>
+                    <td>With optimizations, scales to thousands of individuals</td>
+                </tr>
+            </table>
+
+            <h3>Custom Extensions and Adaptations</h3>
+            
+            <p>The modular design of Bonsai's data structures facilitates custom extensions for specialized applications.</p>
+            
+            <h4>Incorporating Additional Metadata</h4>
+            <p>The basic structures can be extended to include additional information:</p>
+            
+            <pre><code># Extended BioInfo structure with additional metadata
+extended_bio_info = [
+    {
+        'genotype_id': 1000,
+        'age': 75,
+        'sex': 'F',
+        'population': 'EUR',
+        'birth_year': 1947,
+        'is_genotyped': True,
+        'phenotypes': {'height': 165, 'weight': 68},
+        'haplogroups': {'mt': 'H1', 'y': None}
+    },
+    # ... additional individuals ...
+]</code></pre>
+            
+            <p>This extended metadata can be used to enhance pedigree reconstruction accuracy or to analyze the resulting pedigrees in more detail.</p>
+
+            <h4>Custom Relationship Types</h4>
+            <p>The up-node dictionary can be modified to represent more complex relationship types:</p>
+            
+            <pre><code># Extended up-node dictionary with relationship types
+extended_up_node_dict = {
+    1000: {
+        1001: {'type': 'biological', 'confidence': 0.98},
+        1002: {'type': 'biological', 'confidence': 0.97}
+    },
+    1003: {
+        1001: {'type': 'adoptive', 'confidence': 0.99},
+        1004: {'type': 'biological', 'confidence': 0.95}
+    },
+    # ... additional relationships ...
+}</code></pre>
+            
+            <p>This extension allows the representation of more complex family structures, such as adoptive relationships, step-relationships, or relationships with uncertain confidence.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement an efficient IBD segment indexing structure and benchmark its performance on a large dataset.</li>
+                <li>Extend the up-node dictionary implementation to handle additional relationship metadata, such as relationship confidence or type.</li>
+                <li>Implement and test the cycle detection algorithm for pedigree validation.</li>
+                <li>Create a visualization function that renders a pedigree from an up-node dictionary, highlighting different generations and relationship types.</li>
+                <li>Implement a memory-efficient version of the relationship coefficient calculator using sparse matrix representations.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When designing data structures for pedigree reconstruction, always consider the trade-offs between memory usage, computational complexity, and biological accuracy. For large datasets, efficient data structures can make the difference between a reconstruction that completes in minutes versus one that takes days.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab13_bonsai_mathematical.html" class="prev-lab">Mathematical Foundations</a>
+                <a href="lab15_bonsai_calibration.html" class="next-lab">Model Calibration</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

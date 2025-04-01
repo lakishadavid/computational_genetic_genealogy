@@ -171,6 +171,32 @@ img {
     margin: 0.2rem 0;
 }
 
+.hero-attribution {
+    /* Remove flex-direction: column if you previously added it */
+    /* Ensure text-align: center is inherited or applied here */
+    margin-top: 1.5rem; /* Adjust as needed */
+}
+
+.hero-attribution span {
+    display: inline; /* Display spans on the same line */
+    margin: 0 0.25rem; /* Optional: Add small space around text */
+    line-height: 1.5; /* Adjust if wrapping looks odd */
+}
+
+/* Add the dot separator using ::after pseudo-element */
+.hero-attribution span:not(:last-child)::after {
+    content: "•";      /* The dot character */
+    margin-left: 0.5rem; /* Space after the text, before the dot */
+    margin-right: 0.25rem;/* Space after the dot */
+    color: var(--secondary); /* Style the dot - using gold */
+    opacity: 0.8;     /* Match text opacity */
+    /* Prevent the dot from being selected */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
 /* Sections */
 .section {
     margin-bottom: var(--section-spacing);
@@ -488,6 +514,215 @@ footer {
     opacity: 0.8;
 }
 
+/* --- Add to styles.css --- */
+
+/* ==========================
+   Textbook Page Styles
+   ========================== */
+
+   body.textbook-page {
+    /* Styles specific to textbook pages like contents.html */
+    background-color: var(--light); /* Ensure consistent background */
+}
+
+.textbook-header {
+    background-color: var(--light);
+    padding: 2.5rem 1rem 1.5rem; /* More padding top */
+    text-align: center;
+    border-bottom: 4px solid var(--primary); /* Thicker border */
+}
+
+.textbook-header h1 {
+    color: var(--primary);
+    font-size: 2.8rem; /* Prominent Title */
+    margin-bottom: 0.5rem;
+}
+
+.textbook-header p {
+    color: var(--dark);
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+}
+
+.textbook-nav {
+    background-color: var(--primary); /* Darker nav bar */
+    padding: 0.75rem 0;
+    text-align: center;
+    margin-bottom: var(--section-spacing);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+.textbook-nav a {
+    color: white;
+    margin: 0 1.5rem;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.9rem;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+}
+
+.textbook-nav a i {
+    margin-right: 0.5rem; /* Space between icon and text */
+}
+
+.textbook-nav a:hover,
+.textbook-nav a.active {
+    border-bottom-color: var(--secondary);
+    text-decoration: none;
+    color: var(--secondary); /* Highlight active/hover link */
+}
+
+/* Main title for modules/resources */
+.textbook-main-title {
+    font-size: 2.2rem;
+    color: var(--primary);
+    text-align: center;
+    margin-bottom: 2rem;
+    border-bottom: 3px solid var(--secondary); /* Gold line */
+    padding-bottom: 0.75rem;
+    display: inline-block; /* Center the line under the text */
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+
+/* Module Sections Styling */
+.module-section {
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    /* Optional: Add border between sections */
+    /* border-bottom: 1px solid var(--gray); */
+}
+
+.module-section:last-child {
+    border-bottom: none;
+}
+
+.module-section h3 { /* e.g., "Getting Started" */
+    color: var(--primary);
+    font-size: 1.7rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--secondary);
+    display: inline-block; /* Limit border width */
+}
+
+
+
+.module-item {
+    margin-bottom: 1.8rem; /* Space between each lab entry */
+    padding-left: 1rem; /* Indent the whole item slightly */
+    border-left: 3px solid transparent; /* Placeholder for hover effect */
+    transition: border-left-color 0.3s ease;
+}
+
+.module-item:hover {
+    border-left-color: var(--secondary); /* Highlight on hover */
+}
+
+
+.module-item a {
+     text-decoration: none;
+}
+
+.module-item h4 { /* Lab titles - e.g., "Lab 0: Environment Setup" */
+    color: var(--primary);
+    margin-bottom: 0.4rem;
+    font-size: 1.25rem; /* Slightly larger */
+    font-weight: 600;
+    transition: color 0.3s ease;
+}
+
+ .module-item a:hover h4 {
+     color: var(--accent); /* Teal on hover */
+     /* text-decoration: underline; */ /* Optional underline */
+ }
+
+
+.module-item p { /* Lab descriptions */
+    color: var(--dark);
+    font-size: 1rem; /* Slightly larger description */
+    margin-left: 0em; /* Remove previous indent, rely on padding-left of parent */
+    opacity: 0.85;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+/* Resources List Styling */
+.resources-list {
+    list-style: none; /* Remove default bullets */
+    padding-left: 1rem;
+}
+
+.resources-list li {
+    margin-bottom: 0.8rem;
+}
+
+.resources-list li a {
+    color: var(--accent);
+    font-size: 1.1rem;
+    display: inline-flex; /* Align icon and text */
+    align-items: center;
+    transition: color 0.3s ease;
+}
+
+.resources-list li a:hover {
+    color: var(--secondary);
+    text-decoration: underline;
+}
+
+.resources-list li a i {
+    margin-right: 0.6rem;
+    color: var(--secondary); /* Icon color */
+    width: 20px; /* Consistent icon width */
+    text-align: center;
+}
+
+
+/* Footer for textbook pages */
+ .textbook-footer {
+     background-color: var(--light);
+     color: var(--dark);
+     text-align: center;
+     padding: 2rem 0;
+     margin-top: var(--section-spacing);
+     border-top: 1px solid var(--gray);
+     font-size: 0.9rem;
+     opacity: 0.8;
+ }
+
+ /* Responsive adjustments for textbook pages if needed */
+ @media (max-width: 768px) {
+    .textbook-header h1 {
+        font-size: 2.2rem;
+    }
+    .textbook-main-title {
+        font-size: 1.8rem;
+    }
+    .module-section h3 {
+        font-size: 1.5rem;
+    }
+    .module-item h4 {
+        font-size: 1.15rem;
+    }
+    .module-item p {
+        font-size: 0.9rem;
+    }
+    .textbook-nav a {
+        margin: 0 0.5rem;
+        font-size: 0.8rem;
+    }
+ }
+
+/* --- End of Textbook Styles --- */
+
 /* Responsive Styles */
 @media (max-width: 768px) {
     .nav-menu {
@@ -701,3 +936,4 @@ tr:nth-child(even) {
 }
 .prev-lab:before { content: '← '; }
 .next-lab:after { content: ' →'; }
+

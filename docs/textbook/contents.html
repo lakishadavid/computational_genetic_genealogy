@@ -5,222 +5,184 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Computational Genetic Genealogy | Course Textbook</title>
     <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"> <!-- Optional: if you want icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <header>
-        <h1>Computational Genetic Genealogy</h1>
-        <p>Course Textbook & Resources</p>
+<body class="textbook-page"> {/* Added class for specific styling */}
+
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Course Textbook & Resources</p>
+        </div>
     </header>
 
-    <nav class="main-nav">
-        <a href="../index.html">Home</a>
-        <a href="contents.html" class="active">Contents</a>
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html" class="active">Table of Contents</a>
+            {/* Add other textbook nav links here if needed */}
+        </div>
     </nav>
 
     <main class="container">
         <section class="section">
-            <h2>Course Modules</h2>
-            
+            <h2 class="textbook-main-title">Course Modules</h2>
+
             <div class="module-section">
                 <h3>Getting Started</h3>
-                <div class="module-grid">
-                    <a href="lab0_environment.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 0: Environment Setup</h4>
-                            <p>Setting up your computational environment for genetic analysis</p>
-                        </div>
-                    </a>
-                    <a href="lab0_data.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 0: Getting Data</h4>
-                            <p>Overview of data resources for genetic analysis</p>
-                        </div>
-                    </a>
-                    <a href="lab0_opensnp.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 0: OpenSNP Data</h4>
-                            <p>Obtaining and processing OpenSNP genetic data</p>
-                        </div>
-                    </a>
-                    <a href="lab0_onekgenomes.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 0: 1000 Genomes Data</h4>
-                            <p>Accessing and working with 1000 Genomes Project data</p>
-                        </div>
-                    </a>
+                <div class="module-list">
+                    <div class="module-item">
+                        <a href="lab0_environment.html"><h4>Lab 0.1: Environment Setup</h4></a>
+                        <p>Setting up your computational environment for genetic analysis</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab0_data.html"><h4>Lab 0.2: Getting Data</h4></a>
+                        <p>Overview of data resources for genetic analysis</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab0_opensnp.html"><h4>Lab 0.3: OpenSNP Data</h4></a>
+                        <p>Obtaining and processing OpenSNP genetic data</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab0_onekgenomes.html"><h4>Lab 0.4: 1000 Genomes Data</h4></a>
+                        <p>Accessing and working with 1000 Genomes Project data</p>
+                    </div>
                 </div>
             </div>
 
             <div class="module-section">
                 <h3>Data Exploration & Preparation</h3>
-                <div class="module-grid">
-                    <a href="lab1_exploring.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 1: Exploring Data</h4>
-                            <p>Understanding population genomic data structure</p>
-                        </div>
-                    </a>
-                    <a href="lab2_process.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 2: Processing Raw DNA</h4>
-                            <p>Converting and preparing DNA profile data</p>
-                        </div>
-                    </a>
-                    <a href="lab3_qc.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 3: Quality Control</h4>
-                            <p>Ensuring data quality for genetic analysis</p>
-                        </div>
-                    </a>
+                <div class="module-list">
+                     <div class="module-item">
+                        <a href="lab1_exploring.html"><h4>Lab 1: Exploring Data</h4></a>
+                        <p>Understanding population genomic data structure</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab2_process.html"><h4>Lab 2: Processing Raw DNA</h4></a>
+                        <p>Converting and preparing DNA profile data</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab3_qc.html"><h4>Lab 3: Quality Control</h4></a>
+                        <p>Ensuring data quality for genetic analysis</p>
+                    </div>
                 </div>
             </div>
 
             <div class="module-section">
                 <h3>IBD Detection</h3>
-                <div class="module-grid">
-                    <a href="lab4_ibis.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 4: IBIS</h4>
-                            <p>Identity-by-descent detection using IBIS</p>
-                        </div>
-                    </a>
-                    <a href="lab5_hapibd.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 5: Hap-IBD</h4>
-                            <p>IBD detection with haplotype-based methods</p>
-                        </div>
-                    </a>
-                    <a href="lab6_refinedibd.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 6: Refined-IBD</h4>
-                            <p>Advanced techniques for IBD segment detection</p>
-                        </div>
-                    </a>
-                </div>
+                 <div class="module-list">
+                    <div class="module-item">
+                        <a href="lab4_ibis.html"><h4>Lab 4: IBIS</h4></a>
+                        <p>Identity-by-descent detection using IBIS</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab5_hapibd.html"><h4>Lab 5: Hap-IBD</h4></a>
+                        <p>IBD detection with haplotype-based methods</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab6_refinedibd.html"><h4>Lab 6: Refined-IBD</h4></a>
+                        <p>Advanced techniques for IBD segment detection</p>
+                    </div>
+                 </div>
             </div>
 
-            <div class="module-section">
+             <div class="module-section">
                 <h3>Simulation & Evaluation</h3>
-                <div class="module-grid">
-                    <a href="lab7_pedsim.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 7: Ped-Sim</h4>
-                            <p>Simulating genetic data from known pedigrees</p>
-                        </div>
-                    </a>
-                    <a href="lab8_evaluation.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 8: IBD Evaluation</h4>
-                            <p>Evaluating IBD detection methods</p>
-                        </div>
-                    </a>
-                    <a href="lab9_msprime.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 9: MSPrime</h4>
-                            <p>Coalescent-based genetic simulation</p>
-                        </div>
-                    </a>
+                <div class="module-list">
+                     <div class="module-item">
+                        <a href="lab7_pedsim.html"><h4>Lab 7: Ped-Sim</h4></a>
+                        <p>Simulating genetic data from known pedigrees</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab8_evaluation.html"><h4>Lab 8: IBD Evaluation</h4></a>
+                        <p>Evaluating IBD detection methods</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab9_msprime.html"><h4>Lab 9: MSPrime</h4></a>
+                        <p>Coalescent-based genetic simulation</p>
+                    </div>
                 </div>
             </div>
 
             <div class="module-section">
-                <h3>Advanced Analysis</h3>
-                <div class="module-grid">
-                    <a href="lab10_distributions.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 10: Distributions</h4>
-                            <p>Statistical analysis of genetic relatedness</p>
-                        </div>
-                    </a>
-                    <a href="lab11_bonsai.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 11: Bonsai</h4>
-                            <p>Reconstructing pedigrees from genetic data</p>
-                        </div>
-                    </a>
+                <h3>Pedigree Reconstruction</h3>
+                <div class="module-list">
+                    <div class="module-item">
+                        <a href="lab10_distributions.html"><h4>Lab 10: Distributions</h4></a>
+                        <p>Statistical analysis of genetic relatedness</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab11_bonsai.html"><h4>Lab 11: Bonsai Introduction</h4></a>
+                        <p>Reconstructing pedigrees from genetic data</p>
+                    </div>
                 </div>
             </div>
 
             <div class="module-section">
                 <h3>Advanced Bonsai Specialization</h3>
-                <div class="module-grid">
-                    <a href="lab12_bonsai_fundamentals.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 12: Bonsai Fundamentals</h4>
-                            <p>Fundamentals of genetic genealogy and IBD segments</p>
-                        </div>
-                    </a>
-                    <a href="lab13_bonsai_mathematical.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 13: Mathematical Foundations</h4>
-                            <p>Mathematical principles behind Bonsai algorithm</p>
-                        </div>
-                    </a>
-                    <a href="lab14_bonsai_data_structures.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 14: Data Structures</h4>
-                            <p>Data structures and algorithmic design in Bonsai</p>
-                        </div>
-                    </a>
-                    <a href="lab15_bonsai_calibration.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 15: Model Calibration</h4>
-                            <p>Calibrating Bonsai models for optimal performance</p>
-                        </div>
-                    </a>
-                    <a href="lab16_bonsai_architecture.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 16: Architecture</h4>
-                            <p>Architecture and implementation of Bonsai</p>
-                        </div>
-                    </a>
-                    <a href="lab17_bonsai_likelihood.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 17: Likelihood Calculations</h4>
-                            <p>Advanced likelihood calculations in Bonsai</p>
-                        </div>
-                    </a>
-                    <a href="lab18_bonsai_quality.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 18: Data Quality</h4>
-                            <p>Handling data quality issues in pedigree reconstruction</p>
-                        </div>
-                    </a>
-                    <a href="lab19_bonsai_advanced.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 19: Advanced Construction</h4>
-                            <p>Advanced pedigree construction techniques</p>
-                        </div>
-                    </a>
-                    <a href="lab20_bonsai_visualization.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 20: Visualization</h4>
-                            <p>Visualizing and interpreting pedigree structures</p>
-                        </div>
-                    </a>
-                    <a href="lab21_bonsai_applications.html" class="module-card">
-                        <div class="card-content">
-                            <h4>Lab 21: Applications</h4>
-                            <p>Real-world applications of Bonsai</p>
-                        </div>
-                    </a>
-                </div>
+                 <div class="module-list">
+                    <div class="module-item">
+                        <a href="lab12_bonsai_fundamentals.html"><h4>Lab 12: Bonsai Fundamentals</h4></a>
+                        <p>Fundamentals of genetic genealogy and IBD segments</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab13_bonsai_mathematical.html"><h4>Lab 13: Mathematical Foundations</h4></a>
+                        <p>Mathematical principles behind Bonsai algorithm</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab14_bonsai_data_structures.html"><h4>Lab 14: Data Structures</h4></a>
+                        <p>Data structures and algorithmic design in Bonsai</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab15_bonsai_calibration.html"><h4>Lab 15: Model Calibration</h4></a>
+                        <p>Calibrating Bonsai models for optimal performance</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab16_bonsai_architecture.html"><h4>Lab 16: Architecture</h4></a>
+                        <p>Architecture and implementation of Bonsai</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab17_bonsai_likelihood.html"><h4>Lab 17: Likelihood Calculations</h4></a>
+                        <p>Advanced likelihood calculations in Bonsai</p>
+                    </div>
+                     <div class="module-item">
+                        <a href="lab18_bonsai_quality.html"><h4>Lab 18: Data Quality</h4></a>
+                        <p>Handling data quality issues in pedigree reconstruction</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab19_bonsai_advanced.html"><h4>Lab 19: Advanced Construction</h4></a>
+                        <p>Advanced pedigree construction techniques</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab20_bonsai_visualization.html"><h4>Lab 20: Visualization</h4></a>
+                        <p>Visualizing and interpreting pedigree structures</p>
+                    </div>
+                    <div class="module-item">
+                        <a href="lab21_bonsai_applications.html"><h4>Lab 21: Applications</h4></a>
+                        <p>Real-world applications of Bonsai</p>
+                    </div>
+                 </div>
             </div>
         </section>
 
         <section class="section">
-            <h2>Additional Resources</h2>
+            <h2 class="textbook-main-title">Additional Resources</h2>
             <ul class="resources-list">
-                <li><a href="glossary.html">Glossary of Genetic Terms</a></li>
-                <li><a href="data_formats.html">Understanding Genetic Data Formats</a></li>
-                <li><a href="python_reference.html">Python Quick Reference</a></li>
-                <li><a href="troubleshooting.html">Troubleshooting Guide</a></li>
+                <li><a href="glossary.html"><i class="fas fa-book"></i> Glossary of Genetic Terms</a></li>
+                <li><a href="data_formats.html"><i class="fas fa-file-alt"></i> Understanding Genetic Data Formats</a></li>
+                <li><a href="python_reference.html"><i class="fab fa-python"></i> Python Quick Reference</a></li>
+                <li><a href="troubleshooting.html"><i class="fas fa-wrench"></i> Troubleshooting Guide</a></li>
             </ul>
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    <footer class="textbook-footer">
+        <div class="container">
+          <p>© 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
     </footer>
 </body>
 </html>

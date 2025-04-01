@@ -24,931 +24,199 @@
             <h2>Lab 17: Advanced Likelihood Calculations in Bonsai</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> The likelihood calculations in Bonsai are the mathematical heart of the algorithm, determining how genetic evidence is weighed to infer relationships. Understanding these calculations allows researchers to interpret results with greater confidence, modify the algorithm for specific scenarios, and evaluate the strength of evidence supporting different pedigree configurations.</p>
+                <p><strong>Why This Matters:</strong> Likelihood calculations in Bonsai represent the convergence of mathematics, genetics, and cultural knowledge. They are the foundational instruments through which we translate genetic patterns into meaningful narratives of human connection. These calculations mediate between biological realities and social relationships, determining how genetic evidence is weighed when reconstructing complex networks of kinship, particularly in communities seeking to reconnect disrupted lineages.</p>
             </div>
 
             <h3>Learning Objectives</h3>
             <ul class="objectives-list">
-                <li>Master the statistical frameworks for relationship likelihood calculation in Bonsai</li>
-                <li>Understand how IBD patterns translate to likelihood scores for different relationship types</li>
-                <li>Explore specialized likelihood models for close and distant relationships</li>
-                <li>Learn how to analyze and interpret likelihood ratios between competing hypotheses</li>
-                <li>Implement custom likelihood functions for specific pedigree reconstruction scenarios</li>
-                <li>Apply Bayesian techniques to incorporate prior knowledge into likelihood calculations</li>
+                <li>Understand how statistical frameworks for relationship inference embody particular theories of relatedness</li>
+                <li>Analyze how different cultures conceptualize closeness of relation and how likelihood models reflect or challenge these understandings</li>
+                <li>Explore the ethical dimensions of uncertainty quantification in relationship reconstruction</li>
+                <li>Consider how Bayesian approaches to relationship inference incorporate culturally-specific prior knowledge</li>
+                <li>Examine how likelihood calculations negotiate the boundary between biological relationship and socially-constructed kinship</li>
+                <li>Reflect on the implications of statistical confidence when relationships have profound personal and community significance</li>
             </ul>
 
-            <h3>Statistical Foundations of Likelihood Calculation</h3>
+            <h3>Theoretical Foundations: Probability as Cultural Translation</h3>
             
-            <p>At its core, Bonsai uses likelihood functions to evaluate how well different relationship hypotheses explain observed IBD patterns.</p>
+            <p>At the heart of Bonsai's approach to relationship inference lies a profound act of cultural translation: the encoding of human relatedness as statistical likelihood. This translation is not neutral but emerges from specific epistemological traditions that prioritize quantification of uncertainty.</p>
             
-            <h4>The Likelihood Principle</h4>
-            <p>The likelihood principle states that all evidence about a parameter in a statistical model is contained in the likelihood function. In the context of Bonsai, this means:</p>
+            <h4>The Cultural Dimensions of Likelihood</h4>
+            <p>The likelihood principle—that all evidence about a relationship is contained in the likelihood function—reflects a particular way of knowing that privileges mathematical formalism. This approach has both power and limitations:</p>
             
             <div class="equation">
                 <p>L(R | D) = P(D | R)</p>
                 <p>where:</p>
                 <ul>
-                    <li>L(R | D) is the likelihood of relationship R given the observed data D</li>
-                    <li>P(D | R) is the probability of observing data D if relationship R is true</li>
-                    <li>D represents the IBD segments observed between a pair of individuals</li>
-                    <li>R represents a specific relationship type (parent-child, siblings, etc.)</li>
+                    <li>L(R | D) represents our belief in relationship R given the observed genetic sharing D</li>
+                    <li>P(D | R) represents the probability of observing this pattern of genetic sharing if relationship R is true</li>
+                    <li>D represents the genetic inheritance patterns observed between individuals</li>
+                    <li>R represents a specific relationship category derived from Western kinship systems</li>
                 </ul>
             </div>
             
-            <p>The relationship with the highest likelihood is the one that best explains the observed IBD patterns.</p>
+            <p>This equation embodies a transformation—from the biological reality of shared DNA segments to culturally-recognized categories of relation. It is both a technical tool and a cultural artifact, reflecting particular understandings of how kinship should be categorized and measured.</p>
 
-            <h4>Log-Likelihood and Numerical Stability</h4>
-            <p>Due to the very small probability values often encountered in genetic analysis, Bonsai works with log-likelihoods instead of raw likelihoods:</p>
+            <h4>Logarithmic Transformation as Epistemological Practice</h4>
+            <p>Bonsai's use of logarithmic transformation in likelihood calculation is not merely a technical convenience but reflects deeper epistemological commitments about how we should represent certainty and uncertainty:</p>
             
             <div class="equation">
                 <p>ln(L(R | D)) = ln(P(D | R))</p>
             </div>
             
-            <p>This transformation provides several advantages:</p>
+            <p>This transformation offers several significant advantages that shape how we conceptualize relationships:</p>
             <ul>
-                <li>Numerical stability when dealing with extremely small probability values</li>
-                <li>Computational efficiency by replacing multiplication with addition</li>
-                <li>Better interpretability of likelihood differences</li>
+                <li>It creates a numerical framework where extremely rare relationships can still be represented</li>
+                <li>It transforms multiplicative uncertainty into additive uncertainty, changing how we combine evidence</li>
+                <li>It creates a scale where the difference between likelihood values becomes meaningful for comparison</li>
             </ul>
+            
+            <p>The logarithmic scale creates a particular way of seeing relationships—one that compresses the distinction between extremely close relationships while expanding the ability to distinguish distant ones. This mathematical choice has profound implications for how we understand family structures and prioritize which relationships matter.</p>
 
-            <h3>Core Relationship Likelihood Models</h3>
+            <h3>Relationship Models as Cultural Frameworks</h3>
             
-            <p>Bonsai implements specialized likelihood models for different relationship types, each capturing the distinctive IBD patterns expected for that relationship.</p>
+            <p>The likelihood models embedded in Bonsai are not universal or neutral representations of human relationships. Rather, they encode specific cultural understandings of kinship that may align with or diverge from the diverse ways humans conceptualize family connections worldwide.</p>
             
-            <h4>Parent-Child Relationship</h4>
-            <p>The parent-child relationship has a distinctive IBD signature characterized by IBD1 across the entire genome. The likelihood model reflects this unique pattern:</p>
+            <h4>Parent-Child Relationship: The Binary Foundation</h4>
+            <p>The parent-child likelihood model reflects assumptions about the genetic determinism of parenthood and its primacy in kinship structures. This model privileges a binary, biologically-determined relationship above all others:</p>
             
-            <pre><code>def parent_child_likelihood(segments, genome_length=3500):
-    """
-    Calculate log-likelihood of a parent-child relationship.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        genome_length: Total genetic length of the genome in cM
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Calculate total IBD1 coverage
-    ibd1_length = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    ibd1_coverage = ibd1_length / genome_length
-    
-    # Count IBD2 segments (should be very few or none)
-    ibd2_count = sum(1 for seg in segments if seg.type == 'IBD2')
-    
-    # Calculate log-likelihood
-    # High IBD1 coverage increases likelihood, while IBD2 segments decrease it
-    log_like = 100 * (ibd1_coverage - 0.5) - 10 * ibd2_count
-    
-    # Cap at reasonable bounds
-    return max(-1000, min(0, log_like))</code></pre>
+            <p>The parent-child relationship model in Bonsai searches for a distinctive genetic signature: near-complete IBD1 sharing across the genome with minimal IBD2. This pattern reflects assumptions about biological parenthood that may not capture the complexity of parenting across cultures. In many societies, parenthood is a distributed responsibility, with multiple individuals fulfilling parental roles regardless of genetic connection. The statistical certainty with which Bonsai identifies parent-child relationships reinforces a particularly Western prioritization of biological over social parenthood.</p>
             
-            <p>Key features of this model:</p>
-            <ul>
-                <li>Rewards high IBD1 coverage (ideally close to 100%)</li>
-                <li>Penalizes the presence of IBD2 segments (which are not expected in parent-child relationships)</li>
-                <li>Simple and robust, as parent-child relationships have a very distinctive signature</li>
-            </ul>
+            <p>When a genetic genealogist applies this model to communities with different kinship structures—such as those practicing communal childrearing or formal adoption customs—the algorithm may produce technically accurate but culturally misaligned results. These misalignments reveal how genetic kinship algorithms are not culturally neutral but participate in specific traditions of family recognition.</p>
 
-            <h4>Full Siblings Relationship</h4>
-            <p>Full siblings have a characteristic pattern of IBD0, IBD1, and IBD2 regions. The likelihood model captures these proportions:</p>
+            <h4>Sibling Relationships: Shared Origins as Social Bond</h4>
+            <p>The sibling relationship model captures distinct patterns of IBD0, IBD1, and IBD2 sharing that reflect Western cultural emphasis on the full sibling bond as a core family relationship.</p>
             
-            <pre><code>def full_siblings_likelihood(segments, genome_length=3500):
-    """
-    Calculate log-likelihood of a full siblings relationship.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        genome_length: Total genetic length of the genome in cM
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Calculate IBD proportions
-    ibd1_length = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    ibd2_length = sum(seg.length for seg in segments if seg.type == 'IBD2')
-    total_ibd_length = ibd1_length + ibd2_length
-    
-    ibd0_prop = max(0, 1 - total_ibd_length / genome_length)
-    ibd1_prop = ibd1_length / genome_length
-    ibd2_prop = ibd2_length / genome_length
-    
-    # Expected proportions for full siblings
-    expected_ibd0 = 0.25
-    expected_ibd1 = 0.5
-    expected_ibd2 = 0.25
-    
-    # Calculate log-likelihood using Dirichlet-Multinomial model
-    # This accounts for the variance in IBD sharing between siblings
-    alpha = [5 * expected_ibd0, 5 * expected_ibd1, 5 * expected_ibd2]
-    observed = [ibd0_prop * genome_length, ibd1_prop * genome_length, ibd2_prop * genome_length]
-    
-    log_like = dirichlet_multinomial_logpdf(observed, alpha)
-    
-    return log_like</code></pre>
+            <p>Siblinghood occupies a privileged place in many kinship systems, but how it is defined and valorized varies greatly. Bonsai's sibling likelihood model accommodates biological variation within its statistical framework but assumes a universal definition of what constitutes siblinghood. The classification of half-siblings as categorically different from full siblings reflects particular cultural assumptions about family formation that may conflict with indigenous kinship systems where such distinctions are understood differently or not recognized at all.</p>
             
-            <p>This model is more complex because:</p>
-            <ul>
-                <li>It must account for the three IBD states (IBD0, IBD1, IBD2)</li>
-                <li>There is natural variation in the proportions of these states among full siblings</li>
-                <li>The Dirichlet-Multinomial distribution captures this biological variation</li>
-            </ul>
+            <p>The statistical framework used to identify siblings—the Dirichlet-Multinomial distribution—offers flexibility but still operates within bounded categories of relationship. This probability model, while sophisticated, reinforces the idea that relationships must be discretely categorized rather than understood as positions within a continuous social network with culturally-specific meaning.</p>
 
-            <h4>Half Siblings/Grandparent-Grandchild Relationship</h4>
-            <p>Half siblings and grandparent-grandchild relationships share similar IBD patterns, but can sometimes be distinguished by segment length distributions:</p>
+            <h4>Distant Relationship Models: The Politics of Distance</h4>
+            <p>The models Bonsai employs for detecting distant relationships reveal cultural assumptions about which connections matter and how connection attenuates across generations:</p>
             
-            <pre><code>def half_siblings_grandparent_likelihood(segments, genome_length=3500, relationship='half_siblings'):
-    """
-    Calculate log-likelihood of a half siblings or grandparent-grandchild relationship.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        genome_length: Total genetic length of the genome in cM
-        relationship: Specific relationship type ('half_siblings' or 'grandparent')
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Both relationships have ~25% IBD1 and no IBD2
-    ibd1_length = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    ibd2_length = sum(seg.length for seg in segments if seg.type == 'IBD2')
-    
-    ibd1_prop = ibd1_length / genome_length
-    expected_ibd1 = 0.25
-    
-    # Calculate basic log-likelihood based on total IBD1
-    log_like = normal_logpdf(ibd1_prop, expected_ibd1, 0.05)
-    
-    # Penalize unexpected IBD2
-    log_like -= 10 * (ibd2_length / 10)
-    
-    # Distinguish between half siblings and grandparent-grandchild based on segment length distribution
-    if relationship == 'grandparent':
-        # Grandparent-grandchild relationships tend to have fewer, longer segments
-        segment_count = len([seg for seg in segments if seg.type == 'IBD1'])
-        expected_count = 25  # Approximate expected count for grandparent-grandchild
-        log_like += normal_logpdf(segment_count, expected_count, 5)
-    elif relationship == 'half_siblings':
-        # Half siblings tend to have more, shorter segments
-        segment_count = len([seg for seg in segments if seg.type == 'IBD1'])
-        expected_count = 35  # Approximate expected count for half siblings
-        log_like += normal_logpdf(segment_count, expected_count, 5)
-    
-    return log_like</code></pre>
+            <p>As we move to more distant relationships in Bonsai's framework, the models grow more complex, reflecting increasing statistical uncertainty. But this increasing uncertainty also mirrors cultural assumptions about the diminishing significance of relationships beyond immediate family. By modeling distant relationships with greater variance tolerances, the algorithm encodes a particular view of kinship as primarily nuclear and generationally bounded.</p>
             
-            <p>This model illustrates how Bonsai can sometimes distinguish between relationships with similar total IBD sharing by considering the distribution of segment lengths and counts.</p>
+            <p>The calculation of "relationship coefficients" for cousins and other distant relations attempts to quantify connection in a way that may be at odds with how many communities understand extended kinship. For instance, in many Native American and African kinship systems, what Western models might call "second cousins" could hold relationship obligations equivalent to siblings. The variance allowed in the model increases with distance as well, suggesting that the precision with which we define relationships should diminish as genetic sharing decreases—a proposition that many cultural systems of kinship would contest.</p>
 
-            <h4>Distant Relationship Model</h4>
-            <p>For more distant relationships (cousins, etc.), Bonsai uses a model based on total IBD sharing and number of segments:</p>
+            <h3>Advanced Models: Negotiating Complexity and Diversity</h3>
             
-            <pre><code>def distant_relationship_likelihood(segments, relationship_coefficient, genome_length=3500):
-    """
-    Calculate log-likelihood of a distant relationship.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_coefficient: Theoretical relationship coefficient (e.g., 0.125 for first cousins)
-        genome_length: Total genetic length of the genome in cM
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Calculate total IBD length
-    ibd_length = sum(seg.length for seg in segments)
-    ibd_prop = ibd_length / genome_length
-    
-    # Expected IBD proportion equals the relationship coefficient
-    expected_prop = relationship_coefficient
-    
-    # Variance increases with distance
-    variance = relationship_coefficient * (1 - relationship_coefficient) / sqrt(22)  # 22 chromosomes
-    
-    # Calculate log-likelihood for total sharing
-    total_log_like = normal_logpdf(ibd_prop, expected_prop, sqrt(variance))
-    
-    # Count segments
-    segment_count = len(segments)
-    
-    # Expected segment count (approximate based on relationship coefficient)
-    # This formula is a simplified approximation
-    meioses = -log(relationship_coefficient) / log(2)
-    expected_segments = 22 * relationship_coefficient * (1 + 0.1 * meioses)
-    
-    # Calculate log-likelihood for segment count (using Poisson distribution)
-    count_log_like = poisson_logpmf(segment_count, expected_segments)
-    
-    # Combine the two components (with weights)
-    total_weight = 0.7
-    count_weight = 0.3
-    
-    return total_weight * total_log_like + count_weight * count_log_like</code></pre>
+            <p>The more sophisticated likelihood calculation techniques in Bonsai attempt to navigate the complexities of human diversity but bring their own cultural assumptions.</p>
             
-            <p>This model becomes more complex for distant relationships because:</p>
-            <ul>
-                <li>There is greater variance in IBD sharing among distant relatives</li>
-                <li>The number of segments becomes an important discriminating factor</li>
-                <li>The variance in both total length and segment count increases with relationship distance</li>
-            </ul>
+            <h4>Multivariate Probability: The Multidimensionality of Kinship</h4>
+            <p>Multivariate probability distributions in Bonsai represent an attempt to capture the multidimensional nature of kinship through a more complex mathematical lens:</p>
+            
+            <p>Bonsai's multivariate approach recognizes that relationships cannot be reduced to a single dimension of genetic sharing but are characterized by complex patterns. This mathematical sophistication mirrors the social complexity of kinship, where relationships are defined through multiple dimensions of obligation, history, and connection. By incorporating multiple metrics—total sharing, segment counts, length distributions—these models create a more textured representation of relatedness that begins to approach the nuance of human understanding.</p>
+            
+            <p>Yet, these metrics still prioritize certain dimensions of relationship while rendering others invisible. The selection of which genetic features matter in the algorithm's understanding of kinship creates a technological framework that privileges some aspects of relatedness over others. This selection process is not neutral but reflects research priorities and cultural assumptions about what constitutes meaningful connection between people.</p>
 
-            <h3>Advanced Likelihood Calculation Techniques</h3>
+            <h4>Bayesian Integration: Prior Knowledge as Cultural Context</h4>
+            <p>Bayesian approaches to relationship inference in Bonsai provide a formal framework for incorporating prior knowledge and cultural context:</p>
             
-            <p>Beyond the basic models, Bonsai implements several advanced techniques to improve accuracy and handle complex scenarios.</p>
+            <p>The Bayesian paradigm offers a powerful way to formalize how cultural knowledge shapes our interpretation of genetic evidence. By encoding prior expectations about relationship frequencies or known family structures into the statistical framework, Bayesian methods provide a mathematical approach to integrating cultural context with biological data. This integration represents a significant step toward respecting the social dimensions of kinship within a computational framework.</p>
             
-            <h4>Multivariate Probability Distributions</h4>
-            <p>For more precise likelihood calculation, Bonsai can use multivariate distributions that account for the correlation between different IBD metrics:</p>
-            
-            <pre><code>def multivariate_relationship_likelihood(segments, relationship_type):
-    """
-    Calculate likelihood using multivariate probability distributions.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship to evaluate
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Extract multiple IBD metrics
-    metrics = calculate_ibd_metrics(segments)
-    
-    # Get expected values and covariance matrix for this relationship type
-    expected, covariance = get_relationship_parameters(relationship_type)
-    
-    # Calculate multivariate normal log PDF
-    return multivariate_normal_logpdf(metrics, expected, covariance)
+            <p>However, the cultural assumptions embedded in prior distributions are rarely made explicit. Whose prior knowledge counts, and how it is quantified, remains a critical question. When working with historically marginalized communities, researchers must consider whether the prior distributions used in their models reflect colonial assumptions or community understandings of kinship. The mathematical formalism of Bayesian statistics can obscure these political dimensions, presenting culturally-specific assumptions as neutral parameters.</p>
 
-def calculate_ibd_metrics(segments):
-    """Calculate vector of IBD metrics from segments."""
-    # Basic metrics
-    total_ibd1 = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    total_ibd2 = sum(seg.length for seg in segments if seg.type == 'IBD2')
-    segment_count = len(segments)
-    
-    # Advanced metrics
-    mean_segment_length = (total_ibd1 + total_ibd2) / max(1, segment_count)
-    
-    # Segment length distribution metrics
-    lengths = [seg.length for seg in segments]
-    if lengths:
-        median_length = np.median(lengths)
-        length_variance = np.var(lengths)
-    else:
-        median_length = 0
-        length_variance = 0
-    
-    # Chromosome coverage metrics
-    chrom_coverage = calculate_chromosome_coverage(segments)
-    
-    return [
-        total_ibd1,
-        total_ibd2,
-        segment_count,
-        mean_segment_length,
-        median_length,
-        length_variance,
-        chrom_coverage
-    ]</code></pre>
+            <h3>Global Structures: From Individual to Community</h3>
             
-            <p>This multivariate approach captures complex relationships between different aspects of IBD sharing, leading to more accurate relationship inference.</p>
+            <p>Bonsai's transition from pairwise relationships to global pedigree structures represents a shift from individual to community-level analysis that has profound implications for how we understand belonging.</p>
+            
+            <h4>Pedigree Likelihood: The Social Network as Statistical Entity</h4>
+            <p>The global likelihood calculation for entire pedigrees attempts to mathematically represent the complex social networks that constitute communities:</p>
+            
+            <p>When Bonsai calculates the likelihood of an entire pedigree structure, it moves beyond individual relationships to evaluate the plausibility of a complete network of connections. This holistic approach aligns with how many communities understand themselves—not as collections of discrete dyadic relationships but as interconnected networks of belonging. The mathematical formulation of pedigree likelihood represents an attempt to capture this social complexity within a statistical framework.</p>
+            
+            <p>Yet the additivity assumption in pedigree likelihood calculation—where the global score is simply the sum of pairwise scores—may miss important aspects of how communities function. Real human communities exhibit emergent properties that cannot be reduced to the sum of individual relationships. Cultural practices around exogamy, endogamy, and preferred marriage patterns create structure at the community level that pair-focused algorithms may struggle to capture adequately.</p>
 
-            <h4>Segment-Based Likelihood Models</h4>
-            <p>Instead of using summary statistics, Bonsai can calculate likelihood directly from individual segment characteristics:</p>
+            <h4>Consistency Constraints: The Logic of Belonging</h4>
+            <p>Relationship consistency constraints in pedigree reconstruction enforce a particular logical structure on kinship that may not align with all cultural understandings:</p>
             
-            <pre><code>def segment_based_likelihood(segments, relationship_type):
-    """
-    Calculate likelihood based on individual segment probabilities.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship to evaluate
-        
-    Returns:
-        Log-likelihood score
-    """
-    # Get relationship parameters
-    meioses = relationship_to_meioses(relationship_type)
-    
-    # Calculate log-likelihood for each segment
-    segment_log_likes = []
-    for segment in segments:
-        # Probability of segment given relationship
-        prob = segment_probability(segment.length, meioses)
-        segment_log_likes.append(math.log(prob))
-    
-    # Calculate probability of not observing segments in non-IBD regions
-    non_ibd_length = calculate_non_ibd_length(segments)
-    non_ibd_log_like = non_ibd_probability(non_ibd_length, meioses)
-    
-    # Combine all log-likelihoods
-    total_log_like = sum(segment_log_likes) + non_ibd_log_like
-    
-    return total_log_like
+            <p>The consistency requirements in Bonsai's pedigree reconstruction reflect a specific logic of kinship—one where relationships must form coherent, non-contradictory networks. While this logical structure is necessary for computational tractability, it may impose a rigidity that fails to capture the fluid, contextual nature of kinship in many societies. For example, in some cultures, an individual might simultaneously occupy different kinship positions depending on context, ceremony, or social role—a flexibility that defies the strict logical hierarchies of computational pedigrees.</p>
+            
+            <p>The algorithm's search for the "closest common ancestor" between individuals reflects particular assumptions about how kinship should be traced and measured. This approach prioritizes genetic distance over other forms of connection that might be more culturally salient, such as clan membership or ceremonial relationships that create non-genetic but deeply meaningful bonds of kinship.</p>
 
-def segment_probability(length, meioses):
-    """Calculate probability of observing a segment of given length."""
-    # Probability density for segment of this length
-    length_prob = meioses * math.exp(-meioses * length)
-    
-    # Probability of detecting a segment (detection power)
-    detection_prob = 1 - math.exp(-length / 2)  # Simplified detection model
-    
-    return length_prob * detection_prob</code></pre>
+            <h3>Specialized Models: Engaging with Human Diversity</h3>
             
-            <p>This approach is more computationally intensive but can provide higher accuracy, especially for distinguishing between similar relationship types.</p>
+            <p>Bonsai's specialized likelihood models for endogamous populations and admixture represent attempts to account for human diversity within a statistical framework, revealing both the promise and limitations of computational approaches to complex cultural realities.</p>
+            
+            <h4>Endogamy: Statistical Adaptation to Cultural Practice</h4>
+            <p>The endogamous population adjustments in Bonsai attempt to mathematically account for marriage patterns that shape genetic inheritance within particular communities:</p>
+            
+            <p>Endogamy—the practice of marrying within a specific social group—creates distinctive patterns of genetic sharing that standard relationship models may misinterpret. Bonsai's endogamy adjustments represent an attempt to accommodate this cultural diversity within its statistical framework. By modifying expectations about background IBD sharing, these adjustments recognize that relationships exist within specific historical and cultural contexts that shape patterns of inheritance.</p>
+            
+            <p>However, treating endogamy merely as a statistical "confounding factor" risks reducing rich cultural traditions to technical problems requiring correction. Many endogamous communities practice strategic marriage patterns tied to cultural continuity, resource management, or spiritual beliefs. By focusing solely on the genetic consequences without engaging the cultural meanings, computational approaches like Bonsai may inadvertently reinforce the marginalization of non-Western kinship systems as deviations from a statistical norm.</p>
 
-            <h4>Bayesian Integration of Prior Knowledge</h4>
-            <p>Bonsai can incorporate prior knowledge using Bayesian techniques:</p>
+            <h4>Admixture: The Genetics of Cultural Contact</h4>
+            <p>Admixture-aware likelihood calculations in Bonsai reflect attempts to account for the genetic consequences of cultural contact, migration, and colonization:</p>
             
-            <pre><code>def bayesian_relationship_inference(segments, prior_distribution=None):
-    """
-    Infer relationships using Bayesian approach with priors.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        prior_distribution: Dictionary mapping relationship types to prior probabilities
-        
-    Returns:
-        Dictionary mapping relationship types to posterior probabilities
-    """
-    # Default uniform prior if none provided
-    if prior_distribution is None:
-        relationship_types = ['parent_child', 'full_siblings', 'half_siblings', 
-                              'grandparent', 'first_cousins', 'second_cousins']
-        prior_distribution = {rel: 1/len(relationship_types) for rel in relationship_types}
-    
-    # Calculate likelihood for each relationship type
-    likelihoods = {}
-    for rel_type in prior_distribution:
-        if rel_type == 'parent_child':
-            likelihoods[rel_type] = math.exp(parent_child_likelihood(segments))
-        elif rel_type == 'full_siblings':
-            likelihoods[rel_type] = math.exp(full_siblings_likelihood(segments))
-        # Add other relationship types...
-    
-    # Calculate posterior probabilities
-    posterior = {}
-    normalization = sum(likelihoods[rel] * prior_distribution[rel] for rel in prior_distribution)
-    
-    for rel in prior_distribution:
-        posterior[rel] = (likelihoods[rel] * prior_distribution[rel]) / normalization
-    
-    return posterior</code></pre>
+            <p>Admixture-aware models represent Bonsai's effort to address the complexities of human history—migration, cultural contact, and the genetic consequences of colonization and forced displacement. By adjusting relationship likelihoods based on ancestry similarity, these models acknowledge that relationship inference operates differently across diverse populations with complex histories.</p>
             
-            <p>This Bayesian approach allows Bonsai to incorporate prior beliefs about relationship frequencies, known family structures, or demographic information.</p>
+            <p>Yet the very framework of "admixture" itself emerges from particular historical conceptions of human groups as discrete, genetically distinct populations that then "mix"—a conceptualization with deep roots in colonial thinking about race and human difference. While the statistical adjustments may improve technical accuracy, their framing risks reinforcing problematic understandings of human diversity. More critically, these adjustments often focus on technical challenges of reference panel bias rather than engaging with how communities themselves understand and navigate complex ancestral backgrounds.</p>
 
-            <h3>Pedigree-Level Likelihood Calculation</h3>
+            <h3>Interpreting Results: Navigating Uncertainty and Significance</h3>
             
-            <p>Beyond pairwise relationships, Bonsai calculates likelihoods for entire pedigree structures.</p>
+            <p>How Bonsai guides users in interpreting likelihood results reveals particular approaches to uncertainty and confidence that have profound implications for individuals seeking to understand their genetic relationships.</p>
             
-            <h4>From Pairwise to Global Likelihood</h4>
-            <p>The global likelihood of a pedigree is calculated from the pairwise likelihoods:</p>
+            <h4>Likelihood Ratios: The Quantification of Confidence</h4>
+            <p>Likelihood ratio tests in Bonsai translate statistical confidence into language that shapes how users understand the certainty of relationship claims:</p>
             
-            <pre><code>def calculate_pedigree_likelihood(pedigree, segments_by_pair):
-    """
-    Calculate the global likelihood of a pedigree.
-    
-    Args:
-        pedigree: Up-node dictionary representing the pedigree
-        segments_by_pair: Dictionary mapping pairs to their IBD segments
-        
-    Returns:
-        Log-likelihood of the pedigree
-    """
-    log_likelihood = 0
-    
-    # Process each pair with observed IBD
-    for pair, segments in segments_by_pair.items():
-        ind1, ind2 = pair
-        
-        # Determine relationship in the pedigree
-        relationship = infer_relationship_from_pedigree(pedigree, ind1, ind2)
-        
-        # Calculate likelihood of this relationship
-        pair_log_like = calculate_relationship_likelihood(segments, relationship)
-        
-        # Add to global likelihood
-        log_likelihood += pair_log_like
-    
-    # Add prior on pedigree structure (optional)
-    pedigree_prior = calculate_pedigree_prior(pedigree)
-    log_likelihood += pedigree_prior
-    
-    return log_likelihood</code></pre>
+            <p>The translation of likelihood ratios into categorical statements of evidential strength—"very strong," "moderate," or "weak" evidence—represents a critical interface between mathematical uncertainty and human understanding. These verbal interpretations shape how users conceptualize their relationships, potentially transforming statistical nuance into perceived certainty. The thresholds chosen for these categories (100, 10, 3) reflect particular judgments about what constitutes meaningful confidence in relationship claims.</p>
             
-            <p>This approach combines evidence from all pairs of individuals to evaluate the entire pedigree structure.</p>
+            <p>For individuals searching for family connections after historical trauma like slavery or forced adoption, these interpretations carry profound emotional weight. The difference between "strong evidence" and "moderate evidence" for a potential parent-child relationship could significantly impact someone's sense of identity and belonging. The responsibility of translating mathematical likelihoods into meaningful guidance requires both technical accuracy and deep ethical awareness of the human consequences of relationship inference.</p>
 
-            <h4>Relationship Consistency Constraints</h4>
-            <p>The global likelihood calculation must ensure relationship consistency across the pedigree:</p>
+            <h4>Confidence Intervals: The Ethics of Uncertainty</h4>
+            <p>Confidence intervals in Bonsai provide a framework for understanding uncertainty that carries ethical implications for how relationships are claimed or contested:</p>
             
-            <pre><code>def infer_relationship_from_pedigree(pedigree, ind1, ind2):
-    """
-    Infer relationship between two individuals in a pedigree.
-    
-    Args:
-        pedigree: Up-node dictionary representing the pedigree
-        ind1, ind2: IDs of the two individuals
-        
-    Returns:
-        Dictionary with relationship information
-    """
-    # Check for direct parent-child relationship
-    if ind1 in pedigree.get(ind2, {}) or ind2 in pedigree.get(ind1, {}):
-        return {'type': 'parent_child', 'meioses': 1}
-    
-    # Get paths to ancestors for each individual
-    paths1 = get_paths_to_ancestors(pedigree, ind1)
-    paths2 = get_paths_to_ancestors(pedigree, ind2)
-    
-    # Find common ancestors
-    common_ancestors = set(paths1.keys()) & set(paths2.keys())
-    
-    if not common_ancestors:
-        return {'type': 'unrelated', 'meioses': float('inf')}
-    
-    # Find closest common ancestor and calculate meioses
-    min_meioses = float('inf')
-    for ancestor in common_ancestors:
-        for path1 in paths1[ancestor]:
-            for path2 in paths2[ancestor]:
-                total_meioses = len(path1) + len(path2)
-                min_meioses = min(min_meioses, total_meioses)
-    
-    # Determine relationship type from meioses
-    relationship_type = meioses_to_relationship(min_meioses)
-    
-    return {'type': relationship_type, 'meioses': min_meioses}</code></pre>
+            <p>By calculating confidence intervals for relationship metrics, Bonsai acknowledges the inherent uncertainty in genetic relationship inference. This statistical humility represents an important ethical position—that biological evidence alone cannot provide absolute certainty about human relationships. The width of these confidence intervals increases with relationship distance, mirroring how certainty diminishes as we move beyond immediate family.</p>
             
-            <p>This function ensures that the relationships inferred from IBD data are consistent with the logical structure of the pedigree.</p>
+            <p>This approach to uncertainty has implications for how genetic evidence is used in sensitive contexts like tribal enrollment, inheritance claims, or family reunification. By making uncertainty explicit through confidence intervals, Bonsai invites consideration of how much certainty should be required for different relationship claims in different contexts. This statistical approach raises profound questions about the burden of proof for kinship and how different standards of evidence might apply to different kinds of relationship claims.</p>
 
-            <h4>Likelihood-Based Comparison of Alternative Pedigrees</h4>
-            <p>Bonsai uses likelihood ratios to compare alternative pedigree hypotheses:</p>
+            <h3>Beyond Algorithm: Customizing for Cultural Context</h3>
             
-            <pre><code>def compare_pedigrees(pedigrees, segments_by_pair):
-    """
-    Compare multiple pedigree hypotheses using likelihood ratios.
-    
-    Args:
-        pedigrees: List of pedigree structures to compare
-        segments_by_pair: Dictionary mapping pairs to their IBD segments
-        
-    Returns:
-        List of (pedigree, log-likelihood, posterior probability) tuples
-    """
-    # Calculate log-likelihood for each pedigree
-    results = []
-    for pedigree in pedigrees:
-        log_like = calculate_pedigree_likelihood(pedigree, segments_by_pair)
-        results.append((pedigree, log_like))
-    
-    # Sort by likelihood (highest first)
-    results.sort(key=lambda x: x[1], reverse=True)
-    
-    # Calculate posterior probabilities (assuming uniform prior)
-    log_likes = [r[1] for r in results]
-    max_log_like = max(log_likes)
-    
-    # Convert to regular likelihoods (normalized to avoid underflow)
-    rel_likes = [math.exp(ll - max_log_like) for ll in log_likes]
-    total = sum(rel_likes)
-    
-    # Add posterior probabilities
-    final_results = []
-    for i, (pedigree, log_like) in enumerate(results):
-        posterior = rel_likes[i] / total
-        final_results.append((pedigree, log_like, posterior))
-    
-    return final_results</code></pre>
+            <p>The ability to implement custom likelihood functions in Bonsai opens possibilities for adapting relationship inference to specific cultural contexts and priorities.</p>
             
-            <p>This comparison helps researchers identify the most likely pedigree structure and quantify the confidence in that structure relative to alternatives.</p>
+            <h4>Cultural Adaptation of Algorithms</h4>
+            <p>The template for custom likelihood functions represents an opportunity to move beyond universal models toward culturally-specific approaches to relationship inference:</p>
+            
+            <p>Bonsai's framework for custom likelihood functions offers a pathway toward more culturally responsive genetic genealogy. This customization potential acknowledges that universal models of relationship cannot adequately capture the diversity of human kinship systems. By allowing researchers and communities to implement relationship models that reflect specific cultural understandings of kinship, this approach begins to address the epistemological limitations of standard algorithms.</p>
+            
+            <p>For example, a community that recognizes clan relationships as equally significant to biological parenthood might implement custom functions that weight these connections differently. Indigenous communities with specific traditions around adoption might develop models that formalize their understanding of kinship beyond genetic coefficients. These customizations represent not just technical adjustments but potential acts of algorithmic sovereignty—allowing communities to encode their own understanding of relatedness into computational tools.</p>
 
-            <h3>Specialized Likelihood Models for Complex Scenarios</h3>
+            <h4>Integrating Non-Genetic Knowledge</h4>
+            <p>The age-aware likelihood function example demonstrates how non-genetic information can be incorporated to create more contextually appropriate relationship inferences:</p>
             
-            <p>Bonsai includes specialized likelihood models for handling complex scenarios that arise in real-world pedigree reconstruction.</p>
+            <p>By incorporating age information into relationship likelihood calculation, Bonsai demonstrates how algorithms can integrate multiple forms of knowledge beyond genetics. This integration acknowledges that meaningful relationship inference requires contextual information about individuals and communities. The age-aware function shown penalizes biologically plausible but socially implausible relationships, bringing social reality into conversation with genetic evidence.</p>
             
-            <h4>Endogamous Populations</h4>
-            <p>For populations with high levels of endogamy, standard likelihood models may need adjustment:</p>
-            
-            <pre><code>def endogamous_likelihood_adjustment(segments, relationship_type, endogamy_factor=1.0):
-    """
-    Adjust likelihood calculation for endogamous populations.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship to evaluate
-        endogamy_factor: Measure of population endogamy (1.0 = no endogamy)
-        
-    Returns:
-        Adjusted log-likelihood score
-    """
-    # Calculate baseline likelihood
-    baseline_log_like = calculate_relationship_likelihood(segments, relationship_type)
-    
-    # Calculate background IBD expectation
-    background_ibd = 0.01 * endogamy_factor  # 1% background sharing per unit of endogamy
-    
-    # Adjust expected total IBD
-    # For endogamous populations, we expect more total IBD and more segments
-    # than in non-endogamous populations for the same relationship type
-    meioses = relationship_to_meioses(relationship_type)
-    
-    # Adjust for segment count
-    segment_count = len(segments)
-    expected_count = segment_count / endogamy_factor  # Fewer segments expected after adjustment
-    count_log_like = poisson_logpdf(segment_count, expected_count)
-    
-    # Adjust for total IBD
-    total_ibd = sum(seg.length for seg in segments)
-    expected_ibd = (total_ibd - 3500 * background_ibd) / endogamy_factor
-    ibd_log_like = normal_logpdf(total_ibd, expected_ibd, sqrt(expected_ibd * 50))
-    
-    # Combine adjusted components
-    adjusted_log_like = 0.5 * baseline_log_like + 0.3 * count_log_like + 0.2 * ibd_log_like
-    
-    return adjusted_log_like</code></pre>
-            
-            <p>This adjustment accounts for the elevated background IBD sharing in endogamous populations, which can otherwise lead to overestimation of relationship closeness.</p>
+            <p>This approach could be extended to incorporate other forms of non-genetic knowledge that shape how relationships are understood within particular contexts—geographic proximity, historical records, oral histories, or community recognition. Such integration represents a more holistic approach to relationship inference that respects the multidimensional nature of human kinship systems and acknowledges that DNA alone provides an incomplete picture of how people understand their relationships to one another.</p>
 
-            <h4>Handling Admixture</h4>
-            <p>For individuals with mixed ancestry, IBD sharing patterns may differ from standard expectations:</p>
+            <h3>Broader Implications: Likelihood as Cultural Practice</h3>
             
-            <pre><code>def admixture_aware_likelihood(segments, relationship_type, ancestries1, ancestries2):
-    """
-    Calculate relationship likelihood accounting for different ancestries.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship to evaluate
-        ancestries1, ancestries2: Dictionaries mapping ancestry components to proportions
-        
-    Returns:
-        Ancestry-adjusted log-likelihood score
-    """
-    # Calculate baseline likelihood
-    baseline_log_like = calculate_relationship_likelihood(segments, relationship_type)
-    
-    # Calculate ancestry similarity
-    similarity = calculate_ancestry_similarity(ancestries1, ancestries2)
-    
-    # Adjust expected segment count based on ancestry
-    # Different ancestries can affect recombination patterns and IBD detection
-    segment_count = len(segments)
-    
-    # Adjustment factor: less similar ancestries may lead to fewer detected segments
-    # due to reference panel bias and other technical factors
-    adjustment_factor = 0.5 + 0.5 * similarity  # 0.5 to 1.0 based on ancestry similarity
-    
-    expected_count = segment_count / adjustment_factor
-    count_log_like = poisson_logpdf(segment_count, expected_count)
-    
-    # Combine with baseline likelihood
-    adjusted_log_like = 0.7 * baseline_log_like + 0.3 * count_log_like
-    
-    return adjusted_log_like
-
-def calculate_ancestry_similarity(ancestries1, ancestries2):
-    """Calculate similarity between two ancestry profiles."""
-    # Sum of minimum proportions for each ancestry component
-    components = set(ancestries1.keys()) | set(ancestries2.keys())
-    
-    similarity = 0
-    for comp in components:
-        prop1 = ancestries1.get(comp, 0)
-        prop2 = ancestries2.get(comp, 0)
-        similarity += min(prop1, prop2)
-    
-    return similarity</code></pre>
+            <p>Beyond its technical details, Bonsai's likelihood calculation framework embodies a particular approach to knowledge production with significant implications for how we understand human relationships.</p>
             
-            <p>This approach adjusts likelihood calculations to account for the effects of admixture on IBD detection and segment patterns.</p>
-
-            <h4>Likelihood Models for Regions with Unusual Recombination Rates</h4>
-            <p>Certain genomic regions have recombination rates that differ significantly from the genome-wide average, requiring specialized handling:</p>
+            <h4>The Politics of Relationship Categories</h4>
+            <p>The relationship categories encoded in Bonsai's likelihood models reflect particular cultural understandings of kinship that may reproduce or challenge existing power structures:</p>
             
-            <pre><code>def region_aware_likelihood(segments, relationship_type, recombination_map):
-    """
-    Calculate likelihood with awareness of region-specific recombination rates.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship to evaluate
-        recombination_map: Dictionary mapping genomic regions to recombination rate multipliers
-        
-    Returns:
-        Region-adjusted log-likelihood score
-    """
-    # Apply individual segment adjustments based on genomic region
-    adjusted_segments = []
-    
-    for segment in segments:
-        # Get recombination rate multiplier for this segment's region
-        chrom = segment.chromosome
-        pos = (segment.start_pos + segment.end_pos) / 2
-        region = (chrom, int(pos / 1000000))  # Approximate 1Mb region
-        
-        rate_multiplier = recombination_map.get(region, 1.0)
-        
-        # Adjust segment length to account for regional recombination rate
-        # Regions with higher recombination rate will have shorter segments
-        # for the same number of generations
-        adjusted_length = segment.length * rate_multiplier
-        
-        adjusted_segment = segment.copy()
-        adjusted_segment.length = adjusted_length
-        adjusted_segments.append(adjusted_segment)
-    
-    # Calculate likelihood using adjusted segments
-    return calculate_relationship_likelihood(adjusted_segments, relationship_type)</code></pre>
+            <p>By operationalizing specific relationship categories like "parent-child," "full siblings," and "first cousins," Bonsai's likelihood framework privileges particular ways of organizing and categorizing human connections. These categories emerge from Western kinship systems and may not align with how all communities conceptualize relationships. The mathematical formalization of these categories in likelihood calculations gives them a technical authority that can overshadow alternative kinship frameworks.</p>
             
-            <p>This adjustment accounts for the fact that segments in regions with high recombination rates tend to be shorter than expected based on the genome-wide average, which can affect relationship inference.</p>
-
-            <h3>Interpreting Likelihood Results</h3>
+            <p>This categorical approach has particular significance for communities whose kinship systems were historically targeted by colonial powers. Many indigenous peoples experienced deliberate attempts to dismantle their kinship systems through policies of forced assimilation, boarding schools, and adoption. When genetic genealogy algorithms reinforce Western kinship categories without acknowledging alternatives, they risk participating in this ongoing epistemological colonization, presenting one cultural system of relationships as universal and scientifically validated.</p>
             
-            <p>Proper interpretation of likelihood results is crucial for using Bonsai effectively.</p>
+            <h4>Algorithmic Authority and Community Knowledge</h4>
+            <p>The authority granted to likelihood-based relationship inferences raises questions about whose knowledge counts when determining family connections:</p>
             
-            <h4>Likelihood Ratio Tests</h4>
-            <p>Likelihood ratio tests help evaluate the strength of evidence for one relationship type over another:</p>
+            <p>The mathematical sophistication of Bonsai's likelihood calculations can create an impression of objective, scientific authority that may overshadow community-based knowledge about relationships. In contexts where algorithmic inferences conflict with family narratives or community recognition, questions arise about which form of knowledge should take precedence. The statistical confidence expressed through likelihood ratios may be given disproportionate weight compared to oral histories or cultural practices of kinship recognition.</p>
             
-            <pre><code>def likelihood_ratio_test(segments, relationship1, relationship2):
-    """
-    Perform likelihood ratio test between two relationship hypotheses.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship1, relationship2: Relationship types to compare
-        
-    Returns:
-        Log likelihood ratio and interpretation
-    """
-    # Calculate log-likelihoods for both relationships
-    log_like1 = calculate_relationship_likelihood(segments, relationship1)
-    log_like2 = calculate_relationship_likelihood(segments, relationship2)
-    
-    # Calculate log likelihood ratio
-    log_lr = log_like1 - log_like2
-    
-    # Convert to regular likelihood ratio
-    lr = math.exp(log_lr)
-    
-    # Interpretation
-    if lr > 100:
-        strength = "Very strong evidence"
-    elif lr > 10:
-        strength = "Strong evidence"
-    elif lr > 3:
-        strength = "Moderate evidence"
-    else:
-        strength = "Weak or inconclusive evidence"
-    
-    interpretation = f"{strength} in favor of {relationship1} over {relationship2}"
-    if lr < 1:
-        interpretation = f"{strength} in favor of {relationship2} over {relationship1}"
-    
-    return log_lr, lr, interpretation</code></pre>
-            
-            <p>This approach provides a quantitative measure of the evidence supporting one relationship hypothesis over another.</p>
-
-            <h4>Confidence Intervals for IBD Metrics</h4>
-            <p>Confidence intervals help assess the uncertainty in IBD metrics and resulting relationship inferences:</p>
-            
-            <pre><code>def calculate_ibd_confidence_intervals(segments, relationship_type, confidence=0.95):
-    """
-    Calculate confidence intervals for IBD metrics given a relationship.
-    
-    Args:
-        segments: List of IBD segments between the pair
-        relationship_type: Type of relationship
-        confidence: Desired confidence level (0-1)
-        
-    Returns:
-        Dictionary of IBD metrics with confidence intervals
-    """
-    # Get relationship parameters
-    params = get_relationship_parameters(relationship_type)
-    
-    # Calculate observed metrics
-    total_ibd = sum(seg.length for seg in segments)
-    segment_count = len(segments)
-    
-    # Calculate variance based on relationship model
-    meioses = relationship_to_meioses(relationship_type)
-    
-    # For total IBD
-    expected_total = 3500 * (0.5 ** (meioses / 2))
-    variance_total = expected_total * 50  # Approximate variance
-    
-    # For segment count
-    expected_count = expected_total / 10  # Approximate expected segment count
-    variance_count = expected_count  # Poisson variance equals mean
-    
-    # Calculate z-score for desired confidence
-    from scipy.stats import norm
-    z = norm.ppf(1 - (1 - confidence) / 2)
-    
-    # Calculate confidence intervals
-    total_ci = (
-        total_ibd - z * math.sqrt(variance_total),
-        total_ibd + z * math.sqrt(variance_total)
-    )
-    
-    count_ci = (
-        segment_count - z * math.sqrt(variance_count),
-        segment_count + z * math.sqrt(variance_count)
-    )
-    
-    return {
-        'total_ibd': (total_ibd, total_ci),
-        'segment_count': (segment_count, count_ci)
-    }</code></pre>
-            
-            <p>These confidence intervals provide important context for relationship inferences, especially in cases with limited or noisy data.</p>
-
-            <h3>Implementing Custom Likelihood Functions</h3>
-            
-            <p>For specialized applications, researchers may need to implement custom likelihood functions tailored to their specific scenarios.</p>
-            
-            <h4>Template for Custom Likelihood Functions</h4>
-            <p>A general template for creating custom likelihood functions:</p>
-            
-            <pre><code>class CustomLikelihoodFunction:
-    """
-    Template for custom likelihood functions in Bonsai.
-    
-    To implement a custom likelihood function:
-    1. Subclass this class
-    2. Override the calculate_likelihood method
-    3. Optionally override the get_parameters method
-    """
-    
-    def __init__(self, config=None):
-        """Initialize with optional configuration parameters."""
-        self.config = config or {}
-        self.name = "CustomLikelihood"
-    
-    def get_parameters(self, relationship_type):
-        """
-        Get expected parameters for a relationship type.
-        
-        Args:
-            relationship_type: Type of relationship
-            
-        Returns:
-            Dictionary of parameters for this relationship
-        """
-        # Default implementation - override for custom behavior
-        params = {
-            'parent_child': {
-                'expected_ibd': 3500,
-                'variance': 200,
-                'expected_segments': 23
-            },
-            'full_siblings': {
-                'expected_ibd': 2600,
-                'variance': 400,
-                'expected_segments': 40
-            },
-            # Add other relationship types as needed
-        }
-        
-        return params.get(relationship_type, {})
-    
-    def calculate_likelihood(self, segments, relationship_type):
-        """
-        Calculate log-likelihood for a relationship.
-        
-        Args:
-            segments: List of IBD segments between the pair
-            relationship_type: Type of relationship to evaluate
-            
-        Returns:
-            Log-likelihood score
-        """
-        # This is where you implement your custom likelihood calculation
-        # The following is just a placeholder example
-        
-        # Get parameters for this relationship
-        params = self.get_parameters(relationship_type)
-        
-        # Calculate observed IBD
-        total_ibd = sum(seg.length for seg in segments)
-        segment_count = len(segments)
-        
-        # Calculate log-likelihood using normal distribution for total IBD
-        expected_ibd = params.get('expected_ibd', 0)
-        variance = params.get('variance', 1)
-        
-        log_like = normal_logpdf(total_ibd, expected_ibd, math.sqrt(variance))
-        
-        # Add component for segment count using Poisson distribution
-        expected_segments = params.get('expected_segments', 1)
-        log_like += poisson_logpmf(segment_count, expected_segments)
-        
-        return log_like</code></pre>
-            
-            <p>This template can be extended to implement specialized likelihood functions for unique research scenarios.</p>
-
-            <h4>Example: Age-Aware Likelihood Function</h4>
-            <p>An example of a custom likelihood function that incorporates age information:</p>
-            
-            <pre><code>class AgeAwareLikelihood(CustomLikelihoodFunction):
-    """
-    Likelihood function that incorporates age information.
-    """
-    
-    def __init__(self, bio_info=None, config=None):
-        """
-        Initialize with biological information.
-        
-        Args:
-            bio_info: List of dictionaries with individual information
-            config: Configuration parameters
-        """
-        super().__init__(config)
-        self.name = "AgeAwareLikelihood"
-        
-        # Create lookup dictionary
-        self.bio_info_dict = {}
-        for info in (bio_info or []):
-            if 'genotype_id' in info and 'age' in info:
-                self.bio_info_dict[info['genotype_id']] = info
-    
-    def calculate_likelihood(self, segments, relationship_type, ind1=None, ind2=None):
-        """
-        Calculate age-aware log-likelihood.
-        
-        Args:
-            segments: List of IBD segments between the pair
-            relationship_type: Type of relationship to evaluate
-            ind1, ind2: Individual IDs
-            
-        Returns:
-            Log-likelihood score
-        """
-        # Calculate baseline likelihood
-        baseline_log_like = super().calculate_likelihood(segments, relationship_type)
-        
-        # If we don't have IDs or age information, return baseline
-        if ind1 is None or ind2 is None or ind1 not in self.bio_info_dict or ind2 not in self.bio_info_dict:
-            return baseline_log_like
-        
-        # Get age information
-        age1 = self.bio_info_dict[ind1].get('age', 0)
-        age2 = self.bio_info_dict[ind2].get('age', 0)
-        
-        # Calculate age likelihood component
-        age_log_like = 0
-        
-        if relationship_type == 'parent_child':
-            # Parent should be older than child
-            age_diff = abs(age1 - age2)
-            min_parent_age = 15  # Minimum plausible parent age
-            
-            if age_diff < min_parent_age:
-                # Strong penalty for implausible age differences
-                age_log_like = -100
-            else:
-                # Mild reward for plausible age differences
-                age_log_like = math.log(1 + age_diff / 10)
-                
-        elif relationship_type == 'full_siblings':
-            # Siblings should be relatively close in age
-            age_diff = abs(age1 - age2)
-            
-            if age_diff > 30:
-                # Penalty for large age differences
-                age_log_like = -50
-            else:
-                # Normal distribution centered at small age difference
-                age_log_like = normal_logpdf(age_diff, 5, 7)
-                
-        elif relationship_type == 'grandparent':
-            # Larger age difference expected
-            age_diff = abs(age1 - age2)
-            
-            if age_diff < 30:
-                # Penalty for small age differences
-                age_log_like = -50
-            else:
-                # Reward for plausible age differences
-                age_log_like = normal_logpdf(age_diff, 50, 15)
-        
-        # Combine baseline and age components
-        # Age is a soft constraint - it adjusts but doesn't override genetic evidence
-        combined_log_like = baseline_log_like + 0.2 * age_log_like
-        
-        return combined_log_like</code></pre>
-            
-            <p>This custom function demonstrates how additional information, such as age, can be incorporated into the likelihood calculation to improve relationship inference accuracy.</p>
+            <p>This tension becomes particularly significant in communities reconstructing relationships after historical trauma. For African Americans tracing ancestry through and beyond slavery, or Native communities reconnecting across generations of forced separation, genetic evidence provides an important but inherently limited window into complex histories of relationship. Responsible use of likelihood-based inference requires recognizing the complementary value of community knowledge and the limitations of statistical approaches to human connection.</p>
 
             <h3>Exercises</h3>
             <ol>
-                <li>Implement the parent-child and full siblings likelihood functions and test them on simulated IBD data.</li>
-                <li>Create a function to generate confidence intervals for relationship inferences based on IBD sharing metrics.</li>
-                <li>Design a custom likelihood function that incorporates information about geographic proximity of individuals.</li>
-                <li>Implement a likelihood ratio test to distinguish between half siblings and grandparent-grandchild relationships.</li>
-                <li>Create visualizations that show the relationship between IBD sharing patterns and likelihood scores for different relationship types.</li>
+                <li>Research a non-Western kinship system and analyze how its relationship categories might align with or differ from those encoded in Bonsai's likelihood models. How might likelihood calculations need to be modified to better represent these alternative understandings of kinship?</li>
+                <li>Explore how confidence intervals for relationship inferences might be communicated to users from different cultural backgrounds. Design a culturally-responsive approach to explaining uncertainty in genetic relationship claims.</li>
+                <li>Analyze how the integration of geographic information into likelihood models might reinforce or challenge assumptions about how communities form and maintain connection across distance and diaspora.</li>
+                <li>Consider how likelihood ratios between competing relationship hypotheses might be used in contexts where relationship claims have legal or resource implications (e.g., tribal enrollment, inheritance). What ethical guidelines should govern the use of statistical evidence in such contexts?</li>
+                <li>Design a framework for community-based validation of algorithmic relationship inferences that respects both technical accuracy and cultural understandings of kinship.</li>
             </ol>
 
             <div class="alert alert-success">
-                <p><strong>Tip:</strong> When implementing custom likelihood functions, start with simple models and gradually add complexity. Test each addition on simulated data where the true relationships are known to ensure that your customizations improve rather than degrade accuracy.</p>
+                <p><strong>Reflection:</strong> The likelihood calculations at the heart of Bonsai represent a profound attempt to translate between different systems of knowledge—from the biological reality of shared DNA to the social reality of human relationships. This translation is never neutral or complete but always shaped by cultural assumptions about what relationships matter and how they should be categorized. As we develop more sophisticated approaches to genetic relationship inference, we must continually examine whose understanding of kinship is privileged in our algorithms and how these technical choices participate in broader conversations about identity, belonging, and the diverse ways humans create meaningful connections with one another.</p>
             </div>
             
             <div class="lab-navigation">

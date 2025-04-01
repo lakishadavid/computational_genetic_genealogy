@@ -3,483 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 10: Simulating Data with msprime | Computational Genetic Genealogy</title>
+    <title>Lab 9: Simulating Data with msprime | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
     <header>
         <h1>Computational Genetic Genealogy</h1>
-        <p>Simulating Data with msprime</p>
+        <p>Population-Scale Genetic Simulation with msprime</p>
     </header>
 
     <nav class="main-nav">
         <a href="../index.html">Home</a>
         <a href="contents.html">Contents</a>
-        <a href="lab10_msprime.html" class="active">Lab 10: MSPrime</a>
+        <a href="lab9_msprime.html" class="active">Lab 9: MSPrime</a>
     </nav>
 
     <main class="container">
         <article class="section lab-content">
-            <h2>Lab 10: Simulating Genetic Data with msprime</h2>
+            <h2>Lab 9: Population-Scale Genetic Simulation with msprime</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> While Ped-Sim is excellent for forward-time simulation of known pedigrees, msprime offers powerful capabilities for simulating genetic data under complex population models. For anthropologists studying ancient demographic history or complex population structures, msprime provides the flexibility to test hypotheses about human population history.</p>
+                <p><strong>Conceptual Foundations:</strong> This lab explores how we can model the deep evolutionary history of human populations using coalescent theory. Understanding how genetic variation evolves across generations provides insights into ancient demographic events and places genealogical relationships in their broader historical context.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the principles of coalescent simulation with msprime</li>
-                <li>Create and manipulate tree sequence data structures</li>
-                <li>Simulate genetic data under demographic models</li>
-                <li>Extract and analyze IBD segments from simulated data</li>
-                <li>Visualize and interpret genetic sharing patterns</li>
-            </ul>
-
-            <h3>Key Concepts</h3>
+            <h3>Core Concepts</h3>
             
-            <h4>Tree Sequences</h4>
-            <p>Tree sequences are an efficient data structure for representing genetic ancestry:</p>
-            
-            <table>
-                <tr>
-                    <th>Concept</th>
-                    <th>Description</th>
-                </tr>
-                <tr>
-                    <td>Ancestral Recombination Graph (ARG)</td>
-                    <td>A network that represents the ancestry of a set of DNA sequences, accounting for both mutation and recombination</td>
-                </tr>
-                <tr>
-                    <td>Tree Sequence</td>
-                    <td>An efficient representation of the ARG as a sequence of local trees along a chromosome</td>
-                </tr>
-                <tr>
-                    <td>Local Tree</td>
-                    <td>A genealogical tree representing the ancestry of a specific genomic region</td>
-                </tr>
-                <tr>
-                    <td>Most Recent Common Ancestor (MRCA)</td>
-                    <td>The most recent individual that two samples share as an ancestor</td>
-                </tr>
-                <tr>
-                    <td>Time to MRCA (TMRCA)</td>
-                    <td>The number of generations back to the MRCA</td>
-                </tr>
-            </table>
-
-            <h4>msprime and tskit</h4>
-            <p>Key features of msprime and the tskit library:</p>
-            <ul>
-                <li>Efficient simulation of large genomic regions</li>
-                <li>Support for complex demographic models</li>
-                <li>Ability to incorporate recombination and mutation</li>
-                <li>Flexible representation of genetic data</li>
-                <li>Powerful tools for analyzing and visualizing results</li>
-                <li>Integration with other population genetics software</li>
-            </ul>
-
-            <h3>Simulating Genetic Data with msprime</h3>
-            
-            <h4>Basic Simulation</h4>
-            <p>Creating a simple simulation with msprime:</p>
-            
-            <pre><code>import msprime
-import tskit
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Simple simulation with 10 samples
-ts = msprime.sim_ancestry(
-    samples=10,                # Number of samples (haploid genomes)
-    population_size=10000,     # Effective population size
-    sequence_length=10_000_000, # 10 Mb sequence
-    recombination_rate=1e-8,   # Recombination rate per bp per generation
-    random_seed=123            # For reproducibility
-)
-
-# Add mutations to the tree sequence
-ts = msprime.sim_mutations(
-    ts,
-    rate=1e-8,                 # Mutation rate per bp per generation
-    random_seed=123
-)
-
-# Basic information about the simulation
-print(f"Sequence length: {ts.sequence_length}")
-print(f"Number of trees: {ts.num_trees}")
-print(f"Number of samples: {ts.num_samples}")
-print(f"Number of individuals: {ts.num_individuals}")
-print(f"Number of mutations: {ts.num_mutations}")</code></pre>
-
-            <h4>Creating More Complex Models</h4>
-            <p>Simulating data with realistic demographic scenarios:</p>
-            
-            <pre><code>def simulate_demographic_history():
-    """Simulate a demographic history with population splits and migrations."""
-    # Define demographic model with three populations
-    demography = msprime.Demography()
-    
-    # Add three modern populations
-    demography.add_population(name="EUR", initial_size=10000)  # European
-    demography.add_population(name="AFR", initial_size=15000)  # African
-    demography.add_population(name="ASN", initial_size=8000)   # Asian
-    
-    # Add ancient population (out of Africa)
-    demography.add_population(name="OOA", initial_size=2000)
-    
-    # Add ancestral population
-    demography.add_population(name="ANC", initial_size=5000)
-    
-    # Set up population relationships and splits
-    # Asian and European populations split from OOA
-    demography.add_population_split(time=40000 / 25, derived=["EUR", "ASN"], ancestral="OOA")
-    
-    # OOA split from African population
-    demography.add_population_split(time=70000 / 25, derived=["AFR", "OOA"], ancestral="ANC")
-    
-    # Add migration between populations
-    demography.set_migration_rate(source="EUR", dest="AFR", rate=0.00001)
-    demography.set_migration_rate(source="AFR", dest="EUR", rate=0.00001)
-    demography.set_migration_rate(source="EUR", dest="ASN", rate=0.00002)
-    demography.set_migration_rate(source="ASN", dest="EUR", rate=0.00002)
-    
-    # Debug the demography model
-    print(demography.debug())
-    
-    # Run the simulation
-    ts = msprime.sim_ancestry(
-        samples={"EUR": 10, "AFR": 10, "ASN": 10},  # 10 samples from each population
-        demography=demography,
-        sequence_length=10_000_000,  # 10 Mb
-        recombination_rate=1e-8,
-        random_seed=123
-    )
-    
-    # Add mutations
-    ts = msprime.sim_mutations(ts, rate=1e-8, random_seed=123)
-    
-    return ts</code></pre>
-
-            <h3>Working with Tree Sequences</h3>
-            
-            <h4>Exploring Tree Structure</h4>
-            <p>Analyzing the local trees in a simulation:</p>
-            
-            <pre><code>def explore_trees(ts):
-    """Explore the structure of local trees in a tree sequence."""
-    # Get the first few trees for visualization
-    first_tree = ts.first()
-    
-    # Draw the tree
-    plt.figure(figsize=(10, 6))
-    first_tree.draw(format="svg")
-    plt.savefig("results/first_tree.svg")
-    
-    # Get statistics about trees
-    tree_heights = []
-    tree_tmrcas = []
-    
-    # For a specific pair of samples (0 and 1)
-    for tree in ts.trees():
-        tree_heights.append(tree.time(tree.root))
-        tree_tmrcas.append(tree.tmrca(0, 1))
-    
-    # Plot the TMRCA along the genome
-    plt.figure(figsize=(12, 6))
-    plt.plot(list(ts.breakpoints())[:-1], tree_tmrcas)
-    plt.title("TMRCA between samples 0 and 1 along the genome")
-    plt.xlabel("Position (bp)")
-    plt.ylabel("TMRCA (generations)")
-    plt.grid(alpha=0.3)
-    plt.savefig("results/tmrca_along_genome.png")
-    
-    return {
-        "heights": tree_heights,
-        "tmrcas": tree_tmrcas
-    }</code></pre>
-
-            <h4>Finding IBD Segments</h4>
-            <p>Identifying IBD segments from tree sequences:</p>
-            
-            <pre><code>def find_ibd_segments(ts, min_length_bp=500000):
-    """Find IBD segments between all pairs of samples in the tree sequence."""
-    ibd_segments = []
-    
-    # Get the total number of samples
-    n_samples = ts.num_samples
-    
-    # Convert position from bp to cM (assuming 1 cM = 1 Mb)
-    cm_per_bp = 1e-6
-    
-    # Loop through all pairs of samples
-    for i in range(n_samples):
-        for j in range(i + 1, n_samples):
-            # Track current IBD segment
-            current_ibd = None
-            current_mrca = None
-            
-            # Iterate through all trees
-            for tree in ts.trees():
-                # Get MRCA and its time
-                mrca = tree.mrca(i, j)
-                tmrca = tree.time(mrca)
-                
-                # If this is a new IBD segment
-                if current_ibd is None and tmrca < 50:  # Arbitrary threshold for recent ancestry
-                    current_ibd = {
-                        "sample1": i,
-                        "sample2": j,
-                        "start_bp": tree.interval.left,
-                        "mrca": mrca,
-                        "tmrca": tmrca
-                    }
-                    current_mrca = mrca
-                # If continuing the same segment with same MRCA
-                elif current_ibd is not None and mrca == current_mrca:
-                    continue
-                # If end of an IBD segment
-                elif current_ibd is not None:
-                    current_ibd["end_bp"] = tree.interval.left
-                    current_ibd["length_bp"] = current_ibd["end_bp"] - current_ibd["start_bp"]
-                    current_ibd["length_cm"] = current_ibd["length_bp"] * cm_per_bp
-                    
-                    # Only keep segments above minimum length
-                    if current_ibd["length_bp"] >= min_length_bp:
-                        ibd_segments.append(current_ibd)
-                    
-                    # Reset current segment
-                    if tmrca < 50:  # Start a new segment
-                        current_ibd = {
-                            "sample1": i,
-                            "sample2": j,
-                            "start_bp": tree.interval.left,
-                            "mrca": mrca,
-                            "tmrca": tmrca
-                        }
-                        current_mrca = mrca
-                    else:
-                        current_ibd = None
-                        current_mrca = None
-            
-            # Don't forget possible IBD segment at the end of the sequence
-            if current_ibd is not None:
-                current_ibd["end_bp"] = ts.sequence_length
-                current_ibd["length_bp"] = current_ibd["end_bp"] - current_ibd["start_bp"]
-                current_ibd["length_cm"] = current_ibd["length_bp"] * cm_per_bp
-                
-                if current_ibd["length_bp"] >= min_length_bp:
-                    ibd_segments.append(current_ibd)
-    
-    # Convert to DataFrame
-    ibd_df = pd.DataFrame(ibd_segments)
-    
-    return ibd_df</code></pre>
-
-            <h3>Visualizing Genetic Sharing</h3>
-            
-            <h4>IBD Sharing Matrix</h4>
-            <p>Visualizing patterns of IBD sharing between samples:</p>
-            
-            <pre><code>def visualize_ibd_sharing(ibd_df, n_samples):
-    """Create a heatmap of IBD sharing between samples."""
-    # Initialize a matrix for total IBD sharing
-    sharing_matrix = np.zeros((n_samples, n_samples))
-    
-    # Fill the matrix with total IBD sharing in cM
-    for _, row in ibd_df.iterrows():
-        i, j = int(row['sample1']), int(row['sample2'])
-        sharing_matrix[i, j] += row['length_cm']
-        sharing_matrix[j, i] += row['length_cm']  # Make matrix symmetric
-    
-    # Create heatmap
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(sharing_matrix, cmap='viridis')
-    plt.title('Total IBD Sharing Between Samples (cM)')
-    plt.savefig('results/ibd_sharing_heatmap.png')
-    
-    return sharing_matrix</code></pre>
-
-            <h4>MRCA Visualizer</h4>
-            <p>Visualizing the MRCA along the genome for pairs of samples:</p>
-            
-            <pre><code>def visualize_mrca_regions(ts, sample_pairs):
-    """Visualize MRCA regions along the genome for selected sample pairs."""
-    fig, axes = plt.subplots(len(sample_pairs), 1, figsize=(12, 2*len(sample_pairs)))
-    
-    # If only one pair, axes is not a list
-    if len(sample_pairs) == 1:
-        axes = [axes]
-    
-    for (s1, s2), ax in zip(sample_pairs, axes):
-        # Track MRCA and regions
-        mrca_regions = []
-        current_mrca = None
-        current_start = 0
-        
-        # Iterate through trees
-        for tree in ts.trees():
-            mrca = tree.mrca(s1, s2)
-            if mrca != current_mrca:
-                # Record previous region
-                if current_mrca is not None:
-                    mrca_regions.append((current_start, tree.interval.left, current_mrca, 
-                                        tree.time(current_mrca)))
-                # Start new region
-                current_mrca = mrca
-                current_start = tree.interval.left
-        
-        # Add final region
-        if current_mrca is not None:
-            mrca_regions.append((current_start, ts.sequence_length, current_mrca, 
-                                tree.time(current_mrca)))
-        
-        # Create colormap based on TMRCA
-        tmrcas = [r[3] for r in mrca_regions]
-        max_tmrca = max(tmrcas) if tmrcas else 1
-        
-        # Plot regions
-        for start, end, mrca, tmrca in mrca_regions:
-            # Normalize color by TMRCA (older = lighter)
-            color_intensity = 1 - (tmrca / max_tmrca)
-            color = (0, 0, color_intensity)
-            
-            # Plot rectangle for the region
-            width = end - start
-            ax.barh(0, width, left=start, height=0.5, color=color)
-            
-            # Add TMRCA text if region is wide enough
-            if width > ts.sequence_length / 30 and tmrca < max_tmrca * 0.8:  # Only label recent TMRCAs
-                text_pos = start + width/2
-                ax.text(text_pos, 0, f"{int(tmrca)}", ha='center', va='center', 
-                       color='white', fontsize=8)
-        
-        ax.set_title(f"MRCA regions for samples {s1} and {s2}")
-        ax.set_xlabel("Position (bp)")
-        ax.set_yticks([])
-    
-    plt.tight_layout()
-    plt.savefig('results/mrca_regions.png')
-    
-    return mrca_regions</code></pre>
-
-            <h3>Comparing msprime and Ped-Sim</h3>
-            
-            <h4>When to Use Each Tool</h4>
-            <p>Guidelines for choosing between msprime and Ped-Sim:</p>
-            
-            <table>
-                <tr>
-                    <th>Feature</th>
-                    <th>msprime</th>
-                    <th>Ped-Sim</th>
-                </tr>
-                <tr>
-                    <td>Simulation approach</td>
-                    <td>Coalescent (backward in time)</td>
-                    <td>Forward-time pedigree simulation</td>
-                </tr>
-                <tr>
-                    <td>Strengths</td>
-                    <td>
-                        • Population-level simulations<br>
-                        • Ancient demographic history<br>
-                        • Complex migration models<br>
-                        • Very efficient for large sample sizes
-                    </td>
-                    <td>
-                        • Explicit family relationships<br>
-                        • Direct control over pedigree structure<br>
-                        • Realistic recombination patterns<br>
-                        • Easier interpretation of results
-                    </td>
-                </tr>
-                <tr>
-                    <td>Best for</td>
-                    <td>
-                        • Population genetics questions<br>
-                        • Deep ancestral history<br>
-                        • Testing demographic models
-                    </td>
-                    <td>
-                        • Recent family relationships<br>
-                        • Known pedigree structures<br>
-                        • Validating relationship inference
-                    </td>
-                </tr>
-                <tr>
-                    <td>Output format</td>
-                    <td>Tree sequences (convertible to VCF)</td>
-                    <td>VCF, PLINK, IBD segments</td>
-                </tr>
-            </table>
-
-            <h4>Combining Approaches</h4>
-            <p>For some research questions, combining both simulation approaches may be beneficial:</p>
-            
-            <pre><code>def combined_simulation_workflow():
-    """Demonstrate a workflow that combines msprime and Ped-Sim approaches."""
-    # Step 1: Use msprime to simulate ancestral population history
-    ts_ancestral = msprime.sim_ancestry(
-        samples=100,  # Generate 100 haplotypes
-        population_size=10000,
-        sequence_length=10_000_000,
-        recombination_rate=1e-8,
-        random_seed=123
-    )
-    
-    # Add mutations
-    ts_ancestral = msprime.sim_mutations(ts_ancestral, rate=1e-8, random_seed=123)
-    
-    # Step 2: Export haplotypes for founder individuals in Ped-Sim format
-    # Export VCF for use as founder haplotypes in Ped-Sim
-    with open("ancestral_haplotypes.vcf", "w") as vcf_file:
-        ts_ancestral.write_vcf(vcf_file)
-    
-    # Step 3: Use Ped-Sim to simulate specific pedigree structures
-    # This would be a separate process, using the ancestral haplotypes
-    # as input for Ped-Sim founders
-    
-    # Step 4: Analyze the combined results
-    # This would involve importing Ped-Sim results and comparing with
-    # the ancestral population structure
-    
-    return {
-        "ancestral_ts": ts_ancestral,
-        "founder_vcf": "ancestral_haplotypes.vcf"
-    }</code></pre>
-
-            <h3>Anthropological Context</h3>
-            <p>The ability to simulate genetic data under complex models is particularly valuable for anthropological research:</p>
-            
-            <ul>
-                <li><strong>Testing Migration Hypotheses:</strong> Anthropologists can use msprime to simulate genetic patterns under different migration scenarios, helping to distinguish between competing hypotheses about human population movements (e.g., timing of peopling of the Americas or Oceania).</li>
-                <li><strong>Population Structure Studies:</strong> By simulating data under different population structure models, researchers can better interpret genetic clustering observed in real populations, accounting for factors like isolation by distance and ancient admixture events.</li>
-                <li><strong>Cultural Practice Effects:</strong> Comparing simulated genetic patterns under different mating systems (e.g., endogamy, exogamy, or polygyny) can help understand how cultural practices shape genetic diversity.</li>
-                <li><strong>Ancient DNA Interpretation:</strong> Simulations can help bridge the gap between modern and ancient DNA samples, providing a framework for understanding how genetic patterns evolve over time.</li>
-                <li><strong>Reconstructing Unwritten History:</strong> For populations without extensive written records, simulation allows testing of different historical scenarios against observed genetic patterns, helping to recover lost histories.</li>
-            </ul>
-            
-            <p>By combining powerful simulation tools with anthropological theory, researchers can move beyond simple description of genetic patterns to testing specific hypotheses about human history and cultural practices.</p>
-
-            <h3>Exercises</h3>
-            <ol>
-                <li>Create a basic msprime simulation and explore the resulting tree sequence</li>
-                <li>Implement a demographic model representing a population split and migration</li>
-                <li>Extract IBD segments from a simulated tree sequence</li>
-                <li>Visualize patterns of genetic sharing between samples</li>
-                <li>Compare IBD detection results between msprime and Ped-Sim simulated data</li>
-                <li>Design a simulation to test a specific anthropological hypothesis</li>
-            </ol>
-
-            <div class="alert alert-success">
-                <p><strong>Tip:</strong> When designing simulations, start simple and gradually add complexity. This allows you to understand how each parameter affects the results and makes debugging easier. Document your simulation parameters carefully so that your results are reproducible.</p>
+            <div class="concept-section">
+                <h4>The Coalescent Perspective: Working Backward in Time</h4>
+                <p>Coalescent theory represents a profound shift in how we conceptualize genetic inheritance:</p>
+                <ul>
+                    <li><strong>Backward-Time Approach:</strong> Unlike forward simulations that track genetic transmission from ancestors to descendants, coalescent models work backward, tracing the ancestry of present-day genetic variants to their common origins</li>
+                    <li><strong>Merging Lineages:</strong> As we move back in time, genetic lineages "coalesce" (merge) when they reach their most recent common ancestor</li>
+                    <li><strong>Time Dilation:</strong> Coalescent events become increasingly rare as we move further back in time, creating a natural compression of evolutionary history</li>
+                    <li><strong>Computational Efficiency:</strong> By focusing only on the ancestry of sampled individuals rather than entire populations, coalescent methods achieve remarkable computational efficiency</li>
+                </ul>
+                <p>This alternative perspective gives msprime its distinctive strengths in modeling deep time and complex population histories. When you implement coalescent simulations in this lab, you're engaging with a theoretical framework that revolutionized population genetics by making previously intractable questions computationally feasible.</p>
             </div>
+
+            <div class="concept-section">
+                <h4>Tree Sequences: A Revolution in Genetic Data Structures</h4>
+                <p>Tree sequences represent a breakthrough in how we store and analyze genealogical information:</p>
+                <ul>
+                    <li><strong>Genealogical Trees:</strong> For each position in the genome, a tree represents the ancestry of all samples</li>
+                    <li><strong>Recombination Representation:</strong> Adjacent trees differ only where recombination has altered the genealogical relationships</li>
+                    <li><strong>Compressed Storage:</strong> By storing only the differences between adjacent trees, tree sequences achieve massive reductions in file size compared to traditional formats</li>
+                    <li><strong>Analytical Power:</strong> Tree sequences enable direct calculation of many population genetic statistics without needing to examine individual variants</li>
+                </ul>
+                <p>The tree sequence data structure developed for msprime represents a significant advance in computational genetics. The efficiency gain isn't just a technical detail—it enables analyses of unprecedented scale, allowing researchers to model entire chromosomes with realistic recombination rates and complex demographic histories.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Incorporating Complex Demographic Histories</h4>
+                <p>Human populations have experienced numerous demographic events that shape genetic variation:</p>
+                <ul>
+                    <li><strong>Population Splits:</strong> Single ancestral populations dividing into multiple descendent populations</li>
+                    <li><strong>Population Size Changes:</strong> Expansions during favorable conditions and bottlenecks during disasters or migrations</li>
+                    <li><strong>Migration and Admixture:</strong> Gene flow between populations that were previously separated</li>
+                    <li><strong>Selection Events:</strong> Adaptive genetic variants increasing in frequency</li>
+                </ul>
+                <p>msprime allows explicit modeling of these complex demographic scenarios, creating a computational laboratory for testing hypotheses about human population history. The demographic models you'll implement in this lab aren't just abstract exercises—they represent our best understanding of human evolutionary history based on genetic, archaeological, and historical evidence.</p>
+            </div>
+
+            <h3>Mathematical and Theoretical Foundations</h3>
+            
+            <div class="concept-section">
+                <h4>Kingman's Coalescent: The Mathematical Core</h4>
+                <p>The mathematical foundation of msprime lies in coalescent theory:</p>
+                <ul>
+                    <li><strong>Merge Rate:</strong> In a population of size N, the rate at which any two lineages coalesce is 1/N per generation</li>
+                    <li><strong>Waiting Times:</strong> The time until the next coalescent event follows an exponential distribution</li>
+                    <li><strong>Simultaneous Events:</strong> In theory, coalescent events involve exactly two lineages (binary merging), though computational implementations may allow multifurcations</li>
+                    <li><strong>Independence:</strong> Coalescent events at different genomic positions are independent when separated by recombination</li>
+                </ul>
+                <p>These mathematical principles govern how msprime generates genealogies. Understanding them helps interpret simulation results and appreciate the elegant simplicity underlying complex genetic patterns. The coalescent framework also connects directly to concepts like effective population size and genetic drift, providing a computational approach to these core evolutionary processes.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>The Ancestral Recombination Graph (ARG)</h4>
+                <p>The ARG represents the complete ancestral history of a set of sequences:</p>
+                <ul>
+                    <li><strong>Network vs. Tree:</strong> While a tree represents ancestry at a single position, the ARG is a network that captures ancestral relationships across the entire genome</li>
+                    <li><strong>Recombination Events:</strong> In the ARG, lineages can both merge (coalescence) and split (recombination) as we move backward in time</li>
+                    <li><strong>Marginal Trees:</strong> For any genomic position, we can extract a "marginal tree" from the ARG that shows ancestry at that specific location</li>
+                    <li><strong>Sequence Reconstruction:</strong> The ARG contains all information needed to reconstruct the genetic sequences of sampled individuals</li>
+                </ul>
+                <p>Tree sequences in msprime provide an efficient representation of the ARG, allowing us to capture complex genealogical relationships that include both coalescence and recombination. This unified representation of genetic ancestry is particularly valuable for understanding IBD patterns, as it directly models the processes that create shared segments.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Mutation Models: From Genealogy to Genetic Variation</h4>
+                <p>In coalescent simulation, mutations are typically added to the genealogy after it's generated:</p>
+                <ul>
+                    <li><strong>Poisson Process:</strong> Mutations occur randomly along branches of the genealogical trees, following a Poisson process with rate proportional to branch length</li>
+                    <li><strong>Infinite Sites Model:</strong> The simplest mutation model assumes each mutation occurs at a new site</li>
+                    <li><strong>Finite Sites Models:</strong> More complex models allow multiple mutations at the same site, with various substitution matrices governing the types of changes</li>
+                    <li><strong>Sequence Context:</strong> Advanced models can incorporate context-dependent mutation rates, reflecting biological realities like CpG hypermutability</li>
+                </ul>
+                <p>When you add mutations to tree sequences in msprime, you're implementing these statistical models of genetic change. The separation of genealogy generation and mutation placement reflects the fundamental insight that genetic variation is shaped first by demographic processes (via genealogy) and then overlaid with mutational processes.</p>
+            </div>
+
+            <h3>Applications in Anthropological Genetics</h3>
+            
+            <div class="concept-section">
+                <h4>Testing Competing Models of Human History</h4>
+                <p>Coalescent simulations provide a powerful framework for hypothesis testing in anthropological genetics:</p>
+                <ul>
+                    <li><strong>Model Comparison:</strong> Simulating genetic data under different historical scenarios and comparing to observed patterns</li>
+                    <li><strong>Parameter Estimation:</strong> Inferring demographic parameters (population sizes, split times, migration rates) by finding values that produce realistic genetic patterns</li>
+                    <li><strong>Confidence Assessment:</strong> Generating multiple simulations to establish confidence intervals for historical inferences</li>
+                    <li><strong>ABC and Machine Learning:</strong> Using simulation-based approaches to infer complex demographic histories from genetic data</li>
+                </ul>
+                <p>This model-testing approach has transformed our understanding of human history, allowing researchers to quantitatively evaluate competing hypotheses about migration events, population splits, and admixture. The simulations you'll create in this lab form the foundation for this type of hypothesis-driven anthropological genetics.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Contextualizing Modern Genetic Variation</h4>
+                <p>Coalescent simulations help place modern genetic patterns in their deep historical context:</p>
+                <ul>
+                    <li><strong>Null Models:</strong> Creating neutral demographic models that serve as baselines against which to detect unusual patterns</li>
+                    <li><strong>Background Relatedness:</strong> Quantifying the expected genetic sharing between individuals from the same population due to deep ancestry</li>
+                    <li><strong>Natural Selection:</strong> Distinguishing between demographic and selective explanations for unusual patterns of genetic diversity</li>
+                    <li><strong>Ancient DNA Integration:</strong> Bridging ancient and modern samples by modeling the evolutionary processes connecting them</li>
+                </ul>
+                <p>By generating expectations for genetic variation under different historical scenarios, coalescent simulations help researchers interpret the patterns observed in real data. This approach is especially valuable for anthropologists seeking to understand how ancient demographic events continue to shape modern human genetic diversity.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Identifying "True" IBD vs. Background Sharing</h4>
+                <p>Coalescent simulations can help distinguish recent genealogical relationships from deep population sharing:</p>
+                <ul>
+                    <li><strong>IBD Length Distribution:</strong> Modeling the expected distribution of IBS/IBD segment lengths under different demographic histories</li>
+                    <li><strong>Relationship Thresholds:</strong> Establishing thresholds for detecting genealogical relationships of different degrees</li>
+                    <li><strong>Population-Specific Calibration:</strong> Calibrating IBD detection for populations with different demographic histories and levels of endogamy</li>
+                    <li><strong>Temporal Stratification:</strong> Distinguishing between recent and ancient genetic sharing</li>
+                </ul>
+                <p>This application directly connects msprime simulations to genetic genealogy practice. By modeling the background sharing expected for different populations, researchers can better distinguish genetic similarities that represent genealogically meaningful relationships from those resulting from deep population history.</p>
+            </div>
+
+            <h3>Historical and Cultural Context</h3>
+            
+            <div class="concept-section">
+                <h4>The Out-of-Africa Expansion and Human Diversity</h4>
+                <p>Coalescent simulations have been instrumental in understanding human origins:</p>
+                <ul>
+                    <li><strong>African Origin:</strong> Coalescent modeling consistently supports an African origin for modern humans, with greater genetic diversity in African populations</li>
+                    <li><strong>Serial Bottlenecks:</strong> As populations migrated out of Africa, they experienced sequential founder effects that reduced genetic diversity</li>
+                    <li><strong>Archaic Admixture:</strong> Complex models incorporating admixture with Neanderthals and Denisovans help explain patterns in non-African genomes</li>
+                    <li><strong>Recent Population Growth:</strong> The exponential growth of human populations in recent millennia creates distinctive patterns in the frequency of rare variants</li>
+                </ul>
+                <p>The demographic models you'll implement in this lab reflect this scientific consensus about human origins and diversification. These models provide a framework for understanding genetic diversity in a global context, helping place individual genealogical connections within the broader story of human migration and population growth.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Cultural Practices and Genetic Structure</h4>
+                <p>Human cultural practices have left detectable signatures in genetic structure:</p>
+                <ul>
+                    <li><strong>Matrilocality vs. Patrilocality:</strong> Different patterns of residence after marriage create distinctive signatures in mitochondrial and Y-chromosome diversity</li>
+                    <li><strong>Endogamy:</strong> Marriage patterns that favor within-group mating increase background relatedness</li>
+                    <li><strong>Polygyny and Reproductive Skew:</strong> Unequal reproductive success affects the effective population size and coalescent rates</li>
+                    <li><strong>Language and Cultural Barriers:</strong> Cultural boundaries often create genetic structure by limiting gene flow</li>
+                </ul>
+                <p>Coalescent simulations allow researchers to model how these cultural practices shape genetic diversity. By incorporating social structure into demographic models, msprime can help anthropologists understand the complex interplay between cultural practices and genetic patterns.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Recent Historical Events and Genetic Legacy</h4>
+                <p>More recent historical events have also shaped genetic structure in ways that affect genealogical research:</p>
+                <ul>
+                    <li><strong>Colonization and Admixture:</strong> European colonization created complex patterns of admixture in many world regions</li>
+                    <li><strong>Forced Migration:</strong> The transatlantic slave trade and other forced migrations disrupted population structure</li>
+                    <li><strong>Population Bottlenecks:</strong> Events like famines and epidemics left genetic signatures in affected populations</li>
+                    <li><strong>Recent Expansions:</strong> Population growth and migration in recent centuries has created complex patterns of relatedness</li>
+                </ul>
+                <p>While msprime is particularly powerful for modeling deep time, it can also incorporate these more recent events. Understanding how these historical processes shaped genetic diversity is crucial for interpreting genetic relationships in populations with complex histories of displacement, admixture, and recent demographic change.</p>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you work with msprime in this lab, consider these broader implications:</p>
+            <ul>
+                <li><strong>Model Limitations:</strong> All models are simplifications—what aspects of human history are we omitting, and how might these affect our conclusions?</li>
+                <li><strong>Parameter Uncertainty:</strong> How sensitive are simulation results to uncertainty in parameters like population sizes and split times?</li>
+                <li><strong>Disciplinary Integration:</strong> How can we better integrate genetic simulations with evidence from archaeology, linguistics, and written history?</li>
+                <li><strong>Human Story:</strong> How do abstract demographic models connect to the lived experiences of human communities through time?</li>
+            </ul>
+            <p>These considerations highlight the importance of interpreting simulation results with humility and in dialogue with other forms of knowledge about human history. While coalescent simulations provide powerful tools for testing hypotheses, they should be viewed as complementary to, rather than replacements for, other approaches to understanding the human past.</p>
             
             <div class="lab-navigation">
-                <a href="lab9_evaluation.html" class="prev-lab">IBD Evaluation</a>
-                <a href="lab11_distributions.html" class="next-lab">Distributions</a>
+                <a href="lab8_evaluation.html" class="prev-lab">IBD Evaluation</a>
+                <a href="lab10_distributions.html" class="next-lab">Distributions</a>
             </div>
         </article>
     </main>

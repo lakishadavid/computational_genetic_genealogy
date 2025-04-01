@@ -23,259 +23,160 @@
             <h2>Lab 12: Reconstructing Pedigrees with Bonsai</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Having detected IBD segments and analyzed their statistical properties, we now proceed to the core goal of computational genetic genealogy: reconstructing family trees (pedigrees) from genetic data alone. This allows us to infer relationships even when documentary evidence is limited or missing.</p>
+                <p><strong>Why This Matters:</strong> Pedigree reconstruction represents the culmination of genetic genealogy—transforming raw biological patterns into meaningful family connections. By inferring ancestral relationships from genetic data alone, we can rebuild lost histories, reconnect fragmented lineages, and provide a powerful tool for understanding how historical events have shaped human kinship across generations.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the principles behind pedigree reconstruction from genetic data</li>
-                <li>Use the BonsaiTree algorithm to infer pedigree structures</li>
-                <li>Interpret pedigree reconstruction results</li>
-                <li>Evaluate the accuracy of reconstructed pedigrees</li>
-                <li>Apply pedigree reconstruction to real-world genetic genealogy questions</li>
-            </ul>
-
-            <h3>Key Concepts</h3>
+            <h3>Core Concepts</h3>
             
-            <h4>Pedigree Reconstruction</h4>
-            <p>Pedigree reconstruction refers to the computational inference of family relationships based solely on genetic data, without requiring prior knowledge of family structure. This is particularly valuable in situations where:</p>
+            <h4>The Genealogical Inference Challenge</h4>
+            <p>At its heart, pedigree reconstruction addresses one of the most fundamental human questions: How are we related to each other? Throughout history, humans have created elaborate kinship systems, maintained oral traditions, and documented family connections through written records. However, these cultural systems are vulnerable to disruption through migration, colonization, enslavement, adoption, and social upheaval.</p>
             
+            <p>Computational pedigree reconstruction offers a biological complement to these cultural methods, allowing us to recover relationships even when documentary evidence is missing or incomplete. This process transforms IBD segments—the biological remnants of shared ancestry—into reconstructed family trees that provide a scientific account of relatedness.</p>
+            
+            <p>The central challenge lies in translating a complex pattern of genetic sharing between multiple individuals into a coherent family structure that logically explains these patterns. This requires addressing questions such as:</p>
             <ul>
-                <li>Historical records are incomplete or missing</li>
-                <li>Relationships are unknown or uncertain</li>
-                <li>There's a need to validate documented relationships</li>
+                <li>Are two people who share DNA related through a recent common ancestor or multiple distant paths?</li>
+                <li>What minimal pedigree structure explains all observed genetic connections in a group?</li>
+                <li>How can we distinguish between different possible relationship configurations that produce similar genetic sharing?</li>
+                <li>How do we account for missing individuals who connect the sampled people but aren't present in our dataset?</li>
             </ul>
-            
-            <div class="figure">
-                <img src="../images/pedigree_reconstruction.png" alt="Pedigree Reconstruction Process" style="max-width: 700px;">
-                <p class="figure-caption">Pedigree reconstruction uses IBD segments to infer the most likely family tree structure connecting genetic relatives.</p>
-            </div>
 
-            <h4>The BonsaiTree Algorithm</h4>
-            <p>BonsaiTree is a specialized algorithm designed to infer pedigree structures from genotype data:</p>
+            <h4>The Bonsai Approach</h4>
+            <p>The BonsaiTree algorithm, like its botanical namesake, approaches pedigree reconstruction through careful, iterative shaping of possibilities. Just as bonsai cultivation reveals the essential structure of a tree through selective pruning, the algorithm gradually constrains the space of possible relationships to reveal the underlying pedigree structure.</p>
             
+            <p>This process integrates three key elements:</p>
             <ul>
-                <li>Uses detected IBD segments as input</li>
-                <li>Models the probability of IBD sharing under different relationship scenarios</li>
-                <li>Applies graph theory to construct relationship networks</li>
-                <li>Constrains pedigrees to follow biologically plausible patterns</li>
-                <li>Builds the pedigree incrementally, like pruning a bonsai tree to reveal its structure</li>
+                <li><strong>Statistical Modeling</strong>: Using probability distributions to predict expected patterns of IBD sharing under different relationship scenarios</li>
+                <li><strong>Graph Theory</strong>: Representing potential family structures as networks where individuals are nodes and relationships are edges</li>
+                <li><strong>Biological Constraints</strong>: Enforcing rules that reflect biological reality, such as generational timing, reproductive limitations, and genetic inheritance patterns</li>
             </ul>
-
-            <h3>Preparing Data for Bonsai</h3>
             
-            <h4>Required Input</h4>
-            <p>BonsaiTree requires processed IBD segment data:</p>
+            <p>By combining these approaches, Bonsai can infer complex multi-generational structures that would be difficult or impossible to discern through pairwise relationship analyses alone.</p>
+
+            <h3>Theoretical Foundations</h3>
             
-            <pre><code># Format IBD data for Bonsai input
-import pandas as pd
-import numpy as np
-from bonsaitree.v3.bonsai import build_pedigree
-
-# Load the IBD segments detected in previous labs
-ibd_segments = pd.read_csv("results/segments/filtered_segments_ibis.csv", sep="\t")
-
-# Convert to the format required by Bonsai
-def prepare_bonsai_input(ibd_df):
-    """Prepare IBD segments for Bonsai input."""
-    # Rename columns to match Bonsai's expected format
-    bonsai_df = ibd_df.rename(columns={
-        'id1': 'ind1', 
-        'id2': 'ind2',
-        'chromosome': 'chrom', 
-        'genetic_length': 'seg_len',
-        'physical_position_start': 'start_pos',
-        'physical_position_end': 'end_pos'
-    })
-    
-    # Add segment IDs
-    bonsai_df['seg_id'] = [f"seg_{i}" for i in range(len(bonsai_df))]
-    
-    # Keep only required columns
-    bonsai_df = bonsai_df[['seg_id', 'ind1', 'ind2', 'chrom', 'start_pos', 'end_pos', 'seg_len']]
-    
-    return bonsai_df
-
-# Prepare the data
-bonsai_input = prepare_bonsai_input(ibd_segments)</code></pre>
-
-            <h3>Running Bonsai</h3>
+            <h4>The Mathematics of Pedigree Inference</h4>
+            <p>Pedigree reconstruction is fundamentally a probabilistic inference problem. For any observed pattern of IBD sharing, multiple pedigree structures could potentially explain it. The goal is to find the most likely structure, given the data.</p>
             
-            <h4>Basic Bonsai Usage</h4>
-            <p>The core function for running Bonsai is simple, but there are many parameters to control the reconstruction process:</p>
+            <p>This leads to a mathematical formulation:</p>
+            <p><em>P(pedigree | observed IBD) ∝ P(observed IBD | pedigree) × P(pedigree)</em></p>
             
-            <pre><code># Run Bonsai pedigree reconstruction
-from bonsaitree.v3.bonsai import build_pedigree
-
-# Define list of individuals
-individuals = list(set(bonsai_input['ind1'].tolist() + bonsai_input['ind2'].tolist()))
-
-# Run Bonsai with default parameters
-pedigree = build_pedigree(
-    individuals=individuals,
-    segs=bonsai_input,
-    min_cm=7.0,           # Minimum IBD segment length to consider
-    meiosis_prior='uniform',  # Prior on relationship distances
-    g_max=5,              # Maximum number of generations to consider
-    verbose=True          # Show detailed progress
-)</code></pre>
-
-            <h4>Advanced Configuration</h4>
-            <p>For more control over the reconstruction process:</p>
-            
-            <pre><code># Run Bonsai with advanced options
-pedigree = build_pedigree(
-    individuals=individuals,
-    segs=bonsai_input,
-    min_cm=7.0,
-    meiosis_prior='uniform',
-    g_max=5,
-    constraints=constraints,    # Custom relationship constraints
-    sex=sex_info,              # Known sex information for individuals
-    birth_years=birth_years,   # Known or estimated birth years
-    twins=twin_pairs,          # Known twin pairs
-    verbose=True
-)</code></pre>
-
-            <h3>Analyzing Bonsai Output</h3>
-            
-            <h4>Pedigree Structure</h4>
-            <p>The returned pedigree object contains the inferred relationships:</p>
-            
-            <pre><code># Examine the pedigree structure
-print(f"Number of individuals: {len(pedigree.get_individuals())}")
-print(f"Number of inferred relationships: {len(pedigree.get_relationships())}")
-
-# Get all relationships
-relationships = pedigree.get_relationships()
-for rel in relationships[:10]:  # Print first 10 as example
-    print(f"{rel['ind1']} is related to {rel['ind2']} as {rel['type']}")</code></pre>
-
-            <h4>Visualizing the Pedigree</h4>
-            <p>Bonsai provides tools to visualize the reconstructed pedigree:</p>
-            
-            <pre><code># Visualize the pedigree
-from bonsaitree.v3.rendering import render_pedigree
-
-# Generate a plot of the pedigree
-fig = render_pedigree(pedigree)
-fig.savefig("results/reconstructed_pedigree.png", dpi=300)
-
-# You can also export to other formats
-pedigree.to_dot("results/pedigree.dot")  # GraphViz format
-pedigree.to_ped("results/pedigree.ped")  # PLINK pedigree format</code></pre>
-
-            <h3>Evaluating Pedigree Reconstruction</h3>
-            
-            <h4>Comparing to Known Relationships</h4>
-            <p>When working with simulated data or partially known pedigrees, we can evaluate the accuracy of the reconstruction:</p>
-            
-            <pre><code># Load the known pedigree structure (e.g., from simulation or records)
-known_pedigree = pd.read_csv("data/class_data/pedigree.fam", sep="\s+", 
-                           names=['fam_id', 'ind_id', 'father_id', 'mother_id', 'sex', 'phenotype'])
-
-# Function to compare known and inferred relationships
-def evaluate_pedigree(known_ped, inferred_ped):
-    """Compare known and inferred pedigree relationships."""
-    # Extract parent-child relationships from known pedigree
-    known_relations = []
-    for _, row in known_ped.iterrows():
-        if row['father_id'] != '0':
-            known_relations.append((row['father_id'], row['ind_id'], 'parent-child'))
-        if row['mother_id'] != '0':
-            known_relations.append((row['mother_id'], row['ind_id'], 'parent-child'))
-    
-    # Get inferred relationships
-    inferred_relations = []
-    for rel in inferred_ped.get_relationships():
-        inferred_relations.append((rel['ind1'], rel['ind2'], rel['type']))
-    
-    # Calculate metrics
-    correct = len(set(known_relations) & set(inferred_relations))
-    total_known = len(known_relations)
-    total_inferred = len(inferred_relations)
-    
-    precision = correct / total_inferred if total_inferred > 0 else 0
-    recall = correct / total_known if total_known > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
-    
-    return {
-        'precision': precision,
-        'recall': recall,
-        'f1_score': f1,
-        'correct': correct,
-        'total_known': total_known,
-        'total_inferred': total_inferred
-    }
-
-# Evaluate our reconstruction
-metrics = evaluate_pedigree(known_pedigree, pedigree)
-print(f"Precision: {metrics['precision']:.2f}")
-print(f"Recall: {metrics['recall']:.2f}")
-print(f"F1 Score: {metrics['f1_score']:.2f}")</code></pre>
-
-            <h3>Challenges in Pedigree Reconstruction</h3>
-            
-            <h4>Ambiguity in Reconstruction</h4>
-            <p>Several factors can make pedigree reconstruction challenging:</p>
-            
-            <table>
-                <tr>
-                    <th>Challenge</th>
-                    <th>Description</th>
-                    <th>Mitigation</th>
-                </tr>
-                <tr>
-                    <td>Missing individuals</td>
-                    <td>Key connecting individuals might not be in the dataset</td>
-                    <td>Use latent ancestors; incorporate prior knowledge</td>
-                </tr>
-                <tr>
-                    <td>Equivalent structures</td>
-                    <td>Multiple pedigrees may explain the same IBD patterns</td>
-                    <td>Use additional constraints; consider most parsimonious solution</td>
-                </tr>
-                <tr>
-                    <td>IBD detection errors</td>
-                    <td>False positives or negatives in IBD detection</td>
-                    <td>Filter IBD segments; use statistical methods robust to errors</td>
-                </tr>
-                <tr>
-                    <td>Distant relationships</td>
-                    <td>Beyond ~5-6 generations, IBD signal becomes sparse</td>
-                    <td>Focus on closer relationships; combine with other evidence</td>
-                </tr>
-            </table>
-
-            <h3>Anthropological Context</h3>
-            <p>Computational pedigree reconstruction has profound implications for anthropology, particularly when studying populations with disrupted family histories:</p>
-            
+            <p>Where:</p>
             <ul>
-                <li><strong>Diaspora Studies:</strong> Reconstructing family connections across continents disrupted by historical events like the transatlantic slave trade</li>
-                <li><strong>Kinship Systems:</strong> Comparing biological relationships to culturally defined kinship systems</li>
-                <li><strong>Historical Demography:</strong> Inferring historical population characteristics from reconstructed pedigrees</li>
-                <li><strong>Identity and Heritage:</strong> Supporting communities seeking to reconnect with ancestral ties</li>
+                <li><em>P(pedigree | observed IBD)</em> is the probability of a particular pedigree structure given the observed IBD segments</li>
+                <li><em>P(observed IBD | pedigree)</em> is the likelihood of observing the specific IBD patterns if the pedigree were true</li>
+                <li><em>P(pedigree)</em> is the prior probability of the pedigree structure before considering genetic data</li>
             </ul>
             
-            <p>The ability to reconstruct pedigrees from genetic data alone provides a powerful tool for anthropologists studying how historical events have shaped family structures, especially when documentary evidence is limited by historical circumstances.</p>
+            <p>This Bayesian framework allows the algorithm to incorporate both genetic evidence and prior knowledge (like known birth years, historical constraints, or documented relationships) when available.</p>
+
+            <h4>Graph Theoretic Representation</h4>
+            <p>Pedigrees are naturally represented as directed acyclic graphs, where:</p>
+            <ul>
+                <li>Each individual is a node in the graph</li>
+                <li>Parent-child relationships are directed edges</li>
+                <li>The direction of edges follows the flow of genetic material through generations</li>
+                <li>No cycles can exist (a person cannot be their own ancestor)</li>
+            </ul>
+            
+            <p>This representation allows algorithms to leverage powerful graph theory concepts to construct and evaluate potential pedigree structures. When inferring missing ancestors, the algorithm must optimize the graph structure to balance competing objectives:</p>
+            <ul>
+                <li>Minimizing the number of added latent individuals (parsimony)</li>
+                <li>Maximizing the explanation of observed genetic sharing (completeness)</li>
+                <li>Maintaining biological plausibility (consistency)</li>
+            </ul>
+            
+            <p>The result is a reconstructed family tree that best explains the observed genetic connections while following biological constraints.</p>
+
+            <h3>Applications and Implications</h3>
+            
+            <h4>Recovering Lost Histories</h4>
+            <p>Pedigree reconstruction has profound implications for communities whose family histories have been disrupted by historical trauma. For example:</p>
+            <ul>
+                <li><strong>Post-Slavery Reconnection</strong>: Descendants of enslaved people often lack documentary evidence of family connections due to deliberate erasure of kinship during slavery. Genetic pedigree reconstruction can help rebuild these connections beyond the limited historical record.</li>
+                <li><strong>Indigenous Kinship Restoration</strong>: Indigenous communities affected by forced removal policies, residential/boarding schools, and adoption programs can use pedigree reconstruction to reestablish connections disrupted by colonization.</li>
+                <li><strong>Diaspora Reunification</strong>: Communities scattered by war, genocide, or forced migration can reconnect family branches separated by these historical events.</li>
+                <li><strong>Adoption Reunification</strong>: Individuals seeking biological family connections after closed adoptions can identify not just direct relatives but broader family structures.</li>
+            </ul>
+            
+            <p>In these contexts, computational pedigree reconstruction becomes not just a scientific tool but a means of historical and cultural reclamation.</p>
+
+            <h4>Integrating Cultural and Biological Kinship</h4>
+            <p>Anthropologists recognize that kinship operates at both biological and cultural levels, often with complex interrelationships between the two. Pedigree reconstruction creates opportunities to study these relationships by:</p>
+            <ul>
+                <li>Comparing inferred biological relationships to culturally recognized kinship structures</li>
+                <li>Exploring how social kinship practices (like adoption, fictive kinship, or marriage patterns) interact with genetic inheritance</li>
+                <li>Examining how different societies reconcile biological and social definitions of relatedness</li>
+                <li>Understanding how genetic kinship might be interpreted differently across cultural contexts</li>
+            </ul>
+            
+            <p>This integration of biological and cultural perspectives enriches both genetic genealogy and anthropological approaches to kinship.</p>
+
+            <h3>Limitations and Challenges</h3>
+            
+            <h4>The Limits of Genetic Evidence</h4>
+            <p>While powerful, pedigree reconstruction faces several inherent limitations:</p>
+            
+            <p><strong>Temporal Depth</strong>: The recombination process that creates IBD segments also fragments them over generations. Beyond approximately 5-7 generations, IBD segments become too small or too few to reliably reconstruct relationships. This creates a genetic horizon beyond which pedigree reconstruction becomes increasingly uncertain.</p>
+            
+            <p><strong>Structural Ambiguity</strong>: Different pedigree configurations can produce statistically indistinguishable patterns of genetic sharing. For example, the genetic sharing between half-siblings can be difficult to distinguish from that between an aunt/uncle and niece/nephew without additional relatives to provide context.</p>
+            
+            <p><strong>Missing Data</strong>: Pedigree reconstruction works best when most members of recent generations are sampled. When key connecting individuals are missing from the dataset, the algorithm must infer latent (unobserved) ancestors, introducing additional uncertainty.</p>
+            
+            <p><strong>Complex Mating Patterns</strong>: Most pedigree reconstruction algorithms assume random mating. In populations with endogamy (marriage within a community), consanguinity (marriage between relatives), or other non-random mating patterns, standard models may produce inaccurate results.</p>
+
+            <h4>Ethical Considerations</h4>
+            <p>The ability to infer family relationships from genetic data raises important ethical questions:</p>
+            <ul>
+                <li><strong>Privacy Implications</strong>: Pedigree reconstruction can reveal relationships that individuals may not be aware of or wish to keep private, such as unknown parentage or previously undisclosed adoptions.</li>
+                <li><strong>Consent Boundaries</strong>: An individual's genetic data can reveal information about relatives who have not consented to testing or research participation.</li>
+                <li><strong>Cultural Sensitivity</strong>: Different cultures have varying norms about kinship disclosure, adoption, and family structure that may not align with biological reconstruction approaches.</li>
+                <li><strong>Social Impact</strong>: Revealing biological relationships can affect inheritance rights, tribal membership, legal status, and family dynamics in complex ways.</li>
+            </ul>
+            
+            <p>These considerations necessitate careful, culturally informed approaches to pedigree reconstruction, especially in sensitive contexts.</p>
+
+            <h3>Broader Context</h3>
+            
+            <h4>Historical Demography</h4>
+            <p>Beyond individual family histories, reconstructed pedigrees provide valuable data for understanding historical population dynamics:</p>
+            <ul>
+                <li>Inferring historical fertility patterns and family structures</li>
+                <li>Detecting demographic events like population bottlenecks or expansions</li>
+                <li>Analyzing marriage patterns and social structures across generations</li>
+                <li>Studying how migration and admixture have shaped community genetics</li>
+            </ul>
+            
+            <p>These applications extend the value of pedigree reconstruction beyond personal genealogy to broader historical and anthropological questions.</p>
+
+            <h4>Future Directions</h4>
+            <p>The field of computational pedigree reconstruction continues to evolve, with several promising directions:</p>
+            <ul>
+                <li><strong>Integration with Documentary Evidence</strong>: Combining genetic pedigree reconstruction with historical records, oral histories, and other non-genetic evidence</li>
+                <li><strong>Cultural Context Adaptation</strong>: Developing algorithms that can account for diverse marriage patterns, kinship systems, and cultural practices</li>
+                <li><strong>Ancient DNA Application</strong>: Extending techniques to work with ancient DNA to connect modern populations with historical communities</li>
+                <li><strong>Community-Centered Approaches</strong>: Creating tools that empower communities to reconstruct their own genetic histories according to their cultural values and needs</li>
+            </ul>
+            
+            <p>These developments point toward increasingly sophisticated, culturally informed approaches to pedigree reconstruction that honor both biological realities and diverse human kinship systems.</p>
 
             <h3>Exercises</h3>
             <ol>
-                <li>Prepare IBD segment data for Bonsai input</li>
-                <li>Run Bonsai with different parameter settings and compare results</li>
-                <li>Visualize the reconstructed pedigree</li>
-                <li>Compare the inferred pedigree to known relationships (when available)</li>
-                <li>Analyze how different IBD detection thresholds affect pedigree reconstruction</li>
-                <li>Discuss the implications of pedigree reconstruction for anthropological research</li>
+                <li>Consider how pedigree reconstruction might be applied to a specific historical context or community</li>
+                <li>Analyze how different cultural kinship systems might interpret or utilize genetically reconstructed pedigrees</li>
+                <li>Discuss the ethical considerations in pedigree reconstruction for a specific context</li>
+                <li>Explore how biological relationships inferred from genetic data might complement or challenge documentary evidence</li>
+                <li>Consider the implications of pedigree reconstruction for communities with disrupted family histories</li>
+                <li>Design a research protocol that addresses ethical concerns in pedigree reconstruction</li>
             </ol>
 
             <div class="alert alert-success">
-                <p><strong>Tip:</strong> Pedigree reconstruction can be computationally intensive. Start with a small subset of individuals to understand the process before scaling up to larger datasets.</p>
+                <p><strong>Tip:</strong> When working with pedigree reconstruction, remember that the results represent probabilities rather than certainties. Always interpret inferred relationships with appropriate caution, especially when making claims about specific family connections that may have personal significance to living individuals.</p>
             </div>
             
             <div class="lab-navigation">
                 <a href="lab11_distributions.html" class="prev-lab">Distributions</a>
-                <span></span> <!-- placeholder for next lab button -->
+                <a href="lab12_bonsai_fundamentals.html" class="next-lab">Bonsai Fundamentals</a>
             </div>
         </article>
     </main>

@@ -24,375 +24,169 @@
             <h2>Lab 13: Mathematical Foundations of Bonsai</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Understanding the mathematical principles behind Bonsai is essential for interpreting results, optimizing algorithm parameters, and extending the algorithm for specialized applications. The probabilistic framework that powers Bonsai represents the connection between observed genetic data and the biological reality of family relationships.</p>
+                <p><strong>Why This Matters:</strong> Mathematics serves as the bridge between biological reality and computational inference in genetic genealogy. The probabilistic frameworks that underpin pedigree reconstruction algorithms like Bonsai translate the messy, incomplete patterns of genetic sharing into coherent family structures, quantifying uncertainty and guiding interpretation. Understanding these mathematical foundations reveals both the power and limitations of computational approaches to reconstructing human relationships.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Master the probabilistic framework that underpins the Bonsai algorithm</li>
-                <li>Understand how likelihood functions quantify the probability of observed IBD patterns</li>
-                <li>Analyze the mathematical models for different relationship types</li>
-                <li>Explore IBD moment calculations and their role in pedigree inference</li>
-                <li>Examine Bonsai's optimization algorithms for finding maximum likelihood pedigrees</li>
-                <li>Implement and interpret key mathematical components of the Bonsai algorithm</li>
-            </ul>
-
-            <h3>The Probabilistic Framework of Bonsai</h3>
+            <h3>Core Concepts</h3>
             
-            <p>At its core, Bonsai is a statistical algorithm that uses probabilistic inference to reconstruct pedigrees from genetic data. The algorithm employs a Bayesian approach, balancing prior knowledge about relationship structures with the observed evidence from IBD segment patterns.</p>
-
-            <h4>Bayesian Inference in Pedigree Reconstruction</h4>
-            <p>The Bayesian framework allows Bonsai to reason about unobserved structures (pedigrees) based on observed data (IBD segments):</p>
+            <h4>Probability as Genealogical Reasoning</h4>
+            <p>Human genealogical reasoning has always been probabilistic in nature, even when done intuitively. When we recognize family resemblances, deduce relationships from shared physical traits, or interpret documentary evidence, we implicitly evaluate likelihoods and weigh competing explanations. The mathematical foundation of Bonsai formalizes this reasoning in a computational framework.</p>
             
-            <div class="equation">
-                <p>P(Pedigree | IBD data) ∝ P(IBD data | Pedigree) × P(Pedigree)</p>
-                <p>where:</p>
-                <ul>
-                    <li>P(Pedigree | IBD data) is the posterior probability of a pedigree given the IBD data</li>
-                    <li>P(IBD data | Pedigree) is the likelihood of observing the IBD data given a particular pedigree</li>
-                    <li>P(Pedigree) is the prior probability of the pedigree</li>
-                </ul>
-            </div>
+            <p>At the heart of this approach is Bayesian inference, which provides a mathematical framework for updating beliefs based on evidence. In the context of genetic genealogy, this takes the form:</p>
             
-            <p>Bonsai seeks to find the pedigree that maximizes this posterior probability, which is equivalent to maximizing the log-likelihood when using uniform priors:</p>
+            <p style="text-align:center;"><em>P(Pedigree | Genetic Data) ∝ P(Genetic Data | Pedigree) × P(Pedigree)</em></p>
             
-            <div class="equation">
-                <p>log P(Pedigree | IBD data) = log P(IBD data | Pedigree) + log P(Pedigree) + constant</p>
-            </div>
-
-            <h3>Likelihood Functions: Quantifying the Evidence</h3>
-            
-            <p>The likelihood function measures how well a proposed pedigree explains the observed IBD data. In Bonsai, this function is built from probabilistic models of IBD segment inheritance.</p>
-
-            <h4>The IBD Likelihood Model</h4>
-            <p>For a pair of individuals, the likelihood of their IBD sharing given a specific relationship can be expressed as:</p>
-            
-            <div class="equation">
-                <p>L(r | IBD) = P(IBD | r)</p>
-                <p>where:</p>
-                <ul>
-                    <li>r is the relationship type (e.g., parent-child, siblings, cousins)</li>
-                    <li>IBD represents the observed IBD segments between the individuals</li>
-                </ul>
-            </div>
-            
-            <p>Bonsai models this likelihood using a Poisson-like process for the number of IBD segments and an exponential distribution for segment lengths.</p>
-
-            <h4>The IBD Moments Model</h4>
-            <p>A key innovation in Bonsai is the use of "IBD moments" to summarize the IBD sharing between individuals:</p>
-            
-            <pre><code># Python implementation of IBD moments calculation
-def calculate_ibd_moments(segment_list, min_length=7):
-    """Calculate IBD moments from a list of segments.
-    
-    Args:
-        segment_list: List of IBD segments with lengths in cM
-        min_length: Minimum segment length to consider
-    
-    Returns:
-        Dictionary with first moment (count) and second moment (total length)
-    """
-    # Filter segments by minimum length
-    filtered_segments = [seg for seg in segment_list if seg >= min_length]
-    
-    # First moment: number of segments
-    first_moment = len(filtered_segments)
-    
-    # Second moment: total length of segments
-    second_moment = sum(filtered_segments)
-    
-    return {
-        "first_moment": first_moment,
-        "second_moment": second_moment
-    }</code></pre>
-            
-            <p>These moments are then used to calculate likelihoods based on theoretical expectations for different relationship types:</p>
-            
-            <div class="equation">
-                <p>log L(r | IBD) = log P(m₁, m₂ | r)</p>
-                <p>where:</p>
-                <ul>
-                    <li>m₁ is the first IBD moment (segment count)</li>
-                    <li>m₂ is the second IBD moment (total length)</li>
-                    <li>r is the relationship type</li>
-                </ul>
-            </div>
-
-            <h3>Relationship Models in Bonsai</h3>
-            
-            <h4>Parent-Child Relationship</h4>
-            <p>The parent-child relationship has a distinctive IBD pattern, with IBD1 segments covering approximately 100% of the genome:</p>
-            
-            <div class="equation">
-                <p>Expected IBD sharing: 3500 cM</p>
-                <p>Expected segments: 23 (one per chromosome, with some fragmentation due to sequencing artifacts)</p>
-                <p>Theoretical IBD1 percentage: 100%</p>
-                <p>Theoretical IBD2 percentage: 0%</p>
-            </div>
-            
-            <p>The likelihood function for parent-child relationships incorporates these expectations:</p>
-            
-            <pre><code>def parent_child_likelihood(segments):
-    """Calculate likelihood of a parent-child relationship."""
-    total_length = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    coverage = total_length / 3500  # proportion of genome covered
-    
-    # High likelihood if coverage is close to 100% and no IBD2
-    ibd2_segments = sum(1 for seg in segments if seg.type == 'IBD2')
-    
-    if coverage > 0.95 and ibd2_segments == 0:
-        return math.log(0.99)  # High log-likelihood
-    else:
-        return math.log(0.01)  # Low log-likelihood</code></pre>
-
-            <h4>Full Siblings Relationship</h4>
-            <p>Full siblings have a characteristic mix of IBD0, IBD1, and IBD2 regions:</p>
-            
-            <div class="equation">
-                <p>Expected IBD sharing: 2550 cM</p>
-                <p>Theoretical IBD0 percentage: 25%</p>
-                <p>Theoretical IBD1 percentage: 50%</p>
-                <p>Theoretical IBD2 percentage: 25%</p>
-            </div>
-            
-            <p>The likelihood function captures these expectations:</p>
-            
-            <pre><code>def sibling_likelihood(segments):
-    """Calculate likelihood of a full sibling relationship."""
-    ibd1_length = sum(seg.length for seg in segments if seg.type == 'IBD1')
-    ibd2_length = sum(seg.length for seg in segments if seg.type == 'IBD2')
-    total_length = ibd1_length + ibd2_length
-    
-    # Calculate proportions
-    ibd2_proportion = ibd2_length / 3500 if total_length > 0 else 0
-    
-    # Log-likelihood based on how close to expected proportions
-    return normal_log_pdf(ibd2_proportion, mean=0.25, sd=0.05)</code></pre>
-
-            <h4>Distant Relationships</h4>
-            <p>For more distant relationships, Bonsai uses a model based on the expected number of meioses separating the individuals:</p>
-            
-            <div class="equation">
-                <p>E[IBD segments > x cM] = N * 2^(-n) * e^(-rx)</p>
-                <p>where:</p>
-                <ul>
-                    <li>N is a scaling factor related to genome length</li>
-                    <li>n is the number of generations to the common ancestor</li>
-                    <li>r = 2n is the number of meioses</li>
-                    <li>x is the minimum segment length</li>
-                </ul>
-            </div>
-
-            <h3>The Up-Node Dictionary: Encoding Pedigree Structures</h3>
-            
-            <p>A key data structure in Bonsai is the "up-node dictionary," which encodes the pedigree structure in a way that facilitates efficient likelihood calculations and structural modifications.</p>
-            
-            <h4>Structure of the Up-Node Dictionary</h4>
-            <p>The up-node dictionary represents each individual's parents in a compact format:</p>
-            
-            <pre><code># Example up-node dictionary
-# Key: Individual ID
-# Value: Dictionary of parent IDs (with values of 1)
-up_node_dict = {
-    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
-    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents
-    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
-    -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
-    1005: {},                  # Individual 1005 has no recorded parents
-    1006: {},                  # Individual 1006 has no recorded parents
-    1001: {},                  # Individual 1001 has no recorded parents
-    1002: {}                   # Individual 1002 has no recorded parents
-}</code></pre>
-            
-            <p>This representation has several advantages:</p>
+            <p>This elegant equation encapsulates the entire enterprise of genetic genealogy:</p>
             <ul>
-                <li>It can represent complex pedigree structures with multiple generations</li>
-                <li>It allows for the inclusion of inferred ancestors (using negative IDs)</li>
-                <li>It facilitates efficient traversal and modification of the pedigree</li>
-                <li>It supports the calculation of genetic relationships between arbitrary pairs of individuals</li>
+                <li>The <strong>posterior probability</strong>, <em>P(Pedigree | Genetic Data)</em>, represents our estimate of how likely a particular family structure is, given the genetic evidence we've observed</li>
+                <li>The <strong>likelihood</strong>, <em>P(Genetic Data | Pedigree)</em>, quantifies how well a proposed family structure explains the observed patterns of genetic sharing</li>
+                <li>The <strong>prior probability</strong>, <em>P(Pedigree)</em>, incorporates our background knowledge about plausible family structures before considering genetic data</li>
             </ul>
+            
+            <p>This framework provides a principled way to integrate multiple sources of evidence, handle uncertainty, and evaluate competing hypotheses about family relationships. It formalizes the inherently probabilistic nature of genealogical reasoning that humans have practiced throughout history.</p>
 
-            <h4>Genetic Relationship Calculation Using the Up-Node Dictionary</h4>
-            <p>Bonsai uses the up-node dictionary to calculate expected genetic relationships between individuals:</p>
+            <h4>Likelihood Functions: The Mathematical Language of Relationships</h4>
+            <p>Likelihood functions translate biological relationships into mathematical expressions that can be evaluated computationally. They answer the question: "How probable is the observed pattern of genetic sharing if these individuals are related in a particular way?"</p>
             
-            <pre><code>def calculate_relationship_coefficient(up_node_dict, id1, id2):
-    """Calculate the relationship coefficient between two individuals."""
-    if id1 == id2:
-        return 1.0  # Self-relationship is 1.0
-    
-    # Get genetic paths to ancestors for each individual
-    paths1 = get_genetic_paths(up_node_dict, id1)
-    paths2 = get_genetic_paths(up_node_dict, id2)
-    
-    # Find common ancestors and calculate contributions
-    relatedness = 0.0
-    for ancestor in set(paths1.keys()) & set(paths2.keys()):
-        # Each path contributes 0.5^(length of path)
-        for path1 in paths1[ancestor]:
-            for path2 in paths2[ancestor]:
-                contribution = 0.5**(len(path1) + len(path2))
-                relatedness += contribution
-    
-    return relatedness</code></pre>
+            <p>For genetic genealogy, likelihood functions must capture several key aspects of inheritance:</p>
+            <ul>
+                <li>The <strong>randomness of recombination</strong> that creates unique patterns of genetic inheritance in each individual</li>
+                <li>The <strong>expected patterns of sharing</strong> between individuals with different relationship types</li>
+                <li>The <strong>statistical distributions</strong> that govern segment counts, lengths, and positions</li>
+                <li>The <strong>technical uncertainties</strong> introduced by genotyping, phasing, and IBD detection</li>
+            </ul>
+            
+            <p>In Bonsai, these likelihood functions take the form of probabilistic models for IBD segment patterns. The algorithm uses sophisticated statistical models that account for:</p>
+            <ul>
+                <li><strong>Segment count distributions</strong> based on Poisson-like processes that model the random nature of recombination events</li>
+                <li><strong>Segment length distributions</strong> based on exponential models that reflect the fragmentation of ancestral chromosomes over generations</li>
+                <li><strong>Total sharing distributions</strong> based on gamma models that capture the overall amount of genetic material inherited from common ancestors</li>
+            </ul>
+            
+            <p>These mathematical representations transform the biological process of genetic inheritance into computational models that can be evaluated and optimized.</p>
 
-            <h3>Optimization Algorithms in Bonsai</h3>
+            <h3>Theoretical Foundations</h3>
             
-            <p>Bonsai uses sophisticated optimization algorithms to search for the pedigree structure that maximizes the likelihood of the observed IBD data.</p>
+            <h4>The IBD Moments Framework</h4>
+            <p>A key innovation in Bonsai's mathematical approach is the concept of "IBD moments" – statistical summaries that capture the essential properties of genetic sharing between individuals. These moments provide a computationally efficient way to characterize relationship patterns without needing to store or process the full details of every IBD segment.</p>
             
-            <h4>Greedy Search with Simulated Annealing</h4>
-            <p>The core optimization approach combines greedy search with simulated annealing to explore the vast space of possible pedigree configurations:</p>
-            
-            <pre><code>def build_pedigree_with_optimization(individuals, ibd_segments, min_cm=7):
-    """Build a pedigree using optimization techniques."""
-    # Initialize with empty pedigree
-    pedigree = {}
-    for ind in individuals:
-        pedigree[ind] = {}
-    
-    # Calculate initial likelihood
-    current_likelihood = calculate_pedigree_likelihood(pedigree, ibd_segments, min_cm)
-    best_pedigree = pedigree.copy()
-    best_likelihood = current_likelihood
-    
-    # Optimization parameters
-    temperature = 1.0
-    cooling_rate = 0.99
-    iterations = 1000
-    
-    for i in range(iterations):
-        # Propose a modification to the pedigree
-        new_pedigree = propose_pedigree_modification(pedigree)
-        
-        # Calculate new likelihood
-        new_likelihood = calculate_pedigree_likelihood(new_pedigree, ibd_segments, min_cm)
-        
-        # Accept or reject based on likelihood and temperature
-        accept_probability = min(1.0, math.exp((new_likelihood - current_likelihood) / temperature))
-        
-        if random.random() < accept_probability:
-            pedigree = new_pedigree
-            current_likelihood = new_likelihood
-            
-            # Update best pedigree if improved
-            if current_likelihood > best_likelihood:
-                best_pedigree = pedigree.copy()
-                best_likelihood = current_likelihood
-        
-        # Cool the temperature
-        temperature *= cooling_rate
-    
-    return best_pedigree, best_likelihood</code></pre>
-            
-            <h4>Pedigree Modification Operators</h4>
-            <p>Bonsai uses several operators to modify pedigrees during optimization:</p>
+            <p>The first two moments are particularly informative:</p>
             <ul>
-                <li><strong>Add Parent:</strong> Create a new parent node for an individual</li>
-                <li><strong>Remove Parent:</strong> Remove a parent-child relationship</li>
-                <li><strong>Swap Parent:</strong> Change one parent while maintaining the other</li>
-                <li><strong>Merge Nodes:</strong> Combine two nodes representing the same individual</li>
-                <li><strong>Split Node:</strong> Separate a node into two distinct individuals</li>
+                <li><strong>First Moment (μ₁)</strong>: The number of IBD segments, which tends to increase with relationship distance (up to a point) as recombination creates more, shorter segments</li>
+                <li><strong>Second Moment (μ₂)</strong>: The total length of IBD segments, which decreases steadily with relationship distance as less genetic material is shared</li>
             </ul>
             
-            <p>These operators allow Bonsai to explore the space of possible pedigree structures efficiently.</p>
+            <p>The ratio between these moments provides crucial information about relationship type. For example:</p>
+            <ul>
+                <li>Close relationships like parent-child or siblings have fewer, longer segments (high μ₂/μ₁ ratio)</li>
+                <li>Distant relationships like cousins have more numerous, shorter segments (low μ₂/μ₁ ratio)</li>
+            </ul>
+            
+            <p>This moments-based approach represents a mathematical abstraction that captures the essential genealogical information while reducing computational complexity. It transforms the high-dimensional space of possible IBD patterns into a lower-dimensional representation that maintains the key relationship signals.</p>
 
-            <h3>Time Complexity and Computational Considerations</h3>
-            
-            <p>Pedigree reconstruction is an NP-hard problem, meaning the computational complexity grows exponentially with the number of individuals. Bonsai implements several strategies to manage this complexity:</p>
-            
-            <h4>Computational Complexity Analysis</h4>
-            <table>
-                <tr>
-                    <th>Operation</th>
-                    <th>Time Complexity</th>
-                    <th>Optimization Strategies</th>
-                </tr>
-                <tr>
-                    <td>Pairwise likelihood calculation</td>
-                    <td>O(n²)</td>
-                    <td>Caching, pruning low-likelihood pairs</td>
-                </tr>
-                <tr>
-                    <td>Relationship coefficient calculation</td>
-                    <td>O(d) where d is pedigree depth</td>
-                    <td>Path caching, memoization</td>
-                </tr>
-                <tr>
-                    <td>Pedigree structure search</td>
-                    <td>O(2^n) in worst case</td>
-                    <td>Greedy search, simulated annealing, community detection</td>
-                </tr>
-                <tr>
-                    <td>Overall algorithm</td>
-                    <td>O(i · n² · d) for i iterations</td>
-                    <td>Parallel processing, incremental building</td>
-                </tr>
-            </table>
-            
-            <h4>Algorithmic Optimizations</h4>
-            <p>Bonsai implements several optimizations to make the computation tractable:</p>
+            <h4>The Pedigree Probability Space</h4>
+            <p>From a mathematical perspective, pedigree reconstruction represents a search through an enormous space of possible family structures. This space has several challenging properties:</p>
             <ul>
-                <li><strong>Community detection:</strong> Breaking the problem into smaller, independent subproblems</li>
-                <li><strong>Incremental building:</strong> Adding individuals to the pedigree one at a time</li>
-                <li><strong>Likelihood caching:</strong> Avoiding redundant calculations by caching intermediate results</li>
-                <li><strong>Pruning:</strong> Eliminating low-probability relationships early in the process</li>
-                <li><strong>Parallel processing:</strong> Distributing computations across multiple cores or machines</li>
+                <li><strong>Exponential Growth</strong>: The number of possible pedigree configurations grows exponentially with the number of individuals</li>
+                <li><strong>Multimodality</strong>: Multiple distinct pedigree structures may explain the observed genetic data equally well</li>
+                <li><strong>High Dimensionality</strong>: Each potential relationship represents a dimension in the probability space</li>
+                <li><strong>Complex Constraints</strong>: Biological realities (like age relationships and reproductive limitations) create intricate constraints</li>
             </ul>
+            
+            <p>Navigating this space efficiently requires sophisticated mathematical approaches. Bonsai uses techniques from:</p>
+            <ul>
+                <li><strong>Graph Theory</strong>: Representing pedigrees as directed acyclic graphs with specific properties</li>
+                <li><strong>Optimization Theory</strong>: Finding pedigree structures that maximize likelihood functions</li>
+                <li><strong>Stochastic Processes</strong>: Modeling the inherent randomness in genetic inheritance</li>
+                <li><strong>Statistical Learning</strong>: Drawing inferences from incomplete and noisy data</li>
+            </ul>
+            
+            <p>The mathematical challenge lies in developing algorithms that can efficiently explore this vast space to find structures that have high posterior probability—those that best explain the observed genetic data while respecting biological constraints.</p>
 
-            <h3>Mathematical Extensions and Improvements</h3>
+            <h3>Applications and Implications</h3>
             
-            <p>Several mathematical extensions have been developed to improve Bonsai's performance:</p>
-            
-            <h4>Handling Missing Data</h4>
-            <p>Real genetic data often contains missing individuals or incomplete IBD detection. Bonsai addresses this through:</p>
+            <h4>The Up-Node Dictionary: Graph Theory Meets Genealogy</h4>
+            <p>The "up-node dictionary" in Bonsai represents a mathematical innovation that bridges graph theory and genealogy. This data structure encodes the pedigree as a directed graph where:</p>
             <ul>
-                <li><strong>Latent node inference:</strong> Automatically inferring missing ancestors</li>
-                <li><strong>Robust likelihood functions:</strong> Accommodating uncertain IBD calls</li>
-                <li><strong>Probabilistic segment filtering:</strong> Weighting segments by confidence</li>
+                <li>Each individual is a node in the graph</li>
+                <li>Parent-child relationships are directed edges pointing from child to parent</li>
+                <li>The graph must be acyclic (no individual can be their own ancestor)</li>
+                <li>Each node can have at most two parent edges (reflecting biparental reproduction)</li>
             </ul>
             
-            <h4>Incorporating Prior Information</h4>
-            <p>When additional information is available, it can be incorporated into the Bayesian framework:</p>
+            <p>This representation facilitates efficient traversal of ancestral pathways, calculation of relationship coefficients, and evaluation of alternative pedigree configurations. It also enables the introduction of "latent nodes"—inferred individuals who are not directly observed in the genetic data but whose existence is suggested by patterns of relationship among sampled individuals.</p>
+            
+            <p>The graph-theoretic approach provides several advantages:</p>
             <ul>
-                <li><strong>Age constraints:</strong> Using known ages to constrain possible relationships</li>
-                <li><strong>Sex information:</strong> Enforcing biological constraints on reproduction</li>
-                <li><strong>Documentary evidence:</strong> Incorporating known relationships as priors</li>
+                <li>It naturally encodes the directional flow of genetic material through generations</li>
+                <li>It represents complex relationships like half-siblings, double cousins, and consanguinity</li>
+                <li>It supports efficient algorithms for relationship coefficient calculation</li>
+                <li>It enables incremental pedigree construction through graph manipulations</li>
             </ul>
             
-            <pre><code>def incorporate_age_constraints(up_node_dict, ages, min_parent_age=12):
-    """Check if a pedigree satisfies age constraints."""
-    for child, parents in up_node_dict.items():
-        if child < 0 or not parents:  # Skip inferred individuals or those without parents
-            continue
+            <p>This mathematical representation transforms genealogical reasoning into a form that computers can process efficiently, while preserving the essential biological constraints of human pedigrees.</p>
+
+            <h4>Optimization Algorithms: The Search for Truth</h4>
+            <p>Finding the most likely pedigree structure represents a complex optimization problem. Bonsai employs sophisticated algorithms that balance computational efficiency with thoroughness in exploring the space of possible structures.</p>
             
-        child_age = ages.get(child)
-        if child_age is None:
-            continue
+            <p>The core approach combines:</p>
+            <ul>
+                <li><strong>Greedy Search</strong>: Making locally optimal choices at each step to build up the pedigree incrementally</li>
+                <li><strong>Simulated Annealing</strong>: Occasionally accepting sub-optimal changes to escape local maxima in the probability landscape</li>
+                <li><strong>Genetic Algorithms</strong>: Evolving populations of candidate pedigrees through selection and recombination</li>
+                <li><strong>Graph Restructuring</strong>: Applying operations like node merging, splitting, and edge rerouting to transform pedigree structures</li>
+            </ul>
             
-        for parent in parents:
-            if parent < 0:  # Skip inferred parents
-                continue
-                
-            parent_age = ages.get(parent)
-            if parent_age is None:
-                continue
-                
-            # Check if parent is older than child by at least min_parent_age
-            if parent_age <= child_age + min_parent_age:
-                return False  # Age constraint violated
-    
-    return True  # All constraints satisfied</code></pre>
+            <p>These techniques embody a profound philosophical point: truth discovery in genetic genealogy is inherently iterative and exploratory. There is rarely a direct path from data to conclusion; instead, we must systematically explore possibilities, evaluate evidence, and refine our understanding incrementally.</p>
+            
+            <p>The use of stochastic optimization methods also acknowledges the fundamental uncertainty in genealogical inference—there may be multiple plausible explanations for the observed genetic patterns, and we must be prepared to consider alternatives rather than forcing a single answer.</p>
+
+            <h3>Broader Context</h3>
+            
+            <h4>Mathematical Models and Cultural Understanding</h4>
+            <p>The mathematical models embedded in Bonsai reflect particular cultural understandings of kinship and relationship. These models assume:</p>
+            <ul>
+                <li>A bilineal system of descent through mothers and fathers</li>
+                <li>Discrete generations with limited overlapping</li>
+                <li>Predominantly outbred populations with low rates of consanguinity</li>
+                <li>Nuclear family structures as the primary organizational unit</li>
+            </ul>
+            
+            <p>These assumptions align with contemporary Western models of kinship but may not fully represent the diversity of human kinship systems across cultures and histories. For example:</p>
+            <ul>
+                <li>Some societies practice preferential cousin marriage, creating complex patterns of consanguinity</li>
+                <li>Others recognize unilineal descent through either maternal or paternal lines</li>
+                <li>Many cultures have kinship systems that recognize relationships beyond genetic connections</li>
+                <li>Historical practices like polygamy create distinctive pedigree structures</li>
+            </ul>
+            
+            <p>The mathematical framework used in Bonsai can be adapted to accommodate some of these variations, but we must remain aware of its cultural situatedness. The algorithm's ability to reconstruct relationships is shaped by the assumptions built into its mathematical models, which in turn reflect particular understandings of kinship and relatedness.</p>
+
+            <h4>The Limits of Mathematical Inference</h4>
+            <p>Despite its sophistication, the mathematical framework of Bonsai encounters fundamental limits in pedigree reconstruction. These limitations arise from several sources:</p>
+            <ul>
+                <li><strong>Genetic Horizon</strong>: Beyond approximately 5-7 generations, the fragmentation of IBD segments creates a natural limit to relationship detection</li>
+                <li><strong>Equivalent Structures</strong>: Some distinct pedigree configurations produce statistically indistinguishable patterns of genetic sharing</li>
+                <li><strong>Missing Data</strong>: Unsampled individuals create gaps in the relationship network that must be inferred</li>
+                <li><strong>Detection Limitations</strong>: Technical constraints in IBD detection create systematic biases in the observed data</li>
+            </ul>
+            
+            <p>These limitations remind us that mathematics, while powerful, cannot fully resolve all genealogical questions. In many cases, the most appropriate mathematical conclusion is to acknowledge uncertainty—to identify multiple plausible relationship configurations rather than forcing a single answer.</p>
+            
+            <p>This perspective aligns with anthropological approaches to knowledge that recognize the inherent limitations of any single method. Just as traditional genealogists integrate multiple lines of evidence (documents, oral histories, physical resemblances), computational approaches are most effective when used as part of a broader toolkit that includes historical context, cultural understanding, and documentary evidence.</p>
 
             <h3>Exercises</h3>
             <ol>
-                <li>Implement a function to calculate the expected number of IBD segments between individuals with a given relationship coefficient.</li>
-                <li>Create a visualization showing how different parameters in the likelihood function affect the reconstruction accuracy.</li>
-                <li>Extend the up-node dictionary implementation to calculate the genetic relationship between arbitrary pairs of individuals.</li>
-                <li>Implement a simple version of the simulated annealing algorithm for pedigree optimization.</li>
-                <li>Analyze how age constraints affect the space of possible pedigree configurations.</li>
+                <li>Compare how different cultural kinship systems might be represented using graph-theoretical models, and discuss what adaptations would be needed in Bonsai's mathematical framework to accommodate these systems</li>
+                <li>Analyze how the mathematical models for IBD segment inheritance would be affected by historical practices like preferential cousin marriage or polygamy</li>
+                <li>Consider how the concept of probability in pedigree reconstruction relates to concepts of certainty and uncertainty in traditional genealogical research</li>
+                <li>Explore how the graph-theoretical representation of pedigrees might be extended to represent non-biological kinship relationships recognized in various cultural contexts</li>
+                <li>Reflect on the ethical implications of presenting probabilistic results from mathematical models to individuals seeking information about their family relationships</li>
+                <li>Analyze how different prior probability distributions might affect pedigree reconstruction in populations with different demographic histories</li>
             </ol>
 
             <div class="alert alert-success">
-                <p><strong>Tip:</strong> When working with the mathematical aspects of Bonsai, it's helpful to create small, synthetic examples where you know the ground truth. This allows you to verify your implementations and gain intuition about how the algorithm behaves under different conditions.</p>
+                <p><strong>Tip:</strong> When working with mathematical models of human relationships, remember that these models are simplifications of complex biological and social realities. Their value lies not in perfect representation but in providing useful frameworks for inference that acknowledge uncertainty and incorporate diverse forms of evidence.</p>
             </div>
             
             <div class="lab-navigation">

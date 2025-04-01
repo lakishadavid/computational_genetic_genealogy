@@ -3,483 +3,201 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 7: Refined-IBD | Computational Genetic Genealogy</title>
+    <title>Lab 6: Refined-IBD | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
     <header>
         <h1>Computational Genetic Genealogy</h1>
-        <p>IBD Detection with Refined-IBD</p>
+        <p>Precision IBD Detection with Refined-IBD</p>
     </header>
 
     <nav class="main-nav">
         <a href="../index.html">Home</a>
         <a href="contents.html">Contents</a>
-        <a href="lab7_refinedibd.html" class="active">Lab 7: Refined-IBD</a>
+        <a href="lab6_refinedibd.html" class="active">Lab 6: Refined-IBD</a>
     </nav>
 
     <main class="container">
         <article class="section lab-content">
-            <h2>Lab 7: Identity-by-Descent Detection with Refined-IBD</h2>
+            <h2>Lab 6: Precision IBD Detection with Refined-IBD</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Refined-IBD is our third IBD detection algorithm, completing our suite of tools for finding genetic relationships. Refined-IBD is particularly good at detecting long, accurate IBD segments with a focus on minimizing false positives, making it useful for confirming relationships detected by other methods.</p>
+                <p><strong>Conceptual Foundations:</strong> This lab examines the balance between detection sensitivity and precision in genetic relationship analysis. We explore how algorithmic refinement techniques can increase confidence in detected segments while navigating the fundamental statistical trade-offs inherent in genetic inference.</p>
             </div>
 
-            <h3>Learning Objectives</h3>
-            <ul class="objectives-list">
-                <li>Understand the principles behind the Refined-IBD algorithm</li>
-                <li>Run Refined-IBD on phased genetic data</li>
-                <li>Process and interpret Refined-IBD output</li>
-                <li>Compare results across all three IBD detection methods</li>
-                <li>Create a consensus set of IBD segments from multiple methods</li>
-            </ul>
-
-            <h3>Key Concepts</h3>
+            <h3>Core Concepts</h3>
             
-            <h4>Refined-IBD Algorithm</h4>
-            <p>Refined-IBD combines the strengths of different approaches to IBD detection:</p>
-            
-            <table>
-                <tr>
-                    <th>Feature</th>
-                    <th>Refined-IBD</th>
-                    <th>Compared to Other Methods</th>
-                </tr>
-                <tr>
-                    <td>Input format</td>
-                    <td>Phased VCF files (like Hap-IBD)</td>
-                    <td>More precise than IBIS's PLINK requirement</td>
-                </tr>
-                <tr>
-                    <td>Detection approach</td>
-                    <td>Two-stage process: GERMLINE-like detection with HMM refinement</td>
-                    <td>Combines speed and accuracy of different methods</td>
-                </tr>
-                <tr>
-                    <td>Speed</td>
-                    <td>Moderate</td>
-                    <td>Slower than Hap-IBD but faster than IBIS</td>
-                </tr>
-                <tr>
-                    <td>Error rate</td>
-                    <td>Very low false positives</td>
-                    <td>Most conservative of the three methods</td>
-                </tr>
-                <tr>
-                    <td>Post-processing</td>
-                    <td>Requires additional merge step for handling gaps</td>
-                    <td>More complex workflow than other methods</td>
-                </tr>
-            </table>
-
-            <h4>Complementary Detection Methods</h4>
-            <p>With three IBD detection methods, we can strengthen our analysis:</p>
-            
-            <table>
-                <tr>
-                    <th>Method Combination</th>
-                    <th>Advantage</th>
-                </tr>
-                <tr>
-                    <td>All three methods detect a segment</td>
-                    <td>High confidence: Very likely a true IBD segment</td>
-                </tr>
-                <tr>
-                    <td>Only one method detects a segment</td>
-                    <td>Lower confidence: May require additional verification</td>
-                </tr>
-                <tr>
-                    <td>Methods disagree on segment boundaries</td>
-                    <td>Useful for boundary refinement and accuracy assessment</td>
-                </tr>
-                <tr>
-                    <td>Methods detect different sets of relationships</td>
-                    <td>Broader coverage of potential relationships</td>
-                </tr>
-            </table>
-
-            <h3>Running Refined-IBD</h3>
-            
-            <h4>Basic Command</h4>
-            <p>Refined-IBD requires two steps: detection and merging:</p>
-            
-            <pre><code># Step 1: Run Refined-IBD detector
-java -jar refined-ibd.jar \
-    gt=phased_data_chr1.vcf.gz \
-    map=genetic_map_chr1.map \
-    out=results/refinedibd_chr1 \
-    length=3 \
-    trim=0.5 \
-    chrom=1
-
-# Step 2: Merge segments that may have been broken by genotyping errors
-java -jar merge-ibd-segments.jar \
-    refined-ibd-output=results/refinedibd_chr1.ibd.gz \
-    min-input-length=2.0 \
-    min-output-length=3.0 \
-    max-gap=1.0 \
-    out=results/refinedibd_chr1_merged.ibd</code></pre>
-
-            <p>Key parameters for Refined-IBD:</p>
-            <ul>
-                <li><code>length</code>: Minimum segment length in cM</li>
-                <li><code>trim</code>: Amount to trim from the ends of detected segments</li>
-                <li><code>chrom</code>: Chromosome number (important for output naming)</li>
-            </ul>
-            
-            <p>Key parameters for merging segments:</p>
-            <ul>
-                <li><code>min-input-length</code>: Minimum length for input segments</li>
-                <li><code>min-output-length</code>: Minimum length for output segments</li>
-                <li><code>max-gap</code>: Maximum gap (in cM) between segments to be merged</li>
-            </ul>
-
-            <h4>Automating Refined-IBD Analysis</h4>
-            <p>We'll run Refined-IBD for all chromosomes using a Python script:</p>
-            
-            <pre><code>def run_refined_ibd(phased_samples_dir, results_directory, utils_directory, references_directory):
-    """Run Refined-IBD on all chromosomes and merge the resulting segments."""
-    # Paths for the JAR files
-    refinedibd_jar = os.path.join(utils_directory, "refined-ibd.17Jan20.102.jar")
-    merge_jar = os.path.join(utils_directory, "merge-ibd-segments.17Jan20.102.jar")
-    
-    # Create results directory if it doesn't exist
-    os.makedirs(results_directory, exist_ok=True)
-    
-    # Process each chromosome
-    for chromosome in range(1, 23):
-        # Define input and output filenames
-        map_file = os.path.join(references_directory, 
-                            f"genetic_maps/beagle_genetic_maps/plink.chr{chromosome}.GRCh38.map")
-        vcf_file = os.path.join(phased_samples_dir, 
-                            f"opensnps_phased_chr{chromosome}.vcf.gz")
-        output_prefix = os.path.join(results_directory, 
-                                f"refinedibd_chr{chromosome}")
-        
-        # Check if the required files exist
-        if not os.path.isfile(map_file) or not os.path.isfile(vcf_file):
-            print(f"Skipping chromosome {chromosome}: Input files not found")
-            continue
-        
-        # Step 1: Run Refined-IBD
-        refinedibd_cmd = [
-            "java", "-jar", refinedibd_jar,
-            f"gt={vcf_file}",
-            f"map={map_file}",
-            f"out={output_prefix}",
-            "length=3",
-            "trim=0.5",
-            f"chrom={chromosome}"
-        ]
-        
-        try:
-            subprocess.run(refinedibd_cmd, check=True)
-            print(f"Refined-IBD completed for chromosome {chromosome}")
-            
-            # Step 2: Merge segments
-            ibd_output = f"{output_prefix}.ibd.gz"
-            merged_output = f"{output_prefix}_merged.ibd"
-            
-            merge_cmd = [
-                "java", "-jar", merge_jar,
-                f"refined-ibd-output={ibd_output}",
-                "min-input-length=2.0",
-                "min-output-length=3.0",
-                "max-gap=1.0",
-                f"out={merged_output}"
-            ]
-            
-            subprocess.run(merge_cmd, check=True)
-            print(f"Merged segments for chromosome {chromosome}")
-            
-        except subprocess.CalledProcessError as e:
-            print(f"Error processing chromosome {chromosome}: {e}")</code></pre>
-
-            <h3>Understanding Refined-IBD Output</h3>
-            
-            <h4>Output Format</h4>
-            <p>The output from the Refined-IBD merging step has the following format:</p>
-            
-            <pre><code># sample1 sample2 chromosome start_pos end_pos lod cm
-sample1 sample2 1 12345678 23456789 10.5 15.22
-sample3 sample4 1 34567890 45678901 8.2 8.45</code></pre>
-
-            <p>Fields:</p>
-            <ul>
-                <li>Sample IDs (2 columns)</li>
-                <li>Chromosome number</li>
-                <li>Start and end positions (base pairs)</li>
-                <li>LOD score (log odds ratio, indicating confidence)</li>
-                <li>Segment length in centiMorgans</li>
-            </ul>
-            
-            <p>Unlike Hap-IBD, Refined-IBD doesn't specify which haplotype contains the IBD segment, but it does provide a LOD score that can be useful for filtering by confidence level.</p>
-
-            <h4>Combining Results Across Chromosomes</h4>
-            <p>We'll combine the Refined-IBD results from all chromosomes:</p>
-            
-            <pre><code>def combine_refined_ibd_results(results_dir):
-    """Combine chromosome-specific Refined-IBD results into a single file."""
-    # Output path for the combined file
-    combined_path = os.path.join(results_dir, "refinedibd_MergedSamples.seg")
-    
-    # Collect merged segment files
-    merged_files = []
-    for chrom in range(1, 23):
-        merged_file = os.path.join(results_dir, f"refinedibd_chr{chrom}_merged.ibd")
-        if os.path.isfile(merged_file):
-            merged_files.append(merged_file)
-    
-    if not merged_files:
-        print("No Refined-IBD results found to combine.")
-        return None
-    
-    # Process and combine files
-    dfs = []
-    for file in merged_files:
-        try:
-            df = pd.read_csv(file, sep='\s+', header=None,
-                           names=['id1', 'id2', 'chrom', 'start', 'end', 'lod', 'cM'])
-            dfs.append(df)
-        except Exception as e:
-            print(f"Error reading {file}: {e}")
-    
-    if not dfs:
-        print("Could not read any Refined-IBD result files.")
-        return None
-    
-    # Combine and sort
-    combined_df = pd.concat(dfs, ignore_index=True)
-    combined_df.sort_values(['chrom', 'start', 'end'], inplace=True)
-    
-    # Save combined file
-    combined_df.to_csv(combined_path, sep='\t', index=False)
-    print(f"Combined {len(combined_df)} Refined-IBD segments to {combined_path}")
-    
-    return combined_path</code></pre>
-
-            <h3>Analyzing Refined-IBD Results</h3>
-            
-            <h4>Basic Analysis</h4>
-            <p>Let's analyze the combined Refined-IBD results:</p>
-            
-            <pre><code>def analyze_refined_ibd_results(segments_file):
-    """Analyze Refined-IBD segments and generate statistics."""
-    # Load the segments file
-    segments_df = pd.read_csv(segments_file, sep='\t')
-    
-    # Basic statistics
-    print(f"Total segments: {len(segments_df)}")
-    print("\nSegment length statistics (cM):")
-    print(segments_df['cM'].describe())
-    
-    print("\nLOD score statistics:")
-    print(segments_df['lod'].describe())
-    
-    # Segments per chromosome
-    chrom_counts = segments_df['chrom'].value_counts().sort_index()
-    print("\nSegments per chromosome:")
-    print(chrom_counts)
-    
-    # Count segments per sample pair
-    segments_df['pair'] = segments_df.apply(
-        lambda row: tuple(sorted([row['id1'], row['id2']])), axis=1)
-    
-    pair_counts = segments_df['pair'].value_counts()
-    print(f"\nTotal sample pairs with IBD: {len(pair_counts)}")
-    print(f"Average segments per pair: {len(segments_df) / len(pair_counts):.2f}")
-    
-    # Top pairs by total IBD sharing
-    pair_totals = segments_df.groupby('pair')['cM'].sum().sort_values(ascending=False)
-    print("\nTop 10 pairs by total IBD sharing:")
-    print(pair_totals.head(10))
-    
-    return segments_df</code></pre>
-
-            <h4>Creating Visualizations</h4>
-            <p>We can create visualizations to explore the Refined-IBD results:</p>
-            
-            <pre><code>def visualize_refined_ibd_results(segments_df, output_dir):
-    """Create visualizations for Refined-IBD results."""
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 1. Segment length distribution
-    plt.figure(figsize=(10, 6))
-    sns.histplot(segments_df['cM'], bins=30, kde=True)
-    plt.title('Distribution of Refined-IBD Segment Lengths')
-    plt.xlabel('Segment Length (cM)')
-    plt.ylabel('Frequency')
-    plt.grid(alpha=0.3)
-    plt.savefig(os.path.join(output_dir, 'refinedibd_length_distribution.png'), dpi=300)
-    plt.close()
-    
-    # 2. LOD score vs. segment length
-    plt.figure(figsize=(10, 6))
-    sns.scatterplot(x='cM', y='lod', data=segments_df, alpha=0.5)
-    plt.title('LOD Score vs. Segment Length')
-    plt.xlabel('Segment Length (cM)')
-    plt.ylabel('LOD Score')
-    plt.grid(alpha=0.3)
-    plt.savefig(os.path.join(output_dir, 'refinedibd_lod_vs_length.png'), dpi=300)
-    plt.close()
-    
-    # 3. Segments per chromosome
-    chrom_counts = segments_df['chrom'].value_counts().sort_index()
-    plt.figure(figsize=(12, 6))
-    sns.barplot(x=chrom_counts.index, y=chrom_counts.values)
-    plt.title('Refined-IBD Segments per Chromosome')
-    plt.xlabel('Chromosome')
-    plt.ylabel('Number of Segments')
-    plt.xticks(range(len(chrom_counts)), chrom_counts.index)
-    plt.savefig(os.path.join(output_dir, 'refinedibd_segments_by_chromosome.png'), dpi=300)
-    plt.close()</code></pre>
-
-            <h3>Creating a Consensus IBD Set</h3>
-            
-            <h4>Comparing All Three Methods</h4>
-            <p>With results from all three IBD detection methods, we can create a consensus set:</p>
-            
-            <pre><code>def create_consensus_ibd_set(ibis_file, hapibd_file, refinedibd_file, min_cm=3.0, output_dir='results'):
-    """Create a consensus set of IBD segments from all three detection methods."""
-    # Load results from all three methods
-    ibis_df = pd.read_csv(ibis_file, sep='\t')
-    ibis_df = ibis_df[ibis_df['genetic_length'] >= min_cm].copy()
-    ibis_df['method'] = 'IBIS'
-    
-    hapibd_df = pd.read_csv(hapibd_file, sep='\t', header=None,
-                          names=['id1', 'hap1', 'id2', 'hap2', 'chrom', 'start', 'end', 'cM'])
-    hapibd_df = hapibd_df[hapibd_df['cM'] >= min_cm].copy()
-    hapibd_df['method'] = 'HapIBD'
-    
-    refinedibd_df = pd.read_csv(refinedibd_file, sep='\t')
-    refinedibd_df = refinedibd_df[refinedibd_df['cM'] >= min_cm].copy()
-    refinedibd_df['method'] = 'RefinedIBD'
-    
-    # Standardize column names
-    ibis_renamed = ibis_df.rename(columns={
-        'id1': 'id1', 'id2': 'id2', 
-        'chromosome': 'chrom', 
-        'physical_position_start': 'start', 'physical_position_end': 'end',
-        'genetic_length': 'cM'
-    })[['id1', 'id2', 'chrom', 'start', 'end', 'cM', 'method']]
-    
-    hapibd_renamed = hapibd_df[['id1', 'id2', 'chrom', 'start', 'end', 'cM', 'method']]
-    
-    refinedibd_renamed = refinedibd_df[['id1', 'id2', 'chrom', 'start', 'end', 'cM', 'method']]
-    
-    # Combine all results
-    all_segments = pd.concat([ibis_renamed, hapibd_renamed, refinedibd_renamed], ignore_index=True)
-    
-    # Standardize sample pair ordering
-    all_segments['id1_std'], all_segments['id2_std'] = zip(*all_segments.apply(
-        lambda row: tuple(sorted([row['id1'], row['id2']])), axis=1))
-    
-    # Create a unique segment identifier for each chromosome and position range
-    all_segments['segment_id'] = all_segments.apply(
-        lambda row: f"{row['chrom']}:{row['start']}-{row['end']}", axis=1)
-    
-    # Count methods detecting each segment
-    segment_methods = all_segments.groupby(['id1_std', 'id2_std', 'chrom', 'start', 'end'])['method'].apply(list)
-    segment_method_counts = segment_methods.apply(len)
-    
-    # Create a summary of detection by method
-    detection_summary = pd.DataFrame({
-        'methods': segment_methods,
-        'method_count': segment_method_counts
-    }).reset_index()
-    
-    # Analyze consensus levels
-    consensus_counts = detection_summary['method_count'].value_counts()
-    print("Segments detected by multiple methods:")
-    for count, freq in consensus_counts.items():
-        print(f"  {count} method(s): {freq} segments")
-    
-    # Create files for different consensus levels
-    for level in range(1, 4):
-        consensus_segments = detection_summary[detection_summary['method_count'] >= level]
-        consensus_file = os.path.join(output_dir, f"consensus_ibd_level{level}.csv")
-        consensus_segments.to_csv(consensus_file, index=False)
-        print(f"Saved {len(consensus_segments)} segments detected by at least {level} method(s) to {consensus_file}")
-    
-    return detection_summary</code></pre>
-
-            <h4>Visualizing Method Agreement</h4>
-            <p>Let's visualize how the three methods agree with each other:</p>
-            
-            <pre><code>def visualize_method_agreement(consensus_df, output_dir):
-    """Create visualizations for method agreement."""
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # 1. Venn diagram of method combinations
-    from matplotlib_venn import venn3
-    
-    # Count segments by method combination
-    ibis_segments = set()
-    hapibd_segments = set()
-    refinedibd_segments = set()
-    
-    for _, row in consensus_df.iterrows():
-        segment_id = f"{row['id1_std']}~{row['id2_std']}~{row['chrom']}:{row['start']}-{row['end']}"
-        methods = row['methods']
-        
-        if 'IBIS' in methods:
-            ibis_segments.add(segment_id)
-        if 'HapIBD' in methods:
-            hapibd_segments.add(segment_id)
-        if 'RefinedIBD' in methods:
-            refinedibd_segments.add(segment_id)
-    
-    # Create Venn diagram
-    plt.figure(figsize=(10, 10))
-    venn3([ibis_segments, hapibd_segments, refinedibd_segments], 
-         ('IBIS', 'HapIBD', 'RefinedIBD'))
-    plt.title('Overlap in Detected IBD Segments Between Methods')
-    plt.savefig(os.path.join(output_dir, 'method_venn_diagram.png'), dpi=300)
-    plt.close()
-    
-    # 2. Bar chart of consensus levels
-    consensus_counts = consensus_df['method_count'].value_counts().sort_index()
-    plt.figure(figsize=(8, 6))
-    sns.barplot(x=consensus_counts.index, y=consensus_counts.values)
-    plt.title('IBD Segments by Detection Consensus Level')
-    plt.xlabel('Number of Methods Detecting Segment')
-    plt.ylabel('Number of Segments')
-    plt.xticks(range(len(consensus_counts)), consensus_counts.index)
-    plt.savefig(os.path.join(output_dir, 'consensus_level_counts.png'), dpi=300)
-    plt.close()</code></pre>
-
-            <h3>Anthropological Context</h3>
-            <p>Using multiple IBD detection methods is particularly valuable in anthropological research on populations with complex histories:</p>
-            
-            <ul>
-                <li><strong>Detection Robustness:</strong> Segments identified by multiple methods are more likely to represent true genetic relationships, providing stronger evidence for anthropological interpretations</li>
-                <li><strong>Confidence Levels:</strong> The consensus approach allows researchers to assign confidence levels to inferred relationships, which is critical when making claims about historical or ancestral connections</li>
-                <li><strong>False Positive Mitigation:</strong> In studies reconstructing diaspora family networks or indigenous kinship systems, false positives can lead to incorrect historical narratives; consensus methods help minimize this risk</li>
-                <li><strong>Methodological Transparency:</strong> Using multiple methods with clear consensus criteria increases the transparency and reproducibility of anthropological research</li>
-            </ul>
-            
-            <p>By combining multiple detection methods, anthropologists can achieve a balance between sensitivity (detecting as many true relationships as possible) and specificity (avoiding false claims about relationships), leading to more robust reconstructions of historical kinship networks and genealogical connections.</p>
-
-            <h3>Exercises</h3>
-            <ol>
-                <li>Run Refined-IBD on phased VCF files for all chromosomes</li>
-                <li>Merge the resulting IBD segments for each chromosome</li>
-                <li>Analyze the Refined-IBD results and compare with other methods</li>
-                <li>Create a consensus set of IBD segments based on all three methods</li>
-                <li>Visualize the agreement between methods</li>
-                <li>Identify sample pairs with consistent detection across methods</li>
-            </ol>
-
-            <div class="alert alert-success">
-                <p><strong>Tip:</strong> When creating a consensus set, consider not just whether a segment was detected by multiple methods, but also how similar the detected segments are in terms of position and length. Segments that are consistently detected with similar boundaries provide the strongest evidence for true genetic relationships.</p>
+            <div class="concept-section">
+                <h4>The Sensitivity-Specificity Trade-off in Genetic Analysis</h4>
+                <p>A fundamental challenge in IBD detection is balancing sensitivity (finding all true IBD segments) against specificity (avoiding false positives):</p>
+                <ul>
+                    <li><strong>Detection Sensitivity:</strong> The ability to identify true IBD segments, especially shorter ones that indicate more distant relationships</li>
+                    <li><strong>False Positive Control:</strong> The ability to reject segments that match by chance rather than through common ancestry</li>
+                    <li><strong>Confidence Metrics:</strong> Statistical measures that quantify certainty in detected segments</li>
+                    <li><strong>Multi-stage Detection:</strong> Using sequential filters to balance these competing goals</li>
+                </ul>
+                <p>Refined-IBD represents an approach that explicitly addresses this trade-off through a two-stage process: first casting a wide net to identify potential IBD segments (high sensitivity), then applying more stringent criteria to filter out false positives (high specificity). This approach enables reliable detection of more distant relationships than would be possible with a single-stage method.</p>
             </div>
+
+            <div class="concept-section">
+                <h4>Marker Density and Detection Resolution</h4>
+                <p>The density and informativeness of genetic markers profoundly affects IBD detection ability:</p>
+                <ul>
+                    <li><strong>SNP Density:</strong> The number and spacing of genetic variants analyzed</li>
+                    <li><strong>Informativeness:</strong> How much ancestry information each marker provides (related to allele frequency)</li>
+                    <li><strong>Resolution Limitations:</strong> Physical constraints on how precisely segment boundaries can be determined</li>
+                    <li><strong>Detection Thresholds:</strong> Minimum segment lengths that can be reliably detected given marker density</li>
+                </ul>
+                <p>Refined-IBD approaches this challenge by using windows of adjacent markers to identify potential IBD regions, then examining the detailed pattern of matching within these windows. This multi-scale approach provides greater sensitivity in regions with varying marker density, addressing a key limitation of fixed-threshold methods.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Haplotype Matching and Identity States</h4>
+                <p>Refined-IBD employs sophisticated models of genetic similarity to distinguish true IBD from chance similarities:</p>
+                <ul>
+                    <li><strong>IBD vs. IBS:</strong> Distinguishing identity by descent (shared ancestry) from identity by state (coincidental matching)</li>
+                    <li><strong>Haplotype Structure:</strong> Using patterns of adjacent markers to improve detection power</li>
+                    <li><strong>LOD Scores:</strong> Log-odds ratios that quantify statistical evidence for IBD vs. non-IBD</li>
+                    <li><strong>Gap Modeling:</strong> Handling missing or uninformative regions within potential IBD segments</li>
+                </ul>
+                <p>The algorithm models the probability of observing specific haplotype patterns under different hypotheses (IBD vs. non-IBD), allowing it to make statistically informed decisions about segment boundaries and confidence. This probabilistic framework provides a more sophisticated approach than simple marker-by-marker matching.</p>
+            </div>
+
+            <h3>Algorithmic and Computational Foundations</h3>
+            
+            <div class="concept-section">
+                <h4>The Beagle Framework and HMM-Based Approaches</h4>
+                <p>Refined-IBD builds on the Beagle framework, which uses sophisticated statistical models:</p>
+                <ul>
+                    <li><strong>Hidden Markov Models:</strong> Statistical frameworks that model the hidden state (IBD vs. non-IBD) along chromosomes</li>
+                    <li><strong>Haplotype Clusters:</strong> Localized patterns of genetic variation that improve detection power</li>
+                    <li><strong>Scalable Computation:</strong> Optimizations that enable analysis of large datasets</li>
+                    <li><strong>Population-Specific Models:</strong> Adaptation to different patterns of genetic variation across populations</li>
+                </ul>
+                <p>This statistical machinery allows Refined-IBD to model the complex relationship between observed genotypes and the underlying IBD state, accounting for factors like genotyping error, phasing uncertainty, and population-specific haplotype patterns. The result is a more nuanced and powerful detection approach than simpler matching algorithms.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Refinement Logic: From Candidate Segments to Confirmed IBD</h4>
+                <p>The multi-stage approach of Refined-IBD incorporates several key refinement steps:</p>
+                <ul>
+                    <li><strong>Initial Screening:</strong> Identification of candidate segments using a lenient threshold</li>
+                    <li><strong>Haplotype Probability Calculation:</strong> More detailed analysis of haplotype patterns within candidate regions</li>
+                    <li><strong>LOD Score Computation:</strong> Statistical evaluation of evidence for each segment</li>
+                    <li><strong>Segment Merging:</strong> Combining nearby segments that likely represent a single IBD region</li>
+                    <li><strong>Gap Filtering:</strong> Handling regions with missing or uninformative markers</li>
+                </ul>
+                <p>This progressive refinement approach balances computational efficiency with detection accuracy. By focusing detailed analysis on promising regions identified in the initial screening, the algorithm achieves both high sensitivity and high specificity without the computational burden of applying detailed analysis to the entire genome.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Parameter Selection as Hypothesis Testing</h4>
+                <p>The parameters used in Refined-IBD represent explicit statistical hypotheses:</p>
+                <ul>
+                    <li><strong>IBD Score Threshold:</strong> The statistical evidence required to consider a segment IBD</li>
+                    <li><strong>Scale Parameter:</strong> Controls the relationship between genetic and physical distance</li>
+                    <li><strong>Window Size:</strong> The number of markers analyzed together as a haplotype unit</li>
+                    <li><strong>Max Gap:</strong> The maximum allowed distance between markers in a segment</li>
+                </ul>
+                <p>These parameters aren't just technical settings but represent specific hypotheses about genetic inheritance patterns. The IBD score threshold, for example, quantifies how much statistical evidence is required to conclude that a matching segment represents shared ancestry rather than chance similarity. Adjusting these parameters allows researchers to test different hypotheses about the genetic relationships in their data.</p>
+            </div>
+
+            <h3>Applications in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Finding Distant Relatives: The Limits of Detection</h4>
+                <p>Refined-IBD's approach is particularly valuable for identifying more distant relationships:</p>
+                <ul>
+                    <li><strong>Detection Horizon:</strong> The maximum relationship distance that can be reliably detected</li>
+                    <li><strong>Segment Length Distribution:</strong> How segment lengths correlate with relationship distance</li>
+                    <li><strong>Confidence Calibration:</strong> Understanding how LOD scores relate to the probability of true relationships</li>
+                    <li><strong>False Discovery Rate:</strong> The proportion of detected segments expected to be false positives</li>
+                </ul>
+                <p>By providing greater statistical confidence in detected segments, Refined-IBD helps expand the detection horizon to more distant relationships—potentially to 6th or 7th cousins under optimal conditions. This extended reach is particularly valuable for connecting individuals across multiple generations or geographic divides, where relationships may be more distant but still genealogically meaningful.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Complementary Methods in a Comprehensive Analysis Strategy</h4>
+                <p>Refined-IBD offers unique strengths in a multi-method IBD detection strategy:</p>
+                <ul>
+                    <li><strong>Method Complementarity:</strong> Different strengths and weaknesses compared to IBIS and Hap-IBD</li>
+                    <li><strong>Consensus Building:</strong> Greater confidence in segments detected by multiple methods</li>
+                    <li><strong>Method-Specific Advantages:</strong> 
+                        <ul>
+                            <li>IBIS: Works with unphased data, good for consumer testing results</li>
+                            <li>Hap-IBD: Extremely fast, scales to very large datasets</li>
+                            <li>Refined-IBD: Higher statistical confidence, better for distant relationships</li>
+                        </ul>
+                    </li>
+                    <li><strong>Strategic Application:</strong> Selecting methods based on specific research questions</li>
+                </ul>
+                <p>A comprehensive analysis strategy might employ multiple methods sequentially: using Hap-IBD for rapid initial analysis of large datasets, Refined-IBD for higher-confidence detection of more distant relationships, and IBIS for analysis of unphased data. This complementary approach maximizes detection power across different relationship types and data scenarios.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>From Statistical Evidence to Genealogical Conclusions</h4>
+                <p>The statistical framework of Refined-IBD provides a foundation for genealogical interpretation:</p>
+                <ul>
+                    <li><strong>Evidence Gradation:</strong> Using LOD scores to categorize segments by confidence level</li>
+                    <li><strong>Length-Based Classification:</strong> Interpreting segment length distributions in terms of relationship categories</li>
+                    <li><strong>Statistical Aggregation:</strong> Combining evidence from multiple segments to strengthen relationship inferences</li>
+                    <li><strong>Documentation Standards:</strong> Transparent reporting of detection parameters and confidence metrics</li>
+                </ul>
+                <p>This statistical foundation enables more principled genealogical conclusions, connecting computational analysis to historical and social contexts. By quantifying confidence in detected relationships, genealogists can appropriately qualify their conclusions and integrate genetic evidence with documentary sources in a methodologically sound manner.</p>
+            </div>
+
+            <h3>Anthropological and Historical Context</h3>
+            
+            <div class="concept-section">
+                <h4>Statistical Rigor in Historical Recovery</h4>
+                <p>The statistical rigor of Refined-IBD has particular significance for anthropological applications:</p>
+                <ul>
+                    <li><strong>Evidential Standards:</strong> Higher confidence requirements for claims with historical significance</li>
+                    <li><strong>False Discovery Management:</strong> Controlling error rates when making socially consequential claims</li>
+                    <li><strong>Appropriate Qualification:</strong> Communicating certainty levels for different relationship hypotheses</li>
+                    <li><strong>Integration with Historical Evidence:</strong> Weighing genetic evidence alongside documentary and oral histories</li>
+                </ul>
+                <p>When genetic evidence is used to make claims about historical connections—particularly in contexts like recovering connections disrupted by historical traumas—statistical rigor isn't just a technical consideration but an ethical imperative. Refined-IBD's emphasis on statistical confidence provides one framework for meeting this responsibility.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Time Depth and Genetic Memory</h4>
+                <p>The enhanced detection capabilities of Refined-IBD expand the temporal scope of genetic genealogy:</p>
+                <ul>
+                    <li><strong>Generational Reach:</strong> Potentially detecting relationships back 7-10 generations</li>
+                    <li><strong>Historical Contexts:</strong> Connecting to time periods with limited documentary evidence</li>
+                    <li><strong>Memory Beyond Records:</strong> Detecting relationships that predate or transcend available written documentation</li>
+                    <li><strong>Temporal Calibration:</strong> Using genetic segment lengths to estimate relationship age</li>
+                </ul>
+                <p>This extended temporal reach allows genetic genealogy to function as a form of "genetic memory," preserving evidence of relationships through periods of historical disruption and documentation gaps. For communities affected by historical displacement, enslavement, or colonization, this genetic memory may provide connections where documentary evidence was systematically destroyed or never created.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Geographic Distance and Genetic Connection</h4>
+                <p>Refined-IBD can help bridge geographic divides in relationship detection:</p>
+                <ul>
+                    <li><strong>Trans-Continental Connections:</strong> Identifying genetic relationships across geographic divides</li>
+                    <li><strong>Migration Tracing:</strong> Using relationship patterns to reconstruct historical movements</li>
+                    <li><strong>Diaspora Connections:</strong> Linking geographically separated communities with shared ancestry</li>
+                    <li><strong>Geographic Clustering:</strong> Identifying patterns of relationship density that correlate with historic communities</li>
+                </ul>
+                <p>The ability to confidently detect more distant relationships makes it possible to identify connections across geographic divides that might otherwise appear as separate communities. This capability is particularly valuable for diaspora communities seeking connections to ancestral regions or to other diaspora groups with shared ancestry.</p>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you implement Refined-IBD and integrate it with other detection methods, consider these broader implications:</p>
+            <ul>
+                <li><strong>Knowledge Integration:</strong> How can genetic evidence be appropriately integrated with other forms of knowledge about relationships?</li>
+                <li><strong>Uncertainty Communication:</strong> How can statistical confidence be effectively communicated to diverse audiences?</li>
+                <li><strong>Methodological Transparency:</strong> What documentation standards ensure that relationship claims can be evaluated and reproduced?</li>
+                <li><strong>Contextual Interpretation:</strong> How do historical and social contexts shape the meaning and significance of detected relationships?</li>
+            </ul>
+            <p>These considerations connect the technical implementation of IBD detection to broader questions about knowledge creation, evidence, and the social significance of genetic relationships. By engaging with these questions, computational genetic genealogy becomes not just a technical endeavor but a thoughtful contribution to understanding human connections across time and space.</p>
             
             <div class="lab-navigation">
-                <a href="lab6_hapibd.html" class="prev-lab">Hap-IBD</a>
-                <a href="lab8_pedsim.html" class="next-lab">Ped-Sim</a>
+                <a href="lab5_hapibd.html" class="prev-lab">Hap-IBD</a>
+                <a href="lab7_pedsim.html" class="next-lab">Ped-Sim</a>
             </div>
         </article>
     </main>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10: Simulating Data with msprime | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Simulating Data with msprime</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab10_msprime.html" class="active">Lab 10: MSPrime</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 10: Simulating Genetic Data with msprime</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> While Ped-Sim is excellent for forward-time simulation of known pedigrees, msprime offers powerful capabilities for simulating genetic data under complex population models. For anthropologists studying ancient demographic history or complex population structures, msprime provides the flexibility to test hypotheses about human population history.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the principles of coalescent simulation with msprime</li>
+                <li>Create and manipulate tree sequence data structures</li>
+                <li>Simulate genetic data under demographic models</li>
+                <li>Extract and analyze IBD segments from simulated data</li>
+                <li>Visualize and interpret genetic sharing patterns</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Tree Sequences</h4>
+            <p>Tree sequences are an efficient data structure for representing genetic ancestry:</p>
+            
+            <table>
+                <tr>
+                    <th>Concept</th>
+                    <th>Description</th>
+                </tr>
+                <tr>
+                    <td>Ancestral Recombination Graph (ARG)</td>
+                    <td>A network that represents the ancestry of a set of DNA sequences, accounting for both mutation and recombination</td>
+                </tr>
+                <tr>
+                    <td>Tree Sequence</td>
+                    <td>An efficient representation of the ARG as a sequence of local trees along a chromosome</td>
+                </tr>
+                <tr>
+                    <td>Local Tree</td>
+                    <td>A genealogical tree representing the ancestry of a specific genomic region</td>
+                </tr>
+                <tr>
+                    <td>Most Recent Common Ancestor (MRCA)</td>
+                    <td>The most recent individual that two samples share as an ancestor</td>
+                </tr>
+                <tr>
+                    <td>Time to MRCA (TMRCA)</td>
+                    <td>The number of generations back to the MRCA</td>
+                </tr>
+            </table>
+
+            <h4>msprime and tskit</h4>
+            <p>Key features of msprime and the tskit library:</p>
+            <ul>
+                <li>Efficient simulation of large genomic regions</li>
+                <li>Support for complex demographic models</li>
+                <li>Ability to incorporate recombination and mutation</li>
+                <li>Flexible representation of genetic data</li>
+                <li>Powerful tools for analyzing and visualizing results</li>
+                <li>Integration with other population genetics software</li>
+            </ul>
+
+            <h3>Simulating Genetic Data with msprime</h3>
+            
+            <h4>Basic Simulation</h4>
+            <p>Creating a simple simulation with msprime:</p>
+            
+            <pre><code>import msprime
+import tskit
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Simple simulation with 10 samples
+ts = msprime.sim_ancestry(
+    samples=10,                # Number of samples (haploid genomes)
+    population_size=10000,     # Effective population size
+    sequence_length=10_000_000, # 10 Mb sequence
+    recombination_rate=1e-8,   # Recombination rate per bp per generation
+    random_seed=123            # For reproducibility
+)
+
+# Add mutations to the tree sequence
+ts = msprime.sim_mutations(
+    ts,
+    rate=1e-8,                 # Mutation rate per bp per generation
+    random_seed=123
+)
+
+# Basic information about the simulation
+print(f"Sequence length: {ts.sequence_length}")
+print(f"Number of trees: {ts.num_trees}")
+print(f"Number of samples: {ts.num_samples}")
+print(f"Number of individuals: {ts.num_individuals}")
+print(f"Number of mutations: {ts.num_mutations}")</code></pre>
+
+            <h4>Creating More Complex Models</h4>
+            <p>Simulating data with realistic demographic scenarios:</p>
+            
+            <pre><code>def simulate_demographic_history():
+    """Simulate a demographic history with population splits and migrations."""
+    # Define demographic model with three populations
+    demography = msprime.Demography()
+    
+    # Add three modern populations
+    demography.add_population(name="EUR", initial_size=10000)  # European
+    demography.add_population(name="AFR", initial_size=15000)  # African
+    demography.add_population(name="ASN", initial_size=8000)   # Asian
+    
+    # Add ancient population (out of Africa)
+    demography.add_population(name="OOA", initial_size=2000)
+    
+    # Add ancestral population
+    demography.add_population(name="ANC", initial_size=5000)
+    
+    # Set up population relationships and splits
+    # Asian and European populations split from OOA
+    demography.add_population_split(time=40000 / 25, derived=["EUR", "ASN"], ancestral="OOA")
+    
+    # OOA split from African population
+    demography.add_population_split(time=70000 / 25, derived=["AFR", "OOA"], ancestral="ANC")
+    
+    # Add migration between populations
+    demography.set_migration_rate(source="EUR", dest="AFR", rate=0.00001)
+    demography.set_migration_rate(source="AFR", dest="EUR", rate=0.00001)
+    demography.set_migration_rate(source="EUR", dest="ASN", rate=0.00002)
+    demography.set_migration_rate(source="ASN", dest="EUR", rate=0.00002)
+    
+    # Debug the demography model
+    print(demography.debug())
+    
+    # Run the simulation
+    ts = msprime.sim_ancestry(
+        samples={"EUR": 10, "AFR": 10, "ASN": 10},  # 10 samples from each population
+        demography=demography,
+        sequence_length=10_000_000,  # 10 Mb
+        recombination_rate=1e-8,
+        random_seed=123
+    )
+    
+    # Add mutations
+    ts = msprime.sim_mutations(ts, rate=1e-8, random_seed=123)
+    
+    return ts</code></pre>
+
+            <h3>Working with Tree Sequences</h3>
+            
+            <h4>Exploring Tree Structure</h4>
+            <p>Analyzing the local trees in a simulation:</p>
+            
+            <pre><code>def explore_trees(ts):
+    """Explore the structure of local trees in a tree sequence."""
+    # Get the first few trees for visualization
+    first_tree = ts.first()
+    
+    # Draw the tree
+    plt.figure(figsize=(10, 6))
+    first_tree.draw(format="svg")
+    plt.savefig("results/first_tree.svg")
+    
+    # Get statistics about trees
+    tree_heights = []
+    tree_tmrcas = []
+    
+    # For a specific pair of samples (0 and 1)
+    for tree in ts.trees():
+        tree_heights.append(tree.time(tree.root))
+        tree_tmrcas.append(tree.tmrca(0, 1))
+    
+    # Plot the TMRCA along the genome
+    plt.figure(figsize=(12, 6))
+    plt.plot(list(ts.breakpoints())[:-1], tree_tmrcas)
+    plt.title("TMRCA between samples 0 and 1 along the genome")
+    plt.xlabel("Position (bp)")
+    plt.ylabel("TMRCA (generations)")
+    plt.grid(alpha=0.3)
+    plt.savefig("results/tmrca_along_genome.png")
+    
+    return {
+        "heights": tree_heights,
+        "tmrcas": tree_tmrcas
+    }</code></pre>
+
+            <h4>Finding IBD Segments</h4>
+            <p>Identifying IBD segments from tree sequences:</p>
+            
+            <pre><code>def find_ibd_segments(ts, min_length_bp=500000):
+    """Find IBD segments between all pairs of samples in the tree sequence."""
+    ibd_segments = []
+    
+    # Get the total number of samples
+    n_samples = ts.num_samples
+    
+    # Convert position from bp to cM (assuming 1 cM = 1 Mb)
+    cm_per_bp = 1e-6
+    
+    # Loop through all pairs of samples
+    for i in range(n_samples):
+        for j in range(i + 1, n_samples):
+            # Track current IBD segment
+            current_ibd = None
+            current_mrca = None
+            
+            # Iterate through all trees
+            for tree in ts.trees():
+                # Get MRCA and its time
+                mrca = tree.mrca(i, j)
+                tmrca = tree.time(mrca)
+                
+                # If this is a new IBD segment
+                if current_ibd is None and tmrca < 50:  # Arbitrary threshold for recent ancestry
+                    current_ibd = {
+                        "sample1": i,
+                        "sample2": j,
+                        "start_bp": tree.interval.left,
+                        "mrca": mrca,
+                        "tmrca": tmrca
+                    }
+                    current_mrca = mrca
+                # If continuing the same segment with same MRCA
+                elif current_ibd is not None and mrca == current_mrca:
+                    continue
+                # If end of an IBD segment
+                elif current_ibd is not None:
+                    current_ibd["end_bp"] = tree.interval.left
+                    current_ibd["length_bp"] = current_ibd["end_bp"] - current_ibd["start_bp"]
+                    current_ibd["length_cm"] = current_ibd["length_bp"] * cm_per_bp
+                    
+                    # Only keep segments above minimum length
+                    if current_ibd["length_bp"] >= min_length_bp:
+                        ibd_segments.append(current_ibd)
+                    
+                    # Reset current segment
+                    if tmrca < 50:  # Start a new segment
+                        current_ibd = {
+                            "sample1": i,
+                            "sample2": j,
+                            "start_bp": tree.interval.left,
+                            "mrca": mrca,
+                            "tmrca": tmrca
+                        }
+                        current_mrca = mrca
+                    else:
+                        current_ibd = None
+                        current_mrca = None
+            
+            # Don't forget possible IBD segment at the end of the sequence
+            if current_ibd is not None:
+                current_ibd["end_bp"] = ts.sequence_length
+                current_ibd["length_bp"] = current_ibd["end_bp"] - current_ibd["start_bp"]
+                current_ibd["length_cm"] = current_ibd["length_bp"] * cm_per_bp
+                
+                if current_ibd["length_bp"] >= min_length_bp:
+                    ibd_segments.append(current_ibd)
+    
+    # Convert to DataFrame
+    ibd_df = pd.DataFrame(ibd_segments)
+    
+    return ibd_df</code></pre>
+
+            <h3>Visualizing Genetic Sharing</h3>
+            
+            <h4>IBD Sharing Matrix</h4>
+            <p>Visualizing patterns of IBD sharing between samples:</p>
+            
+            <pre><code>def visualize_ibd_sharing(ibd_df, n_samples):
+    """Create a heatmap of IBD sharing between samples."""
+    # Initialize a matrix for total IBD sharing
+    sharing_matrix = np.zeros((n_samples, n_samples))
+    
+    # Fill the matrix with total IBD sharing in cM
+    for _, row in ibd_df.iterrows():
+        i, j = int(row['sample1']), int(row['sample2'])
+        sharing_matrix[i, j] += row['length_cm']
+        sharing_matrix[j, i] += row['length_cm']  # Make matrix symmetric
+    
+    # Create heatmap
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(sharing_matrix, cmap='viridis')
+    plt.title('Total IBD Sharing Between Samples (cM)')
+    plt.savefig('results/ibd_sharing_heatmap.png')
+    
+    return sharing_matrix</code></pre>
+
+            <h4>MRCA Visualizer</h4>
+            <p>Visualizing the MRCA along the genome for pairs of samples:</p>
+            
+            <pre><code>def visualize_mrca_regions(ts, sample_pairs):
+    """Visualize MRCA regions along the genome for selected sample pairs."""
+    fig, axes = plt.subplots(len(sample_pairs), 1, figsize=(12, 2*len(sample_pairs)))
+    
+    # If only one pair, axes is not a list
+    if len(sample_pairs) == 1:
+        axes = [axes]
+    
+    for (s1, s2), ax in zip(sample_pairs, axes):
+        # Track MRCA and regions
+        mrca_regions = []
+        current_mrca = None
+        current_start = 0
+        
+        # Iterate through trees
+        for tree in ts.trees():
+            mrca = tree.mrca(s1, s2)
+            if mrca != current_mrca:
+                # Record previous region
+                if current_mrca is not None:
+                    mrca_regions.append((current_start, tree.interval.left, current_mrca, 
+                                        tree.time(current_mrca)))
+                # Start new region
+                current_mrca = mrca
+                current_start = tree.interval.left
+        
+        # Add final region
+        if current_mrca is not None:
+            mrca_regions.append((current_start, ts.sequence_length, current_mrca, 
+                                tree.time(current_mrca)))
+        
+        # Create colormap based on TMRCA
+        tmrcas = [r[3] for r in mrca_regions]
+        max_tmrca = max(tmrcas) if tmrcas else 1
+        
+        # Plot regions
+        for start, end, mrca, tmrca in mrca_regions:
+            # Normalize color by TMRCA (older = lighter)
+            color_intensity = 1 - (tmrca / max_tmrca)
+            color = (0, 0, color_intensity)
+            
+            # Plot rectangle for the region
+            width = end - start
+            ax.barh(0, width, left=start, height=0.5, color=color)
+            
+            # Add TMRCA text if region is wide enough
+            if width > ts.sequence_length / 30 and tmrca < max_tmrca * 0.8:  # Only label recent TMRCAs
+                text_pos = start + width/2
+                ax.text(text_pos, 0, f"{int(tmrca)}", ha='center', va='center', 
+                       color='white', fontsize=8)
+        
+        ax.set_title(f"MRCA regions for samples {s1} and {s2}")
+        ax.set_xlabel("Position (bp)")
+        ax.set_yticks([])
+    
+    plt.tight_layout()
+    plt.savefig('results/mrca_regions.png')
+    
+    return mrca_regions</code></pre>
+
+            <h3>Comparing msprime and Ped-Sim</h3>
+            
+            <h4>When to Use Each Tool</h4>
+            <p>Guidelines for choosing between msprime and Ped-Sim:</p>
+            
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>msprime</th>
+                    <th>Ped-Sim</th>
+                </tr>
+                <tr>
+                    <td>Simulation approach</td>
+                    <td>Coalescent (backward in time)</td>
+                    <td>Forward-time pedigree simulation</td>
+                </tr>
+                <tr>
+                    <td>Strengths</td>
+                    <td>
+                        • Population-level simulations<br>
+                        • Ancient demographic history<br>
+                        • Complex migration models<br>
+                        • Very efficient for large sample sizes
+                    </td>
+                    <td>
+                        • Explicit family relationships<br>
+                        • Direct control over pedigree structure<br>
+                        • Realistic recombination patterns<br>
+                        • Easier interpretation of results
+                    </td>
+                </tr>
+                <tr>
+                    <td>Best for</td>
+                    <td>
+                        • Population genetics questions<br>
+                        • Deep ancestral history<br>
+                        • Testing demographic models
+                    </td>
+                    <td>
+                        • Recent family relationships<br>
+                        • Known pedigree structures<br>
+                        • Validating relationship inference
+                    </td>
+                </tr>
+                <tr>
+                    <td>Output format</td>
+                    <td>Tree sequences (convertible to VCF)</td>
+                    <td>VCF, PLINK, IBD segments</td>
+                </tr>
+            </table>
+
+            <h4>Combining Approaches</h4>
+            <p>For some research questions, combining both simulation approaches may be beneficial:</p>
+            
+            <pre><code>def combined_simulation_workflow():
+    """Demonstrate a workflow that combines msprime and Ped-Sim approaches."""
+    # Step 1: Use msprime to simulate ancestral population history
+    ts_ancestral = msprime.sim_ancestry(
+        samples=100,  # Generate 100 haplotypes
+        population_size=10000,
+        sequence_length=10_000_000,
+        recombination_rate=1e-8,
+        random_seed=123
+    )
+    
+    # Add mutations
+    ts_ancestral = msprime.sim_mutations(ts_ancestral, rate=1e-8, random_seed=123)
+    
+    # Step 2: Export haplotypes for founder individuals in Ped-Sim format
+    # Export VCF for use as founder haplotypes in Ped-Sim
+    with open("ancestral_haplotypes.vcf", "w") as vcf_file:
+        ts_ancestral.write_vcf(vcf_file)
+    
+    # Step 3: Use Ped-Sim to simulate specific pedigree structures
+    # This would be a separate process, using the ancestral haplotypes
+    # as input for Ped-Sim founders
+    
+    # Step 4: Analyze the combined results
+    # This would involve importing Ped-Sim results and comparing with
+    # the ancestral population structure
+    
+    return {
+        "ancestral_ts": ts_ancestral,
+        "founder_vcf": "ancestral_haplotypes.vcf"
+    }</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>The ability to simulate genetic data under complex models is particularly valuable for anthropological research:</p>
+            
+            <ul>
+                <li><strong>Testing Migration Hypotheses:</strong> Anthropologists can use msprime to simulate genetic patterns under different migration scenarios, helping to distinguish between competing hypotheses about human population movements (e.g., timing of peopling of the Americas or Oceania).</li>
+                <li><strong>Population Structure Studies:</strong> By simulating data under different population structure models, researchers can better interpret genetic clustering observed in real populations, accounting for factors like isolation by distance and ancient admixture events.</li>
+                <li><strong>Cultural Practice Effects:</strong> Comparing simulated genetic patterns under different mating systems (e.g., endogamy, exogamy, or polygyny) can help understand how cultural practices shape genetic diversity.</li>
+                <li><strong>Ancient DNA Interpretation:</strong> Simulations can help bridge the gap between modern and ancient DNA samples, providing a framework for understanding how genetic patterns evolve over time.</li>
+                <li><strong>Reconstructing Unwritten History:</strong> For populations without extensive written records, simulation allows testing of different historical scenarios against observed genetic patterns, helping to recover lost histories.</li>
+            </ul>
+            
+            <p>By combining powerful simulation tools with anthropological theory, researchers can move beyond simple description of genetic patterns to testing specific hypotheses about human history and cultural practices.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Create a basic msprime simulation and explore the resulting tree sequence</li>
+                <li>Implement a demographic model representing a population split and migration</li>
+                <li>Extract IBD segments from a simulated tree sequence</li>
+                <li>Visualize patterns of genetic sharing between samples</li>
+                <li>Compare IBD detection results between msprime and Ped-Sim simulated data</li>
+                <li>Design a simulation to test a specific anthropological hypothesis</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When designing simulations, start simple and gradually add complexity. This allows you to understand how each parameter affects the results and makes debugging easier. Document your simulation parameters carefully so that your results are reproducible.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab9_evaluation.html" class="prev-lab">IBD Evaluation</a>
+                <a href="lab11_distributions.html" class="next-lab">Distributions</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

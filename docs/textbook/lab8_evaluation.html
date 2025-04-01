@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 9: Evaluating IBD Detection | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Evaluating IBD Detection Methods</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab9_evaluation.html" class="active">Lab 9: Evaluation</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 9: Evaluating IBD Detection Methods</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Evaluating the accuracy of IBD detection methods is crucial for anthropological research. Different algorithms have varying strengths and weaknesses, and understanding these differences helps researchers choose the appropriate tool for specific research questions.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Compare the performance of multiple IBD detection algorithms</li>
+                <li>Evaluate algorithm outputs against known ground truth data</li>
+                <li>Apply statistical measures to assess algorithm accuracy</li>
+                <li>Analyze the relationship between segment length and detection reliability</li>
+                <li>Develop critical thinking about algorithm selection for research questions</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Evaluation Metrics</h4>
+            <p>Several metrics help us evaluate IBD detection performance:</p>
+            
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Description</th>
+                    <th>Calculation</th>
+                </tr>
+                <tr>
+                    <td>Precision</td>
+                    <td>Proportion of detected segments that are true IBD</td>
+                    <td>TP / (TP + FP)</td>
+                </tr>
+                <tr>
+                    <td>Recall</td>
+                    <td>Proportion of true IBD segments that are detected</td>
+                    <td>TP / (TP + FN)</td>
+                </tr>
+                <tr>
+                    <td>F1 Score</td>
+                    <td>Harmonic mean of precision and recall</td>
+                    <td>2 * (Precision * Recall) / (Precision + Recall)</td>
+                </tr>
+                <tr>
+                    <td>Overlap Percentage</td>
+                    <td>How much a detected segment overlaps with the true segment</td>
+                    <td>(Overlap Length) / (True Segment Length)</td>
+                </tr>
+            </table>
+
+            <h4>IBD Detection Challenges</h4>
+            <p>Common challenges in IBD detection include:</p>
+            <ul>
+                <li>False positives from IBS (Identical-By-State) segments</li>
+                <li>False negatives, especially for short segments</li>
+                <li>Splitting of long segments due to phasing errors</li>
+                <li>Incorrectly merged segments from adjacent IBD regions</li>
+                <li>Trade-offs between precision and recall based on algorithm parameters</li>
+            </ul>
+
+            <h3>Loading and Formatting IBD Data</h3>
+            
+            <h4>Loading Data from Different Algorithms</h4>
+            <p>Each IBD detection algorithm has its own output format:</p>
+            
+            <pre><code>def load_refined_ibd(segments_file):
+    """Load IBD segments detected by Refined-IBD."""
+    columns = ['ind1', 'ind2', 'chrom', 'start_bp', 'end_bp', 'start_cm', 'end_cm', 'lod']
+    df = pd.read_csv(segments_file, sep='\t', names=columns)
+    df['length_cm'] = df['end_cm'] - df['start_cm']
+    df['length_bp'] = df['end_bp'] - df['start_bp']
+    df['algorithm'] = 'refinedibd'
+    return df
+
+def load_hap_ibd(segments_file):
+    """Load IBD segments detected by Hap-IBD."""
+    columns = ['ind1', 'hap1', 'ind2', 'hap2', 'chrom', 'start_bp', 'end_bp', 'length_cm', 'lod']
+    df = pd.read_csv(segments_file, sep='\t', names=columns)
+    # Convert haploid format to diploid
+    df = df[['ind1', 'ind2', 'chrom', 'start_bp', 'end_bp', 'length_cm', 'lod']]
+    df['algorithm'] = 'hapibd'
+    return df
+
+def load_ibis(segments_file):
+    """Load IBD segments detected by IBIS."""
+    columns = ['ind1', 'ind2', 'chrom', 'start_bp', 'end_bp', 'genetic_length', 'num_snps', 'score']
+    df = pd.read_csv(segments_file, sep='\t', names=columns)
+    df = df.rename(columns={'genetic_length': 'length_cm'})
+    df['algorithm'] = 'ibis'
+    return df
+
+def load_pedsim_truth(segments_file):
+    """Load true IBD segments from Ped-Sim output."""
+    columns = ['ind1_id', 'ind2_id', 'chrom', 'start_bp', 'end_bp', 'start_cm', 'end_cm']
+    df = pd.read_csv(segments_file, sep='\s+', names=columns)
+    df['length_cm'] = df['end_cm'] - df['start_cm']
+    df['length_bp'] = df['end_bp'] - df['start_bp']
+    df = df.rename(columns={'ind1_id': 'ind1', 'ind2_id': 'ind2'})
+    df['true_segment'] = True
+    return df</code></pre>
+
+            <h4>Creating a Standardized Format</h4>
+            <p>To compare algorithms fairly, we need to standardize their outputs:</p>
+            
+            <pre><code>def standardize_ibd_segments(refined_df, hap_df, ibis_df):
+    """Convert all IBD segment formats to a standard format for comparison."""
+    # Select common columns
+    common_cols = ['ind1', 'ind2', 'chrom', 'start_bp', 'end_bp', 'length_cm', 'algorithm']
+    
+    # Ensure all dataframes have these columns
+    refined_standard = refined_df[common_cols].copy()
+    hap_standard = hap_df[common_cols].copy()
+    ibis_standard = ibis_df[common_cols].copy()
+    
+    # Combine into a single dataframe
+    all_segments = pd.concat([refined_standard, hap_standard, ibis_standard])
+    
+    # Standardize chromosome format (ensure 'chr' prefix)
+    all_segments['chrom'] = all_segments['chrom'].astype(str)
+    all_segments['chrom'] = all_segments['chrom'].apply(
+        lambda x: f"chr{x}" if not x.startswith('chr') else x)
+    
+    # Sort by chromosome and position
+    all_segments = all_segments.sort_values(['chrom', 'start_bp'])
+    
+    return all_segments</code></pre>
+
+            <h3>Evaluating Against Ground Truth</h3>
+            
+            <h4>Segment Overlap Detection</h4>
+            <p>We assess how well detected segments match the true segments:</p>
+            
+            <pre><code>def evaluate_tool(tool_df, truth_df):
+    """Evaluate an IBD detection tool against ground truth data."""
+    # Build interval trees for efficient overlap detection
+    truth_trees = {}
+    for chrom in truth_df['chrom'].unique():
+        chrom_df = truth_df[truth_df['chrom'] == chrom]
+        tree = IntervalTree()
+        
+        for idx, row in chrom_df.iterrows():
+            # Store index in the tree for later retrieval
+            tree[row['start_bp']:row['end_bp']] = idx
+            
+        truth_trees[chrom] = tree
+    
+    # Add evaluation columns to the tool dataframe
+    tool_df['detected_truth'] = False
+    tool_df['overlap_pct'] = 0.0
+    tool_df['truth_id'] = None
+    
+    # Evaluate each detected segment
+    for idx, row in tool_df.iterrows():
+        chrom = row['chrom']
+        if chrom in truth_trees:
+            # Find overlapping true segments
+            overlaps = truth_trees[chrom][row['start_bp']:row['end_bp']]
+            
+            if overlaps:
+                # For each overlapping true segment, calculate the overlap percentage
+                best_overlap = 0
+                best_truth_id = None
+                
+                for overlap in overlaps:
+                    truth_idx = overlap.data
+                    truth_row = truth_df.loc[truth_idx]
+                    
+                    # Calculate overlap length in base pairs
+                    overlap_start = max(row['start_bp'], truth_row['start_bp'])
+                    overlap_end = min(row['end_bp'], truth_row['end_bp'])
+                    overlap_length = overlap_end - overlap_start
+                    
+                    # Calculate overlap percentage relative to true segment
+                    overlap_pct = overlap_length / (truth_row['end_bp'] - truth_row['start_bp'])
+                    
+                    # Keep track of best overlap
+                    if overlap_pct > best_overlap:
+                        best_overlap = overlap_pct
+                        best_truth_id = truth_idx
+                
+                # Mark as detected if overlap is sufficient (e.g., 50%)
+                if best_overlap >= 0.5:
+                    tool_df.at[idx, 'detected_truth'] = True
+                    tool_df.at[idx, 'overlap_pct'] = best_overlap
+                    tool_df.at[idx, 'truth_id'] = best_truth_id
+    
+    return tool_df</code></pre>
+
+            <h4>Calculating Performance Metrics</h4>
+            <p>We calculate precision, recall, and F1 score for each algorithm:</p>
+            
+            <pre><code>def calculate_performance_metrics(tool_df, truth_df, min_length=3):
+    """Calculate precision, recall, and F1 score for a tool."""
+    # Filter segments by minimum length
+    tool_filtered = tool_df[tool_df['length_cm'] >= min_length]
+    truth_filtered = truth_df[truth_df['length_cm'] >= min_length]
+    
+    # Find true positives (detected truth segments)
+    true_positives = tool_filtered[tool_filtered['detected_truth']].shape[0]
+    
+    # All detected segments are either TP or FP
+    all_detected = tool_filtered.shape[0]
+    
+    # All true segments are either TP or FN
+    all_truth = truth_filtered.shape[0]
+    
+    # Find which truth segments were detected
+    detected_truth_ids = set(tool_filtered['truth_id'].dropna())
+    truth_detected = truth_filtered.index.isin(detected_truth_ids)
+    truth_detected_count = sum(truth_detected)
+    
+    # Calculate metrics
+    precision = true_positives / all_detected if all_detected > 0 else 0
+    recall = truth_detected_count / all_truth if all_truth > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    return {
+        'precision': precision,
+        'recall': recall,
+        'f1': f1,
+        'true_positives': true_positives,
+        'false_positives': all_detected - true_positives,
+        'false_negatives': all_truth - truth_detected_count,
+        'total_detected': all_detected,
+        'total_truth': all_truth
+    }</code></pre>
+
+            <h3>Visualizing Evaluation Results</h3>
+            
+            <h4>Length Distribution Comparison</h4>
+            <p>Compare the distribution of segment lengths between algorithms:</p>
+            
+            <pre><code>def plot_length_distribution(all_results, truth_df):
+    """Plot the distribution of segment lengths for each algorithm and truth."""
+    plt.figure(figsize=(12, 6))
+    
+    # Get a subset of each algorithm's data
+    for algo in all_results:
+        df = all_results[algo]['evaluated']
+        sns.histplot(df['length_cm'], bins=30, alpha=0.5, label=algo, kde=True)
+    
+    # Add the truth distribution
+    sns.histplot(truth_df['length_cm'], bins=30, alpha=0.5, label='Ground Truth', kde=True)
+    
+    plt.title('Distribution of IBD Segment Lengths by Algorithm')
+    plt.xlabel('Segment Length (cM)')
+    plt.ylabel('Frequency')
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.savefig('results/ibd_length_distribution_comparison.png', dpi=300)
+    plt.close()</code></pre>
+
+            <h4>Precision-Recall Analysis</h4>
+            <p>Visualize the precision-recall trade-off for different segment lengths:</p>
+            
+            <pre><code>def plot_precision_recall(all_results, truth_df):
+    """Plot precision and recall by segment length threshold."""
+    min_lengths = np.arange(1, 10.1, 0.5)
+    results = {algo: {'precision': [], 'recall': [], 'f1': []} for algo in all_results}
+    
+    # Calculate metrics for different length thresholds
+    for min_len in min_lengths:
+        for algo in all_results:
+            metrics = calculate_performance_metrics(
+                all_results[algo]['evaluated'], truth_df, min_length=min_len)
+            results[algo]['precision'].append(metrics['precision'])
+            results[algo]['recall'].append(metrics['recall'])
+            results[algo]['f1'].append(metrics['f1'])
+    
+    # Plot precision and recall curves
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    
+    for algo in all_results:
+        ax1.plot(min_lengths, results[algo]['precision'], marker='o', label=algo)
+        ax2.plot(min_lengths, results[algo]['recall'], marker='o', label=algo)
+    
+    ax1.set_title('Precision by Minimum Segment Length')
+    ax1.set_xlabel('Minimum Segment Length (cM)')
+    ax1.set_ylabel('Precision')
+    ax1.grid(alpha=0.3)
+    ax1.legend()
+    
+    ax2.set_title('Recall by Minimum Segment Length')
+    ax2.set_xlabel('Minimum Segment Length (cM)')
+    ax2.set_ylabel('Recall')
+    ax2.grid(alpha=0.3)
+    ax2.legend()
+    
+    plt.tight_layout()
+    plt.savefig('results/precision_recall_by_length.png', dpi=300)
+    plt.close()</code></pre>
+
+            <h4>Overlap Quality Analysis</h4>
+            <p>Analyze how well detected segments match true segments:</p>
+            
+            <pre><code>def plot_overlap_histogram(all_results):
+    """Plot histogram of overlap percentages for true positive segments."""
+    plt.figure(figsize=(12, 6))
+    
+    for algo in all_results:
+        df = all_results[algo]['evaluated']
+        true_positives = df[df['detected_truth']]
+        if not true_positives.empty:
+            sns.histplot(true_positives['overlap_pct'], bins=20, alpha=0.5, label=algo, kde=True)
+    
+    plt.title('Distribution of Overlap Percentages for True Positive Segments')
+    plt.xlabel('Overlap Percentage')
+    plt.ylabel('Frequency')
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.savefig('results/overlap_percentage_distribution.png', dpi=300)
+    plt.close()</code></pre>
+
+            <h3>Comparing Algorithm Performance</h3>
+            
+            <h4>Overall Performance Summary</h4>
+            <p>Create a summary table of algorithm performance:</p>
+            
+            <pre><code>def create_performance_summary(all_results, truth_df, length_thresholds=[3, 5, 7]):
+    """Create a summary table of algorithm performance at different thresholds."""
+    summary = []
+    
+    for min_len in length_thresholds:
+        for algo in all_results:
+            metrics = calculate_performance_metrics(
+                all_results[algo]['evaluated'], truth_df, min_length=min_len)
+            
+            summary.append({
+                'Algorithm': algo,
+                'Min Length (cM)': min_len,
+                'Precision': metrics['precision'],
+                'Recall': metrics['recall'],
+                'F1 Score': metrics['f1'],
+                'True Positives': metrics['true_positives'],
+                'False Positives': metrics['false_positives'],
+                'False Negatives': metrics['false_negatives']
+            })
+    
+    summary_df = pd.DataFrame(summary)
+    print(summary_df.to_string(index=False))
+    
+    # Save to CSV
+    summary_df.to_csv('results/algorithm_performance_summary.csv', index=False)
+    
+    return summary_df</code></pre>
+
+            <h4>Strengths and Weaknesses Analysis</h4>
+            <p>Based on our evaluation, each algorithm has distinct characteristics:</p>
+            
+            <table>
+                <tr>
+                    <th>Algorithm</th>
+                    <th>Strengths</th>
+                    <th>Weaknesses</th>
+                    <th>Best For</th>
+                </tr>
+                <tr>
+                    <td>Refined-IBD</td>
+                    <td>
+                        • Good precision<br>
+                        • Robust to phasing errors<br>
+                        • Detailed output
+                    </td>
+                    <td>
+                        • Lower recall for short segments<br>
+                        • Computationally intensive<br>
+                        • May split long segments
+                    </td>
+                    <td>Projects requiring high precision, especially with longer segments</td>
+                </tr>
+                <tr>
+                    <td>Hap-IBD</td>
+                    <td>
+                        • High speed<br>
+                        • Good detection of short segments<br>
+                        • Consistent performance
+                    </td>
+                    <td>
+                        • May include false positives<br>
+                        • Requires phased data<br>
+                        • Less detailed confidence metrics
+                    </td>
+                    <td>Large datasets where speed is important and phased data is available</td>
+                </tr>
+                <tr>
+                    <td>IBIS</td>
+                    <td>
+                        • Works with unphased data<br>
+                        • Good recall<br>
+                        • Fast processing
+                    </td>
+                    <td>
+                        • Lower precision<br>
+                        • May merge adjacent segments<br>
+                        • Sensitive to data quality
+                    </td>
+                    <td>Projects with unphased data or where maximizing detected relationships is important</td>
+                </tr>
+            </table>
+
+            <h3>Anthropological Context</h3>
+            <p>The evaluation of IBD detection algorithms has significant implications for anthropological research:</p>
+            
+            <ul>
+                <li><strong>Population Structure Analysis:</strong> Different algorithms may be more suitable for studying different population structures. For endogamous populations with high background relatedness, high-precision algorithms like Refined-IBD may be preferable to avoid false inferences.</li>
+                <li><strong>Recent vs. Distant Relationships:</strong> For studying recent kinship, algorithms that excel at detecting longer segments (>7 cM) are most important. For ancient relationships or population history, accuracy in detecting shorter segments (3-7 cM) becomes critical.</li>
+                <li><strong>Diaspora Studies:</strong> When studying historically displaced populations (e.g., African diaspora), maximizing recall may be more important than precision to identify potential connections across geographic regions.</li>
+                <li><strong>Methodological Transparency:</strong> Anthropologists must be transparent about algorithm choices and evaluation metrics when publishing research, as these choices affect conclusions about kinship patterns and population history.</li>
+            </ul>
+            
+            <p>Understanding algorithm performance is not just a technical consideration but directly impacts anthropological interpretations of genetic data. The choice of IBD detection method should be guided by the specific research questions and the cultural context of the population being studied.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Run three IBD detection algorithms on the same simulated dataset</li>
+                <li>Evaluate each algorithm's performance against the ground truth data</li>
+                <li>Create visualizations comparing algorithm performance</li>
+                <li>Analyze how performance varies with segment length</li>
+                <li>Discuss which algorithm would be most appropriate for different research scenarios</li>
+                <li>Create a summary table of algorithm strengths and weaknesses</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When evaluating algorithms, consider not just overall metrics but how performance varies across different segment lengths, chromosomes, and relationship types. An algorithm that performs well on average might not be optimal for your specific research question.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab8_pedsim.html" class="prev-lab">Ped-Sim</a>
+                <a href="lab10_msprime.html" class="next-lab">MSPrime</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glossary of Genetic Terms | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Glossary of Genetic Terms</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="glossary.html" class="active">Glossary</a>
+    </nav>
+
+    <main class="container">
+        <section class="section lab-content">
+            <h2>Glossary of Genetic Terms</h2>
+            
+            <p>This glossary provides definitions for key terms used throughout the course, with an emphasis on their relevance to computational genetic genealogy and anthropological research.</p>
+            
+            <dl>
+                <dt><strong>Allele</strong></dt>
+                <dd>One of the alternative forms of a gene or genetic locus. Different alleles can result in different observable traits.</dd>
+                
+                <dt><strong>Autosomal DNA</strong></dt>
+                <dd>DNA contained in the 22 pairs of autosomes (non-sex chromosomes) that is inherited from both parents and recombined during meiosis.</dd>
+                
+                <dt><strong>centiMorgan (cM)</strong></dt>
+                <dd>A unit of genetic distance that represents the probability of recombination during meiosis. One centiMorgan corresponds to approximately a 1% chance of recombination between two loci.</dd>
+                
+                <dt><strong>Chromosome</strong></dt>
+                <dd>A long DNA molecule containing many genes and associated proteins that carries genetic information.</dd>
+                
+                <dt><strong>Endogamy</strong></dt>
+                <dd>The practice of marrying within a specific social group, resulting in increased genetic relatedness within the population and potentially complicating genetic relationship inference.</dd>
+                
+                <dt><strong>Founder Effect</strong></dt>
+                <dd>The reduction in genetic diversity that occurs when a small subset of individuals from a larger population establishes a new population, common in diaspora communities.</dd>
+                
+                <dt><strong>Genetic Map</strong></dt>
+                <dd>A representation of the relative positions of genetic markers along a chromosome based on recombination frequencies, measured in centiMorgans.</dd>
+                
+                <dt><strong>Genotype</strong></dt>
+                <dd>The genetic constitution of an individual at specific genetic loci.</dd>
+                
+                <dt><strong>Haplotype</strong></dt>
+                <dd>A group of genes or genetic markers that are inherited together from a single parent.</dd>
+                
+                <dt><strong>HBD (Homozygous-By-Descent)</strong></dt>
+                <dd>Segments of DNA where both copies are identical by descent, typically due to inheriting identical segments from related parents (e.g., in consanguineous marriages).</dd>
+                
+                <dt><strong>IBD (Identity-By-Descent)</strong></dt>
+                <dd>Segments of DNA that are identical between two individuals because they were inherited from a common ancestor, forming the basis for genetic relationship inference.</dd>
+                
+                <dt><strong>IBS (Identity-By-State)</strong></dt>
+                <dd>Genetic markers that are identical between individuals, without necessarily being inherited from a common ancestor.</dd>
+                
+                <dt><strong>Kinship Coefficient</strong></dt>
+                <dd>A measure of relatedness between two individuals, defined as the probability that alleles sampled at random from each individual are identical by descent.</dd>
+                
+                <dt><strong>LOD Score</strong></dt>
+                <dd>Log of odds score; a statistical measure of the likelihood of genetic linkage between loci or the confidence in an inferred genetic relationship.</dd>
+                
+                <dt><strong>MAF (Minor Allele Frequency)</strong></dt>
+                <dd>The frequency of the less common allele at a polymorphic locus in a population.</dd>
+                
+                <dt><strong>Meiosis</strong></dt>
+                <dd>The type of cell division that produces gametes (eggs or sperm) with half the chromosome number of the parent cell, involving recombination of genetic material.</dd>
+                
+                <dt><strong>Pedigree</strong></dt>
+                <dd>A diagram representing the genetic relationships among individuals, tracing patterns of inheritance across generations.</dd>
+                
+                <dt><strong>Phasing</strong></dt>
+                <dd>The process of determining which alleles are on the same chromosome (haplotype), crucial for accurate IBD detection.</dd>
+                
+                <dt><strong>Recombination</strong></dt>
+                <dd>The exchange of genetic material between homologous chromosomes during meiosis, resulting in new combinations of alleles.</dd>
+                
+                <dt><strong>SNP (Single Nucleotide Polymorphism)</strong></dt>
+                <dd>A variation at a single position in a DNA sequence, the most common type of genetic variation among people.</dd>
+                
+                <dt><strong>VCF (Variant Call Format)</strong></dt>
+                <dd>A standard file format for storing genetic variation data, including SNPs and small insertions/deletions.</dd>
+                
+                <dt><strong>Y-DNA</strong></dt>
+                <dd>DNA contained in the Y chromosome, passed from father to son and used to trace paternal lineages.</dd>
+                
+                <dt><strong>mtDNA (Mitochondrial DNA)</strong></dt>
+                <dd>DNA contained in mitochondria, passed from mother to all children and used to trace maternal lineages.</dd>
+            </dl>
+            
+            <h3>Terms Specific to Computational Genetic Genealogy</h3>
+            
+            <dl>
+                <dt><strong>Admixture</strong></dt>
+                <dd>The interbreeding of two or more previously isolated populations, resulting in individuals with mixed genetic ancestry.</dd>
+                
+                <dt><strong>Admixture Mapping</strong></dt>
+                <dd>A method for localizing genes that influence traits or diseases that differ in prevalence between populations by studying individuals with mixed ancestry.</dd>
+                
+                <dt><strong>Coalescent Simulation</strong></dt>
+                <dd>A computational approach that models genetic inheritance backward in time to the most recent common ancestor, used in MSPrime simulations.</dd>
+                
+                <dt><strong>False Discovery Rate (FDR)</strong></dt>
+                <dd>In IBD detection, the proportion of detected segments that are not truly IBD.</dd>
+                
+                <dt><strong>Forward-time Simulation</strong></dt>
+                <dd>A computational approach that models genetic inheritance forward in time through specified pedigrees, used in Ped-Sim simulations.</dd>
+                
+                <dt><strong>Genetic Genealogy</strong></dt>
+                <dd>The use of genetic testing in combination with traditional genealogical methods to infer relationships between individuals.</dd>
+                
+                <dt><strong>Ground Truth</strong></dt>
+                <dd>In simulation contexts, the actual genetic relationships and IBD segments that are known with certainty and used to evaluate detection methods.</dd>
+                
+                <dt><strong>Hidden Markov Model (HMM)</strong></dt>
+                <dd>A statistical model used in IBD detection algorithms like IBIS to infer the hidden state (IBD/not-IBD) from observed genetic data.</dd>
+                
+                <dt><strong>Pedigree Reconstruction</strong></dt>
+                <dd>The computational process of inferring family relationships and structures based solely on genetic data, without prior genealogical information.</dd>
+                
+                <dt><strong>Population Structure</strong></dt>
+                <dd>The organization of genetic variation within and between populations, often visualized using techniques like Principal Component Analysis (PCA).</dd>
+                
+                <dt><strong>Positional Burrows-Wheeler Transform (PBWT)</strong></dt>
+                <dd>An algorithm used in Hap-IBD for efficient detection of identical haplotype segments between individuals.</dd>
+                
+                <dt><strong>Precision</strong></dt>
+                <dd>In IBD detection evaluation, the proportion of detected segments that are truly IBD.</dd>
+                
+                <dt><strong>Recall (Sensitivity)</strong></dt>
+                <dd>In IBD detection evaluation, the proportion of true IBD segments that are successfully detected.</dd>
+            </dl>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

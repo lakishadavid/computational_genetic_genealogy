@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 11: Statistical Distributions | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Statistical Distributions in Genetic Sharing</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab11_distributions.html" class="active">Lab 11: Distributions</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 11: Statistical Distributions in Genetic Sharing</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Understanding the statistical distributions that govern genetic sharing between relatives provides the theoretical foundation for relationship inference. These mathematical models allow anthropologists to predict expected patterns of IBD sharing and interpret observed patterns in the context of family relationships and population history.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the statistical foundations of IBD segment distributions</li>
+                <li>Apply mathematical models from relationship inference literature</li>
+                <li>Analyze how meiotic distance affects expected genetic sharing</li>
+                <li>Use Poisson and exponential distributions to model IBD segments</li>
+                <li>Compare analytical models for predicting IBD patterns</li>
+            </ul>
+
+            <h3>Key Concepts</h3>
+            
+            <h4>Mathematical Models of Genetic Sharing</h4>
+            <p>Several key probability distributions model different aspects of genetic sharing:</p>
+            
+            <table>
+                <tr>
+                    <th>Distribution</th>
+                    <th>What It Models</th>
+                    <th>Key Parameters</th>
+                </tr>
+                <tr>
+                    <td>Poisson</td>
+                    <td>Number of IBD segments shared between relatives</td>
+                    <td>λ (lambda): expected number of segments</td>
+                </tr>
+                <tr>
+                    <td>Exponential</td>
+                    <td>Length distribution of IBD segments</td>
+                    <td>Rate parameter related to meiotic distance</td>
+                </tr>
+                <tr>
+                    <td>Gamma</td>
+                    <td>Total amount of IBD sharing (in cM)</td>
+                    <td>Shape and rate parameters</td>
+                </tr>
+                <tr>
+                    <td>Binomial</td>
+                    <td>Probability of sharing an allele IBD at a specific locus</td>
+                    <td>p = relatedness coefficient</td>
+                </tr>
+            </table>
+
+            <h4>Relationship Between Meiotic Distance and IBD</h4>
+            <p>The relationship between meiotic distance (number of generations) and IBD sharing is fundamental:</p>
+            <ul>
+                <li>Expected proportion of genome shared IBD = 2<sup>-d</sup> (for simple relationships)</li>
+                <li>Expected number of segments increases with meiotic distance (up to a point)</li>
+                <li>Expected segment length decreases with meiotic distance</li>
+                <li>Minimum detectable segment length creates bias in observed sharing</li>
+            </ul>
+
+            <h3>ERSA Model for IBD Sharing</h3>
+            
+            <h4>The ERSA Equation</h4>
+            <p>The ERSA (Estimated Relationship by Shared Ancestry) model predicts IBD sharing:</p>
+            
+            <pre><code>def ersa_expected_segments(d, min_seg_len, num_ancestors=1, num_rec=35, num_chr=22):
+    """
+    Calculate expected number of shared segments using ERSA model.
+    
+    Parameters:
+    d (int): Meiotic distance (total number of meioses separating two individuals)
+    min_seg_len (float): Minimum segment length threshold in cM
+    num_ancestors (int): Number of common ancestors (default=1)
+    num_rec (int): Expected number of recombinations per genome per meiosis (default=35)
+    num_chr (int): Number of chromosomes (default=22)
+    
+    Returns:
+    float: Expected number of shared segments (lambda)
+    """
+    # Probability that a random segment exceeds the minimum length
+    prob_greater_than_t = np.exp(-d * min_seg_len / 100)
+    
+    # ERSA equation for expected number of segments
+    lambda_mean = ((num_ancestors * (num_rec * d + num_chr)) / (2 ** (d - 1))) * prob_greater_than_t
+    
+    return lambda_mean</code></pre>
+
+            <h4>Segment Length Distribution</h4>
+            <p>The distribution of segment lengths follows an exponential distribution:</p>
+            
+            <pre><code>def segment_length_distribution(d, num_segments=1000):
+    """
+    Generate a distribution of segment lengths for a given meiotic distance.
+    
+    Parameters:
+    d (int): Meiotic distance
+    num_segments (int): Number of segments to generate
+    
+    Returns:
+    numpy.ndarray: Array of segment lengths in cM
+    """
+    # Rate parameter for exponential distribution (in cM^-1)
+    rate = d / 100
+    
+    # Generate segment lengths from exponential distribution
+    segment_lengths = np.random.exponential(scale=1/rate, size=num_segments)
+    
+    return segment_lengths</code></pre>
+
+            <h4>Simulating IBD Segments</h4>
+            <p>We can simulate realistic IBD segments using these distributions:</p>
+            
+            <pre><code>def simulate_ibd_segments(d, min_length, num_ancestors=1, num_simulations=1000):
+    """
+    Simulate IBD segments between relatives separated by meiotic distance d.
+    
+    Parameters:
+    d (int): Meiotic distance
+    min_length (float): Minimum segment length in cM
+    num_ancestors (int): Number of common ancestors
+    num_simulations (int): Number of simulations to run
+    
+    Returns:
+    dict: Simulation results including number of segments and total IBD
+    """
+    # Constants
+    num_rec = 35  # Recombinations per meiosis
+    num_chr = 22  # Number of chromosomes
+    
+    # Pre-filtering lambda (expected number of segments before length filter)
+    lambda_pre = ((num_ancestors * (num_rec * d + num_chr)) / (2 ** (d - 1)))
+    
+    # Results storage
+    segment_counts = []
+    total_ibd_lengths = []
+    
+    # Run simulations
+    for _ in range(num_simulations):
+        # Sample number of segments from Poisson
+        num_segments = np.random.poisson(lambda_pre)
+        
+        # Sample segment lengths from exponential
+        rate = d / 100  # Rate parameter in cM^-1
+        segment_lengths = np.random.exponential(scale=1/rate, size=num_segments)
+        
+        # Filter segments by minimum length
+        valid_segments = segment_lengths[segment_lengths >= min_length]
+        
+        # Store results
+        segment_counts.append(len(valid_segments))
+        total_ibd_lengths.append(np.sum(valid_segments))
+    
+    # Calculate statistics
+    mean_segments = np.mean(segment_counts)
+    std_segments = np.std(segment_counts)
+    mean_total_ibd = np.mean(total_ibd_lengths)
+    std_total_ibd = np.std(total_ibd_lengths)
+    
+    # Compare with analytical expectations
+    expected_segments = ersa_expected_segments(d, min_length, num_ancestors)
+    
+    return {
+        "segment_counts": segment_counts,
+        "total_ibd": total_ibd_lengths,
+        "mean_segments": mean_segments,
+        "std_segments": std_segments,
+        "mean_total_ibd": mean_total_ibd,
+        "std_total_ibd": std_total_ibd,
+        "expected_segments": expected_segments
+    }</code></pre>
+
+            <h3>Relationship Inference Models</h3>
+            
+            <h4>ERSA Implementation</h4>
+            <p>The ERSA algorithm uses statistical distributions to infer relationships:</p>
+            
+            <pre><code>def ersa_relationship_inference(num_segments, total_ibd, min_seg_len):
+    """
+    Infer meiotic distance using ERSA model.
+    
+    Parameters:
+    num_segments (int): Number of observed IBD segments
+    total_ibd (float): Total IBD sharing in cM
+    min_seg_len (float): Minimum segment length in cM
+    
+    Returns:
+    dict: Inferred relationship information
+    """
+    # Search for the most likely meiotic distance
+    max_likelihood = -np.inf
+    best_d = None
+    best_num_ancestors = None
+    
+    # Try different meiotic distances
+    for d in range(2, 15):
+        # Try different numbers of ancestors
+        for num_ancestors in [1, 2, 4]:
+            # Expected number of segments
+            expected_segments = ersa_expected_segments(d, min_seg_len, num_ancestors)
+            
+            # Likelihood under Poisson model
+            log_likelihood = scipy.stats.poisson.logpmf(num_segments, expected_segments)
+            
+            # Update if this is better
+            if log_likelihood > max_likelihood:
+                max_likelihood = log_likelihood
+                best_d = d
+                best_num_ancestors = num_ancestors
+    
+    # Convert meiotic distance to relationship term
+    relationship = interpret_meiotic_distance(best_d, best_num_ancestors)
+    
+    return {
+        "meiotic_distance": best_d,
+        "num_ancestors": best_num_ancestors,
+        "relationship": relationship,
+        "expected_segments": ersa_expected_segments(best_d, min_seg_len, best_num_ancestors),
+        "log_likelihood": max_likelihood
+    }</code></pre>
+
+            <h4>Bonsai Approach</h4>
+            <p>The Bonsai algorithm uses a similar statistical foundation with some refinements:</p>
+            
+            <pre><code>def get_analytical_distant_relative_distribution(relation_tuple, genome_length, min_seg_len):
+    """
+    Implementation from Bonsai algorithm for distant relative IBD distribution.
+    
+    Parameters:
+    relation_tuple (tuple): (up_meioses, down_meioses, num_ancestors)
+    genome_length (float): Total genome length in cM
+    min_seg_len (float): Minimum segment length in cM
+    
+    Returns:
+    dict: Expected number of segments and total length
+    """
+    up_meioses = relation_tuple[0]
+    down_meioses = relation_tuple[1]
+    num_ancestors = relation_tuple[2]
+    
+    # Total meiotic distance
+    d = up_meioses + down_meioses
+    
+    # Expected number of recombination events
+    # 35 recombinations per meiosis + 22 chromosomes
+    num_recomb_events = 35 * d + 22
+    
+    # Length parameter for exponential distribution (Morgan^-1)
+    length_param = d / 100
+    
+    # Expected segment length (Morgan)
+    E_segment_length = 1 / length_param
+    
+    # Probability segment exceeds minimum length
+    prob_exceed_min = np.exp(-min_seg_len * length_param)
+    
+    # Expected number of segments before filtering
+    E_segs_pre_filtering = (num_ancestors * num_recomb_events) / (2 ** (d - 1))
+    
+    # Expected number of segments after filtering
+    E_segs_post_filtering = E_segs_pre_filtering * prob_exceed_min
+    
+    # Expected total IBD length
+    E_total_ibd = E_segs_post_filtering * (E_segment_length + min_seg_len)
+    
+    return {
+        "expected_segments": E_segs_post_filtering,
+        "expected_total_ibd": E_total_ibd,
+        "length_parameter": length_param,
+        "prob_exceed_min": prob_exceed_min
+    }</code></pre>
+
+            <h4>Comparing Different Models</h4>
+            <p>Let's compare how these models predict IBD segments for different relationships:</p>
+            
+            <pre><code>def compare_models_for_relationships():
+    """Compare ERSA and Bonsai predictions for different relationships."""
+    # Common relationships to test
+    relationships = [
+        {"name": "Full siblings", "meiotic_distance": 2, "num_ancestors": 2},
+        {"name": "First cousins", "meiotic_distance": 4, "num_ancestors": 1},
+        {"name": "Second cousins", "meiotic_distance": 6, "num_ancestors": 1},
+        {"name": "Third cousins", "meiotic_distance": 8, "num_ancestors": 1},
+        {"name": "Fourth cousins", "meiotic_distance": 10, "num_ancestors": 1}
+    ]
+    
+    # Minimum segment thresholds to test
+    min_lengths = [3, 5, 7]
+    
+    # Compare predictions
+    results = []
+    
+    for rel in relationships:
+        for min_len in min_lengths:
+            # ERSA prediction
+            ersa_pred = ersa_expected_segments(
+                rel["meiotic_distance"], min_len, rel["num_ancestors"])
+            
+            # Bonsai prediction
+            bonsai_tuple = (rel["meiotic_distance"] // 2, rel["meiotic_distance"] // 2, 
+                           rel["num_ancestors"])
+            bonsai_pred = get_analytical_distant_relative_distribution(
+                bonsai_tuple, 3400, min_len)["expected_segments"]
+            
+            # Store results
+            results.append({
+                "relationship": rel["name"],
+                "meiotic_distance": rel["meiotic_distance"],
+                "min_length": min_len,
+                "ersa_expected_segments": ersa_pred,
+                "bonsai_expected_segments": bonsai_pred,
+                "percent_difference": 100 * abs(ersa_pred - bonsai_pred) / ersa_pred
+            })
+    
+    # Convert to DataFrame
+    results_df = pd.DataFrame(results)
+    
+    # Create comparison plot
+    plt.figure(figsize=(12, 8))
+    
+    for min_len in min_lengths:
+        subset = results_df[results_df["min_length"] == min_len]
+        plt.plot(subset["meiotic_distance"], subset["ersa_expected_segments"], 
+                marker='o', label=f"ERSA (min {min_len} cM)")
+        plt.plot(subset["meiotic_distance"], subset["bonsai_expected_segments"], 
+                marker='x', linestyle='--', label=f"Bonsai (min {min_len} cM)")
+    
+    plt.title("Expected Number of IBD Segments by Relationship")
+    plt.xlabel("Meiotic Distance")
+    plt.ylabel("Expected Number of Segments")
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.savefig("results/model_comparison.png")
+    
+    return results_df</code></pre>
+
+            <h3>Visualizing Statistical Patterns</h3>
+            
+            <h4>Number of Segments vs. Meiotic Distance</h4>
+            <p>Visualizing how segment counts change with relationship distance:</p>
+            
+            <pre><code>def plot_segments_vs_distance():
+    """Plot expected number of segments vs. meiotic distance."""
+    meiotic_distances = range(2, 16)
+    min_lengths = [3, 5, 7, 9]
+    
+    plt.figure(figsize=(12, 6))
+    
+    for min_len in min_lengths:
+        expected_segments = [ersa_expected_segments(d, min_len) for d in meiotic_distances]
+        plt.plot(meiotic_distances, expected_segments, marker='o', 
+                label=f"Min {min_len} cM")
+    
+    plt.title("Expected Number of IBD Segments by Meiotic Distance")
+    plt.xlabel("Meiotic Distance")
+    plt.ylabel("Expected Number of Segments")
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.savefig("results/segments_vs_distance.png")
+    
+    # Also create heatmap for number of ancestors
+    fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+    
+    for i, min_len in enumerate([3, 5, 7]):
+        # Create data for heatmap
+        data = np.zeros((14, 4))  # meiotic distances 2-15, ancestors 1-4
+        
+        for d_idx, d in enumerate(range(2, 16)):
+            for a_idx, num_ancestors in enumerate(range(1, 5)):
+                data[d_idx, a_idx] = ersa_expected_segments(d, min_len, num_ancestors)
+        
+        # Create heatmap
+        im = axes[i].imshow(data, cmap='viridis', aspect='auto')
+        axes[i].set_title(f"Expected Segments (min {min_len} cM)")
+        axes[i].set_xlabel("Number of Common Ancestors")
+        axes[i].set_ylabel("Meiotic Distance")
+        axes[i].set_xticks(range(4))
+        axes[i].set_xticklabels(range(1, 5))
+        axes[i].set_yticks(range(14))
+        axes[i].set_yticklabels(range(2, 16))
+        
+        # Add colorbar
+        fig.colorbar(im, ax=axes[i])
+    
+    plt.tight_layout()
+    plt.savefig("results/segments_heatmap.png")
+    
+    return {
+        "distance_plot": "results/segments_vs_distance.png",
+        "heatmap": "results/segments_heatmap.png"
+    }</code></pre>
+
+            <h4>Segment Length Distributions</h4>
+            <p>Visualizing the distribution of segment lengths for different relationships:</p>
+            
+            <pre><code>def plot_segment_length_distributions():
+    """Plot the distribution of segment lengths for different relationships."""
+    relationships = [
+        {"name": "Full siblings", "meiotic_distance": 2},
+        {"name": "First cousins", "meiotic_distance": 4},
+        {"name": "Second cousins", "meiotic_distance": 6},
+        {"name": "Third cousins", "meiotic_distance": 8}
+    ]
+    
+    plt.figure(figsize=(12, 6))
+    
+    for rel in relationships:
+        # Generate segment lengths
+        segment_lengths = segment_length_distribution(rel["meiotic_distance"], 10000)
+        
+        # Plot distribution
+        sns.kdeplot(segment_lengths, label=f"{rel['name']} (d={rel['meiotic_distance']})")
+    
+    plt.title("Distribution of IBD Segment Lengths by Relationship")
+    plt.xlabel("Segment Length (cM)")
+    plt.ylabel("Density")
+    plt.grid(alpha=0.3)
+    plt.legend()
+    plt.xlim(0, 100)  # Focus on 0-100 cM range
+    plt.savefig("results/segment_length_distributions.png")
+    
+    # Also add vertical lines showing minimum thresholds
+    for min_len in [3, 5, 7]:
+        plt.axvline(min_len, color='red', linestyle='--', alpha=0.5)
+        plt.text(min_len+0.5, plt.ylim()[1]*0.9, f"{min_len} cM", 
+                rotation=90, color='red', alpha=0.7)
+    
+    plt.savefig("results/segment_length_distributions_with_thresholds.png")
+    
+    return {
+        "basic_plot": "results/segment_length_distributions.png",
+        "with_thresholds": "results/segment_length_distributions_with_thresholds.png"
+    }</code></pre>
+
+            <h3>Anthropological Context</h3>
+            <p>Understanding the statistical foundations of genetic sharing is crucial for anthropological research:</p>
+            
+            <ul>
+                <li><strong>Kinship System Reconstruction:</strong> The expected patterns of genetic sharing can help anthropologists reconstruct kinship systems in populations with limited historical records. By comparing observed IBD patterns to theoretical expectations, researchers can infer marriage patterns and family structures.</li>
+                <li><strong>Demographic History:</strong> Deviations from expected IBD distributions can reveal demographic events like population bottlenecks, founder effects, or recent admixture, helping anthropologists understand a population's history.</li>
+                <li><strong>Cultural Practice Impact:</strong> Statistical models can reveal how cultural practices (like cousin marriage or exogamy) affect the distribution of genetic sharing within a community, providing a quantitative measure of cultural impact on genetics.</li>
+                <li><strong>Integrating Genealogical and Genetic Evidence:</strong> These models provide a framework for integrating traditional genealogical knowledge with genetic evidence, allowing anthropologists to validate oral histories or documentary evidence with biological relationships.</li>
+                <li><strong>Beyond Euro-centric Models:</strong> Statistical models can be adapted to reflect diverse kinship systems beyond the nuclear family model common in Western societies, making genetic genealogy more inclusive of different cultural contexts.</li>
+            </ul>
+            
+            <p>By understanding these statistical patterns, anthropologists can move beyond simply detecting genetic relationships to interpreting them within their cultural and historical contexts, enriching our understanding of human social relationships across diverse societies.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Calculate the expected number of IBD segments for different relationships using the ERSA equation</li>
+                <li>Simulate the distribution of IBD segment lengths for a specific relationship</li>
+                <li>Compare the predictions of ERSA and Bonsai models for a set of relationships</li>
+                <li>Create visualizations showing how IBD patterns change with relationship distance</li>
+                <li>Discuss how minimum segment length thresholds affect relationship inference</li>
+                <li>Design a simulation to test how cultural marriage patterns affect IBD distribution</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When working with these statistical models, pay attention to the assumptions behind each equation. For example, the ERSA model assumes random mating and no population structure. When studying populations with endogamy or other non-random mating patterns, you may need to adjust these models or interpret their results with caution.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab10_msprime.html" class="prev-lab">MSPrime</a>
+                <a href="lab12_bonsai.html" class="next-lab">Bonsai</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

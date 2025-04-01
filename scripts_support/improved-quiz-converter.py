@@ -3,6 +3,10 @@ import uuid
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 import sys
+import csv
+import os
+import zipfile
+import time
 
 def generate_uuid():
     """Generate a UUID string without dashes."""
@@ -52,10 +56,11 @@ def create_question_item(section, question_num, question_text, options, correct_
     
     # Add options
     for i, option_text in enumerate(options):
-        option_id = f"{question_num}00{i}"
-        response_label = ET.SubElement(render_choice, "response_label", {"ident": option_id})
-        option_material = create_xml_element(response_label, "material")
-        create_xml_element(option_material, "mattext", option_text).set("texttype", "text/plain")
+        if option_text:  # Skip empty options
+            option_id = f"{question_num}00{i}"
+            response_label = ET.SubElement(render_choice, "response_label", {"ident": option_id})
+            option_material = create_xml_element(response_label, "material")
+            create_xml_element(option_material, "mattext", option_text).set("texttype", "text/plain")
     
     # Create response processing
     resprocessing = create_xml_element(item, "resprocessing")
@@ -111,69 +116,118 @@ def create_canvas_xml(quiz_title, questions, max_attempts=1):
     reparsed = minidom.parseString(rough_string)
     return reparsed.toprettyxml(indent="  ")
 
-def parse_tab_delimited(file_path):
-    """Parse tab-delimited text file with exactly the format provided in paste.txt."""
+def parse_csv_file(file_path):
+    """Parse a CSV file with a flexible format."""
     questions = []
     
     with open(file_path, "r", encoding="utf-8") as file:
-        for line in file:
-            # Skip blank lines
-            if not line.strip():
+        reader = csv.reader(file)
+        for row in reader:
+            if not row or len(row) < 5:  # Skip empty or too short rows
                 continue
                 
-            # Split by tabs
-            parts = line.strip().split('\t')
+            # Expected format: question_type, blank, points, question_text, correct_answer_index, option1, option2, ... optionN
+            question_type = row[0]
             
-            # If we don't get enough parts, skip
-            if len(parts) < 9:
+            # Only process multiple choice questions for now
+            if question_type != "MC":
                 continue
                 
-            # Only process multiple choice questions
-            if parts[0] != "MC":
-                continue
+            # Extract data
+            try:
+                points = int(row[2])
+                question_text = row[3]
+                correct_answer_index = row[4].strip()
                 
-            # Extract data based on the exact format in paste.txt
-            question_type = parts[0]  # MC
-            # parts[1] is empty
-            points = int(parts[2])    # 5
-            question_text = parts[3]  # Question text
-            correct_answer_index = parts[4]  # Index of correct answer (1-4)
-            options = parts[5:9]      # The 4 answer options
-            
-            questions.append({
-                "question": question_text,
-                "options": options,
-                "correct_answer_index": correct_answer_index,
-                "points": points
-            })
+                # Make sure correct_answer_index is numeric
+                if not correct_answer_index.isdigit():
+                    print(f"Warning: Invalid correct answer index: '{correct_answer_index}' in row: {row}")
+                    continue
+                
+                # Collect all non-empty options
+                options = [opt.strip() for opt in row[5:] if opt.strip()]
+                
+                if options and correct_answer_index:
+                    questions.append({
+                        "question": question_text,
+                        "options": options,
+                        "correct_answer_index": correct_answer_index,
+                        "points": points
+                    })
+            except (IndexError, ValueError) as e:
+                print(f"Warning: Skipping malformed row: {row}. Error: {e}")
     
     return questions
+
+def create_zip_file(xml_file_path, zip_file_path=None):
+    """Create a zip file containing the XML file."""
+    if zip_file_path is None:
+        # Use the same name but with .zip extension
+        zip_file_path = os.path.splitext(xml_file_path)[0] + ".zip"
+    
+    with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+        zipf.write(xml_file_path, os.path.basename(xml_file_path))
+    
+    return zip_file_path
+
+def process_quiz_file(input_file, quiz_title=None, output_dir=None, max_attempts=1):
+    """Process a quiz file and create Canvas-compatible files."""
+    # Generate base names
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+    if quiz_title is None:
+        quiz_title = base_name.replace("_", " ")
+    
+    # Add timestamp to avoid overwrites
+    timestamp = int(time.time())
+    
+    # Set output directory
+    if output_dir is None:
+        output_dir = os.path.dirname(input_file)
+    
+    # Generate output paths
+    xml_file_path = os.path.join(output_dir, f"{base_name}_{timestamp}.xml")
+    zip_file_path = os.path.join(output_dir, f"{base_name}_{timestamp}.zip")
+    
+    # Parse the input file
+    questions = parse_csv_file(input_file)
+    if not questions:
+        print(f"No valid questions found in {input_file}.")
+        return None
+    
+    # Generate the XML
+    xml_content = create_canvas_xml(quiz_title, questions, max_attempts)
+    
+    # Write XML file
+    with open(xml_file_path, "w", encoding="utf-8") as file:
+        file.write(xml_content)
+    
+    # Create zip file
+    create_zip_file(xml_file_path, zip_file_path)
+    
+    # Clean up the temporary XML file
+    os.remove(xml_file_path)
+    
+    return zip_file_path
 
 def main():
     # Check command line arguments
     if len(sys.argv) < 2:
-        print("Usage: python simple-converter.py input_file [output_file]")
+        print("Usage: python improved-quiz-converter.py input_file [quiz_title] [output_dir] [max_attempts]")
+        print("Example: python improved-quiz-converter.py quizzes/my_quiz.csv 'My Quiz Title' quizzes 2")
         sys.exit(1)
     
     input_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else "GPS_Quiz.xml"
+    quiz_title = sys.argv[2] if len(sys.argv) > 2 else None
+    output_dir = sys.argv[3] if len(sys.argv) > 3 else None
+    max_attempts = int(sys.argv[4]) if len(sys.argv) > 4 else 1
     
-    # Parse the input file
     try:
-        questions = parse_tab_delimited(input_file)
-        if not questions:
-            print("No valid questions found in the input file.")
+        zip_file = process_quiz_file(input_file, quiz_title, output_dir, max_attempts)
+        if zip_file:
+            print(f"Successfully created {zip_file}")
+        else:
+            print("Failed to create quiz file.")
             sys.exit(1)
-        
-        # Generate the XML
-        xml_content = create_canvas_xml("Genealogical Proof Standard Quiz", questions)
-        
-        # Write to file
-        with open(output_file, "w", encoding="utf-8") as file:
-            file.write(xml_content)
-            
-        print(f"Successfully converted {len(questions)} questions to {output_file}")
-        
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

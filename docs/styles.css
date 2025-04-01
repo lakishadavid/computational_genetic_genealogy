@@ -614,10 +614,16 @@ footer {
     display: inline-block; /* Limit border width */
 }
 
+/* Module List Container */
+.module-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
 
 
 .module-item {
-    margin-bottom: 1.8rem; /* Space between each lab entry */
+    margin-bottom: 0; /* Remove bottom margin since we're using gap in .module-list */
     padding-left: 1rem; /* Indent the whole item slightly */
     border-left: 3px solid transparent; /* Placeholder for hover effect */
     transition: border-left-color 0.3s ease;

@@ -5,17 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab 0: Environment Setup | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-<body>
-    <header>
-        <h1>Computational Genetic Genealogy</h1>
-        <p>Environment Setup</p>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Environment Setup</p>
+        </div>
     </header>
 
-    <nav class="main-nav">
-        <a href="../index.html">Home</a>
-        <a href="contents.html">Contents</a>
-        <a href="lab0_environment.html" class="active">Lab 0: Environment</a>
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab0_environment.html" class="active">Lab 0: Environment</a>
+        </div>
     </nav>
 
     <main class="container">
@@ -59,7 +67,7 @@
 
             <h3>Technical Foundations</h3>
             
-            <h4>The Bioinformatics Toolkit</h4>
+            <h4 id="python">The Bioinformatics Toolkit</h4>
             <p>The specialized tools used in computational genetic genealogy represent the intersection of multiple knowledge traditions: population genetics, computer science, statistical modeling, and information visualization. Each tool encapsulates theoretical frameworks and assumptions that shape our analytical possibilities.</p>
             
             <p>Key tools in our environment include:</p>
@@ -108,7 +116,7 @@
             
             <p>These approaches represent different philosophies about research infrastructure—containerization prioritizes consistency and reproducibility, while local installation offers more customization and direct system integration. The choice between them often reflects broader research values around standardization versus flexibility.</p>
 
-            <h4>Verifying Your Environment</h4>
+            <h4 id="troubleshooting">Verifying Your Environment</h4>
             <p>Environment verification isn't merely a technical step but a process of establishing trust in your research infrastructure. By checking tool versions and functionality, you're ensuring that your analytical results will be:</p>
             <ul>
                 <li><strong>Reproducible</strong>: Others can replicate your findings using the same tools</li>
@@ -164,8 +172,10 @@
         </article>
     </main>
 
-    <footer>
-        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
     </footer>
 </body>
 </html>

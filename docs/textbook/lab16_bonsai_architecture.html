@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 16: Bonsai Architecture | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Architecture and Implementation of Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab15_bonsai_calibration.html">Lab 15: Model Calibration</a>
+        <a href="lab16_bonsai_architecture.html" class="active">Lab 16: Architecture</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 16: Architecture and Implementation of Bonsai</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Understanding Bonsai's architecture and implementation details is essential for researchers who want to extend, modify, or optimize the algorithm. A deep knowledge of how Bonsai is structured enables the development of custom features, integration with other tools, and adaptation to specific research needs.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Understand the overall architecture of the Bonsai algorithm</li>
+                <li>Explore the modular components of Bonsai and their interactions</li>
+                <li>Learn how to configure and customize Bonsai for specific applications</li>
+                <li>Examine implementation details that affect performance and accuracy</li>
+                <li>Master techniques for extending and modifying Bonsai</li>
+                <li>Develop strategies for integrating Bonsai with other genetic analysis tools</li>
+            </ul>
+
+            <h3>Bonsai's Architectural Overview</h3>
+            
+            <p>Bonsai is designed with a modular architecture that separates different concerns and allows for flexible configuration and extension.</p>
+            
+            <div class="figure">
+                <img src="../images/bonsai_architecture.png" alt="Bonsai Architecture Diagram" style="max-width: 700px;">
+                <p class="figure-caption">High-level architecture of the Bonsai algorithm showing key components and data flow.</p>
+            </div>
+            
+            <h4>Core Components</h4>
+            <p>The major architectural components of Bonsai include:</p>
+            
+            <ul>
+                <li><strong>Input Handling:</strong> Data loaders and preprocessors for IBD segments and individual metadata</li>
+                <li><strong>Relationship Model:</strong> Statistical models describing expected IBD patterns for different relationships</li>
+                <li><strong>Up-Node Dictionary:</strong> Core data structure for representing and manipulating pedigrees</li>
+                <li><strong>Optimization Engine:</strong> Algorithms for searching the space of possible pedigrees</li>
+                <li><strong>Constraint Handler:</strong> System for enforcing biological and logical constraints</li>
+                <li><strong>Output Generator:</strong> Tools for serializing, visualizing, and analyzing results</li>
+            </ul>
+            
+            <p>These components work together to transform raw IBD segment data into reconstructed pedigrees.</p>
+
+            <h3>Input Handling and Preprocessing</h3>
+            
+            <p>Bonsai can accept input data in various formats, which are processed into standardized internal representations.</p>
+            
+            <h4>Input Data Formats</h4>
+            <p>Bonsai accepts several types of input:</p>
+            
+            <pre><code># Example input types and formats
+
+# 1. Segment data as pandas DataFrame
+segments_df = pd.DataFrame({
+    'ind1': ['sample1', 'sample1', 'sample2'],
+    'ind2': ['sample2', 'sample3', 'sample3'],
+    'chrom': [1, 5, 11],
+    'start_pos': [5000000, 75000000, 22000000],
+    'end_pos': [15000000, 100000000, 35000000],
+    'seg_len': [10.5, 25.2, 13.7]
+})
+
+# 2. Segment data as CSV file
+# chrom,ind1,ind2,start_pos,end_pos,seg_len
+# 1,sample1,sample2,5000000,15000000,10.5
+# 5,sample1,sample3,75000000,100000000,25.2
+# 11,sample2,sample3,22000000,35000000,13.7
+
+# 3. Segment data as unphased IBD segment list
+unphased_ibd_seg_list = [
+    [1000, 1001, '1', 5000000, 15000000, False, 10.5],
+    [1000, 1002, '5', 75000000, 100000000, False, 25.2],
+    [1001, 1002, '11', 22000000, 35000000, False, 13.7]
+]
+
+# 4. Bio information for individuals
+bio_info = [
+    {'genotype_id': 1000, 'age': 45, 'sex': 'F'},
+    {'genotype_id': 1001, 'age': 25, 'sex': 'M'},
+    {'genotype_id': 1002, 'age': 22, 'sex': 'F'}
+]</code></pre>
+            
+            <p>These inputs are converted into internal representations that optimize for the algorithm's needs.</p>
+
+            <h4>Input Validation and Sanitization</h4>
+            <p>Bonsai performs extensive validation to ensure input data is correct and consistent:</p>
+            
+            <pre><code># Example input validation functions
+
+def validate_segments(segments):
+    """Validate segment data for correctness and consistency."""
+    # Check required columns
+    required_columns = ['ind1', 'ind2', 'chrom', 'start_pos', 'end_pos', 'seg_len']
+    missing_columns = [col for col in required_columns if col not in segments.columns]
+    if missing_columns:
+        raise ValueError(f"Missing required columns: {missing_columns}")
+    
+    # Check data types
+    if not segments['ind1'].apply(lambda x: isinstance(x, (str, int))).all():
+        raise TypeError("Column 'ind1' must contain string or integer values")
+    if not segments['ind2'].apply(lambda x: isinstance(x, (str, int))).all():
+        raise TypeError("Column 'ind2' must contain string or integer values")
+    
+    # Check for duplicated segments
+    if segments.duplicated().any():
+        raise ValueError("Duplicated segments detected")
+    
+    # Check for invalid segment lengths
+    if (segments['seg_len'] <= 0).any():
+        raise ValueError("All segments must have positive length")
+    
+    # Check physical positions
+    if (segments['start_pos'] >= segments['end_pos']).any():
+        raise ValueError("Start position must be less than end position")
+    
+    # Check chromosome values
+    valid_chromosomes = list(range(1, 23)) + ['X', 'Y', 'MT']
+    invalid_chroms = segments['chrom'].apply(lambda x: str(x) not in [str(c) for c in valid_chromosomes])
+    if invalid_chroms.any():
+        raise ValueError("Invalid chromosome values detected")
+    
+    return True
+
+def validate_bio_info(bio_info):
+    """Validate bio_info for correctness and consistency."""
+    # Check for required fields
+    for i, info in enumerate(bio_info):
+        if 'genotype_id' not in info:
+            raise ValueError(f"Missing 'genotype_id' in bio_info entry {i}")
+        
+        # Check sex values
+        if 'sex' in info and info['sex'] not in ['M', 'F', 'Unknown']:
+            raise ValueError(f"Invalid sex value '{info['sex']}' for individual {info['genotype_id']}")
+        
+        # Check age values
+        if 'age' in info:
+            if not isinstance(info['age'], (int, float)):
+                raise TypeError(f"Age must be numeric for individual {info['genotype_id']}")
+            if info['age'] < 0:
+                raise ValueError(f"Age cannot be negative for individual {info['genotype_id']}")
+    
+    # Check for duplicate genotype_ids
+    genotype_ids = [info['genotype_id'] for info in bio_info]
+    if len(genotype_ids) != len(set(genotype_ids)):
+        raise ValueError("Duplicate genotype_ids detected in bio_info")
+    
+    return True</code></pre>
+            
+            <p>This validation ensures that errors are caught early in the pipeline, preventing downstream issues during reconstruction.</p>
+
+            <h3>Modular Component Architecture</h3>
+            
+            <p>Bonsai is built with a modular architecture that separates concerns and allows for independent development of components.</p>
+            
+            <h4>Component Interaction Diagram</h4>
+            <pre><code>+-----------------+      +-----------------+      +-----------------+
+| Input Handling  | ---→ | Preprocessing   | ---→ | Relationship    |
+| & Validation    |      | & Indexing      |      | Model          |
++-----------------+      +-----------------+      +-----------------+
+                                                          ↓
++-----------------+      +-----------------+      +-----------------+
+| Output &        | ←--- | Up-Node         | ←--- | Optimization    |
+| Visualization   |      | Dictionary      |      | Engine          |
++-----------------+      +-----------------+      +-----------------+
+                              ↑                           ↑
+                              |                           |
+                         +-----------------+      +-----------------+
+                         | Constraint      | ---→ | Statistical     |
+                         | Handler         |      | Inference       |
+                         +-----------------+      +-----------------+</code></pre>
+            
+            <p>This modular design enables:</p>
+            <ul>
+                <li>Independent testing of components</li>
+                <li>Focused optimization of performance bottlenecks</li>
+                <li>Custom replacements for specific components</li>
+                <li>Parallel development by multiple contributors</li>
+            </ul>
+
+            <h4>Component Interfaces</h4>
+            <p>Each component exposes well-defined interfaces for interaction:</p>
+            
+            <pre><code># Example component interface (Input Handler)
+class InputHandler:
+    """Handles loading and validating input data for Bonsai."""
+    
+    def load_segments(self, source, format='auto'):
+        """
+        Load segment data from various sources.
+        
+        Args:
+            source: Data source (DataFrame, file path, list, etc.)
+            format: Data format ('csv', 'dataframe', 'list', 'auto')
+            
+        Returns:
+            Standardized internal segment representation
+        """
+        if format == 'auto':
+            format = self._detect_format(source)
+            
+        if format == 'csv':
+            return self._load_from_csv(source)
+        elif format == 'dataframe':
+            return self._validate_and_process_df(source)
+        elif format == 'list':
+            return self._process_list(source)
+        else:
+            raise ValueError(f"Unsupported format: {format}")
+    
+    def load_bio_info(self, source, format='auto'):
+        """
+        Load biological information for individuals.
+        
+        Args:
+            source: Data source (list, file path, etc.)
+            format: Data format ('json', 'list', 'csv', 'auto')
+            
+        Returns:
+            Standardized internal bio_info representation
+        """
+        # Implementation details...
+        pass
+    
+    def validate_inputs(self, segments, bio_info):
+        """
+        Validate that inputs are consistent with each other.
+        
+        Args:
+            segments: Segment data
+            bio_info: Biological information
+            
+        Returns:
+            True if valid, raises exception otherwise
+        """
+        # Implementation details...
+        pass
+        
+    # Private helper methods
+    def _detect_format(self, source):
+        """Automatically detect the format of the source."""
+        # Implementation details...
+        pass
+        
+    def _load_from_csv(self, filepath):
+        """Load and process segment data from CSV file."""
+        # Implementation details...
+        pass
+        
+    def _validate_and_process_df(self, df):
+        """Validate and process a DataFrame."""
+        # Implementation details...
+        pass
+        
+    def _process_list(self, segment_list):
+        """Process a list of segment data."""
+        # Implementation details...
+        pass</code></pre>
+            
+            <p>These clean interfaces make it easier to understand, test, and modify individual components without affecting the rest of the system.</p>
+
+            <h3>Optimization Engine Design</h3>
+            
+            <p>The optimization engine is a central component of Bonsai, responsible for finding the most likely pedigree structure.</p>
+            
+            <h4>Search Algorithms</h4>
+            <p>Bonsai implements several search algorithms to explore the space of possible pedigrees:</p>
+            
+            <pre><code># Example optimization engine architecture
+
+class BonsaiOptimizer:
+    """Optimization engine for finding the most likely pedigree."""
+    
+    def __init__(self, relationship_model, constraint_handler, 
+                 algorithm='simulated_annealing', config=None):
+        """
+        Initialize the optimizer.
+        
+        Args:
+            relationship_model: Model for calculating relationship likelihoods
+            constraint_handler: Handler for enforcing constraints
+            algorithm: Search algorithm to use
+            config: Configuration parameters for the algorithm
+        """
+        self.relationship_model = relationship_model
+        self.constraint_handler = constraint_handler
+        self.algorithm = algorithm
+        self.config = config or {}
+        
+    def optimize(self, individuals, segments, initial_pedigree=None):
+        """
+        Find the most likely pedigree given the data.
+        
+        Args:
+            individuals: List of individual IDs
+            segments: Segment data
+            initial_pedigree: Optional starting pedigree (default: empty)
+            
+        Returns:
+            Tuple of (optimized pedigree, log likelihood)
+        """
+        if self.algorithm == 'simulated_annealing':
+            return self._simulated_annealing(individuals, segments, initial_pedigree)
+        elif self.algorithm == 'greedy':
+            return self._greedy_search(individuals, segments, initial_pedigree)
+        elif self.algorithm == 'mcmc':
+            return self._mcmc_sampling(individuals, segments, initial_pedigree)
+        else:
+            raise ValueError(f"Unsupported algorithm: {self.algorithm}")
+    
+    def _simulated_annealing(self, individuals, segments, initial_pedigree):
+        """Implement simulated annealing optimization."""
+        # Create empty pedigree if none provided
+        pedigree = initial_pedigree or {ind: {} for ind in individuals}
+        
+        # Initialize temperature and cooling schedule
+        temperature = self.config.get('initial_temperature', 1.0)
+        cooling_rate = self.config.get('cooling_rate', 0.99)
+        iterations = self.config.get('iterations', 1000)
+        
+        # Calculate initial likelihood
+        current_likelihood = self.relationship_model.calculate_pedigree_likelihood(
+            pedigree, segments)
+        
+        best_pedigree = pedigree.copy()
+        best_likelihood = current_likelihood
+        
+        # Main optimization loop
+        for i in range(iterations):
+            # Propose a modification
+            new_pedigree = self._propose_modification(pedigree)
+            
+            # Check constraints
+            if not self.constraint_handler.validate(new_pedigree):
+                continue  # Skip invalid pedigrees
+            
+            # Calculate new likelihood
+            new_likelihood = self.relationship_model.calculate_pedigree_likelihood(
+                new_pedigree, segments)
+            
+            # Accept or reject the modification
+            delta = new_likelihood - current_likelihood
+            if delta > 0 or random.random() < math.exp(delta / temperature):
+                pedigree = new_pedigree
+                current_likelihood = new_likelihood
+                
+                # Update best if improved
+                if current_likelihood > best_likelihood:
+                    best_pedigree = pedigree.copy()
+                    best_likelihood = current_likelihood
+            
+            # Cool temperature
+            temperature *= cooling_rate
+        
+        return best_pedigree, best_likelihood
+    
+    def _greedy_search(self, individuals, segments, initial_pedigree):
+        """Implement greedy search optimization."""
+        # Implementation details...
+        pass
+    
+    def _mcmc_sampling(self, individuals, segments, initial_pedigree):
+        """Implement Markov Chain Monte Carlo sampling."""
+        # Implementation details...
+        pass
+    
+    def _propose_modification(self, pedigree):
+        """Propose a random modification to the pedigree."""
+        # Implementation details...
+        pass</code></pre>
+            
+            <p>Each search algorithm has different strengths and weaknesses, making them suitable for different scenarios:</p>
+            <ul>
+                <li><strong>Greedy Search:</strong> Fast but can get stuck in local optima</li>
+                <li><strong>Simulated Annealing:</strong> Better at avoiding local optima, but slower</li>
+                <li><strong>MCMC Sampling:</strong> Provides uncertainty estimates, but requires more computational resources</li>
+            </ul>
+
+            <h4>Heuristics and Optimizations</h4>
+            <p>Bonsai employs several heuristics to improve search efficiency:</p>
+            
+            <pre><code># Example heuristics implementation
+
+def prioritize_relationship_pairs(segments):
+    """
+    Prioritize pairs of individuals for relationship inference.
+    
+    Args:
+        segments: Segment data
+        
+    Returns:
+        List of pairs sorted by priority
+    """
+    # Create pair-based index
+    pair_index = {}
+    for seg in segments:
+        pair = tuple(sorted([seg['ind1'], seg['ind2']]))
+        if pair not in pair_index:
+            pair_index[pair] = []
+        pair_index[pair].append(seg)
+    
+    # Calculate priority metrics for each pair
+    pair_priorities = []
+    for pair, segs in pair_index.items():
+        total_cm = sum(seg['seg_len'] for seg in segs)
+        segment_count = len(segs)
+        
+        # Priority score combining total IBD and segment count
+        # Higher scores for pairs likely to be closely related
+        priority_score = total_cm * math.sqrt(segment_count)
+        
+        pair_priorities.append({
+            'pair': pair,
+            'total_cm': total_cm,
+            'segment_count': segment_count,
+            'priority_score': priority_score
+        })
+    
+    # Sort by priority score (highest first)
+    sorted_pairs = sorted(pair_priorities, key=lambda x: x['priority_score'], reverse=True)
+    
+    return [item['pair'] for item in sorted_pairs]
+
+def incremental_pedigree_building(individuals, segments):
+    """
+    Build pedigree incrementally by adding individuals in priority order.
+    
+    Args:
+        individuals: List of individual IDs
+        segments: Segment data
+        
+    Returns:
+        Built pedigree
+    """
+    # Prioritize pairs
+    priority_pairs = prioritize_relationship_pairs(segments)
+    
+    # Initialize with empty pedigree
+    pedigree = {}
+    
+    # Track processed individuals
+    processed = set()
+    
+    # Process pairs in priority order
+    for pair in priority_pairs:
+        ind1, ind2 = pair
+        
+        # If both individuals already in pedigree, continue
+        if ind1 in processed and ind2 in processed:
+            continue
+        
+        # If neither in pedigree, add both as new family unit
+        if ind1 not in processed and ind2 not in processed:
+            # Infer relationship and add to pedigree
+            add_new_family_unit(pedigree, ind1, ind2, segments)
+            processed.add(ind1)
+            processed.add(ind2)
+        
+        # If one in pedigree, add the other
+        elif ind1 in processed and ind2 not in processed:
+            add_to_existing_family(pedigree, ind1, ind2, segments)
+            processed.add(ind2)
+        elif ind2 in processed and ind1 not in processed:
+            add_to_existing_family(pedigree, ind2, ind1, segments)
+            processed.add(ind1)
+    
+    # Add any remaining unprocessed individuals as singletons
+    for ind in individuals:
+        if ind not in processed:
+            pedigree[ind] = {}
+            processed.add(ind)
+    
+    return pedigree</code></pre>
+            
+            <p>These heuristics significantly improve the efficiency of the search process, especially for large datasets.</p>
+
+            <h3>Constraint Handler Implementation</h3>
+            
+            <p>The constraint handler enforces biological and logical constraints on pedigree structures.</p>
+            
+            <h4>Types of Constraints</h4>
+            <p>Bonsai implements various constraints to ensure realistic pedigrees:</p>
+            
+            <pre><code># Example constraint implementation
+
+class ConstraintHandler:
+    """Handles validation and enforcement of pedigree constraints."""
+    
+    def __init__(self, bio_info=None):
+        """
+        Initialize constraint handler.
+        
+        Args:
+            bio_info: Optional biological information about individuals
+        """
+        self.bio_info = bio_info or []
+        self.bio_info_dict = {item['genotype_id']: item for item in self.bio_info}
+        
+    def validate(self, pedigree):
+        """
+        Validate that a pedigree satisfies all constraints.
+        
+        Args:
+            pedigree: Up-node dictionary representing the pedigree
+            
+        Returns:
+            True if valid, False otherwise
+        """
+        # Check each constraint
+        return (self.check_acyclic(pedigree) and
+                self.check_parent_limit(pedigree) and
+                self.check_sex_constraints(pedigree) and
+                self.check_age_constraints(pedigree))
+    
+    def check_acyclic(self, pedigree):
+        """Check that the pedigree is acyclic (no cycles)."""
+        # For each individual, traverse up the pedigree and check for cycles
+        for start_id in pedigree:
+            visited = set()
+            stack = [start_id]
+            
+            while stack:
+                current = stack.pop()
+                
+                if current in visited:
+                    return False  # Cycle detected
+                    
+                visited.add(current)
+                
+                # Add parents to stack
+                if current in pedigree:
+                    stack.extend(pedigree[current].keys())
+        
+        return True
+    
+    def check_parent_limit(self, pedigree):
+        """Check that no individual has more than two parents."""
+        for ind_id, parents in pedigree.items():
+            if len(parents) > 2:
+                return False
+        return True
+    
+    def check_sex_constraints(self, pedigree):
+        """Check that sex constraints are satisfied."""
+        if not self.bio_info:
+            return True  # No bio_info, no sex constraints to check
+            
+        for child_id, parents in pedigree.items():
+            # Skip if child has fewer than 2 parents
+            if len(parents) < 2:
+                continue
+                
+            # Get parent IDs
+            parent_ids = list(parents.keys())
+            
+            # Check if both parents have known sex
+            parent1_sex = self._get_sex(parent_ids[0])
+            parent2_sex = self._get_sex(parent_ids[1])
+            
+            # If both parents have known sex, they should be different
+            if parent1_sex in ['M', 'F'] and parent2_sex in ['M', 'F']:
+                if parent1_sex == parent2_sex:
+                    return False  # Same-sex parents
+        
+        return True
+    
+    def check_age_constraints(self, pedigree):
+        """Check that age constraints are satisfied."""
+        if not self.bio_info:
+            return True  # No bio_info, no age constraints to check
+            
+        min_parent_age = 12  # Minimum age for parenthood
+        
+        for child_id, parents in pedigree.items():
+            child_age = self._get_age(child_id)
+            
+            # Skip if child age unknown
+            if child_age is None:
+                continue
+                
+            for parent_id in parents:
+                parent_age = self._get_age(parent_id)
+                
+                # Skip if parent age unknown
+                if parent_age is None:
+                    continue
+                    
+                # Parent should be older than child by at least min_parent_age
+                if parent_age <= child_age + min_parent_age:
+                    return False  # Age constraint violated
+        
+        return True
+    
+    def _get_sex(self, ind_id):
+        """Get the sex of an individual from bio_info."""
+        if ind_id in self.bio_info_dict and 'sex' in self.bio_info_dict[ind_id]:
+            return self.bio_info_dict[ind_id]['sex']
+        return 'Unknown'
+    
+    def _get_age(self, ind_id):
+        """Get the age of an individual from bio_info."""
+        if ind_id in self.bio_info_dict and 'age' in self.bio_info_dict[ind_id]:
+            return self.bio_info_dict[ind_id]['age']
+        return None</code></pre>
+            
+            <p>These constraints ensure that the reconstructed pedigrees follow biological reality and logical consistency.</p>
+
+            <h4>Constraint Relaxation and Soft Constraints</h4>
+            <p>In some cases, it may be beneficial to relax constraints or implement them as "soft" constraints:</p>
+            
+            <pre><code># Example soft constraint implementation
+
+class SoftConstraintHandler(ConstraintHandler):
+    """Handles soft constraints with penalties instead of binary validation."""
+    
+    def calculate_penalty(self, pedigree):
+        """
+        Calculate penalty score for constraint violations.
+        
+        Args:
+            pedigree: Up-node dictionary representing the pedigree
+            
+        Returns:
+            Penalty score (higher for more violations)
+        """
+        penalty = 0
+        
+        # Check for cycles (still a hard constraint)
+        if not self.check_acyclic(pedigree):
+            return float('inf')  # Infinite penalty
+        
+        # Check parent limit (soft constraint)
+        for ind_id, parents in pedigree.items():
+            if len(parents) > 2:
+                penalty += 100 * (len(parents) - 2)  # Penalty proportional to excess
+        
+        # Check sex constraints (soft constraint)
+        if self.bio_info:
+            for child_id, parents in pedigree.items():
+                if len(parents) < 2:
+                    continue
+                    
+                parent_ids = list(parents.keys())
+                parent1_sex = self._get_sex(parent_ids[0])
+                parent2_sex = self._get_sex(parent_ids[1])
+                
+                if parent1_sex in ['M', 'F'] and parent2_sex in ['M', 'F']:
+                    if parent1_sex == parent2_sex:
+                        penalty += 50  # Penalty for same-sex parents
+        
+        # Check age constraints (soft constraint)
+        if self.bio_info:
+            min_parent_age = 12
+            
+            for child_id, parents in pedigree.items():
+                child_age = self._get_age(child_id)
+                
+                if child_age is None:
+                    continue
+                    
+                for parent_id in parents:
+                    parent_age = self._get_age(parent_id)
+                    
+                    if parent_age is None:
+                        continue
+                        
+                    if parent_age <= child_age + min_parent_age:
+                        # Penalty proportional to the age violation
+                        violation = (child_age + min_parent_age - parent_age)
+                        penalty += 10 * violation
+        
+        return penalty</code></pre>
+            
+            <p>Soft constraints provide more flexibility in the optimization process while still guiding it toward biologically plausible solutions.</p>
+
+            <h3>Configuration and Customization</h3>
+            
+            <p>Bonsai provides extensive configuration options to adapt the algorithm to specific needs.</p>
+            
+            <h4>Configuration System</h4>
+            <p>Configuration is handled through a nested dictionary structure:</p>
+            
+            <pre><code># Example default configuration
+default_config = {
+    'input': {
+        'min_segment_length': 7.0,
+        'filter_segments': True,
+        'accept_unknown_chromosomes': False
+    },
+    'model': {
+        'relationship_priors': 'uniform',
+        'use_length_distribution': True,
+        'use_segment_count': True,
+        'length_weight': 0.6,
+        'count_weight': 0.4
+    },
+    'optimization': {
+        'algorithm': 'simulated_annealing',
+        'initial_temperature': 1.0,
+        'cooling_rate': 0.99,
+        'iterations': 1000,
+        'restarts': 3
+    },
+    'constraints': {
+        'enforce_sex_constraints': True,
+        'enforce_age_constraints': True,
+        'min_parent_age': 12,
+        'max_generations': 5
+    },
+    'output': {
+        'save_intermediate': False,
+        'return_top_k': 3,
+        'verbose': True
+    }
+}
+
+# Example usage with custom configuration
+custom_config = {
+    'input': {
+        'min_segment_length': 10.0  # Override minimum segment length
+    },
+    'optimization': {
+        'algorithm': 'greedy',  # Use greedy algorithm instead
+        'iterations': 500       # Fewer iterations
+    }
+}
+
+# Merge configurations
+def merge_configs(default, custom):
+    """Merge custom configuration into default configuration."""
+    result = default.copy()
+    
+    for section, settings in custom.items():
+        if section in result:
+            # Update existing section
+            result[section].update(settings)
+        else:
+            # Add new section
+            result[section] = settings.copy()
+    
+    return result
+
+# Create final configuration
+config = merge_configs(default_config, custom_config)
+
+# Initialize Bonsai with configuration
+bonsai_instance = Bonsai(config=config)</code></pre>
+            
+            <p>This flexible configuration system allows users to customize Bonsai's behavior without modifying the code.</p>
+
+            <h4>Plugin Architecture</h4>
+            <p>For more extensive customization, Bonsai supports a plugin architecture:</p>
+            
+            <pre><code># Example plugin system
+
+class BonsaiPlugin:
+    """Base class for Bonsai plugins."""
+    
+    def __init__(self, config=None):
+        """Initialize the plugin with configuration."""
+        self.config = config or {}
+    
+    def initialize(self, bonsai_instance):
+        """Initialize the plugin with the Bonsai instance."""
+        self.bonsai = bonsai_instance
+    
+    def register_hooks(self):
+        """Register hook functions with the Bonsai instance."""
+        pass
+
+# Example custom relationship model plugin
+class CustomRelationshipModel(BonsaiPlugin):
+    """Custom relationship model plugin for Bonsai."""
+    
+    def register_hooks(self):
+        """Register hooks with Bonsai."""
+        self.bonsai.register_hook('calculate_relationship_likelihood',
+                                 self.custom_likelihood_function)
+    
+    def custom_likelihood_function(self, relationship, segments):
+        """
+        Custom likelihood calculation for relationships.
+        
+        Args:
+            relationship: Relationship type
+            segments: Segment data
+            
+        Returns:
+            Log-likelihood of the relationship
+        """
+        # Custom implementation
+        # ...
+        return log_likelihood
+
+# Example usage
+bonsai_instance = Bonsai(config=config)
+custom_model = CustomRelationshipModel(config={'parameter': 'value'})
+bonsai_instance.register_plugin(custom_model)
+bonsai_instance.run()</code></pre>
+            
+            <p>This plugin architecture enables advanced customization without requiring modifications to the core codebase.</p>
+
+            <h3>Performance Optimization Strategies</h3>
+            
+            <p>Bonsai implements several strategies to optimize performance for large datasets.</p>
+            
+            <h4>Parallel Processing</h4>
+            <p>Parallelization can significantly improve performance:</p>
+            
+            <pre><code># Example parallel processing implementation
+
+import multiprocessing as mp
+from concurrent.futures import ProcessPoolExecutor
+
+class ParallelBonsai:
+    """Parallel implementation of Bonsai for improved performance."""
+    
+    def __init__(self, config=None, n_processes=None):
+        """
+        Initialize parallel Bonsai.
+        
+        Args:
+            config: Configuration dictionary
+            n_processes: Number of processes to use (default: CPU count)
+        """
+        self.config = config or {}
+        self.n_processes = n_processes or mp.cpu_count()
+    
+    def run_parallel(self, individuals, segments, bio_info=None):
+        """
+        Run Bonsai in parallel on partitioned data.
+        
+        Args:
+            individuals: List of individual IDs
+            segments: Segment data
+            bio_info: Biological information
+            
+        Returns:
+            Reconstructed pedigree
+        """
+        # Partition the data using community detection
+        communities = self._detect_communities(segments)
+        
+        # Process each community in parallel
+        with ProcessPoolExecutor(max_workers=self.n_processes) as executor:
+            futures = []
+            
+            for i, community in enumerate(communities):
+                # Filter data for this community
+                community_individuals = list(community)
+                community_segments = self._filter_segments_by_community(segments, community)
+                community_bio_info = self._filter_bio_info_by_community(bio_info, community)
+                
+                # Submit job to process pool
+                future = executor.submit(
+                    self._process_community,
+                    community_individuals,
+                    community_segments,
+                    community_bio_info,
+                    i
+                )
+                futures.append(future)
+            
+            # Collect results
+            community_pedigrees = [future.result() for future in futures]
+        
+        # Merge the community pedigrees
+        merged_pedigree = self._merge_pedigrees(community_pedigrees)
+        
+        return merged_pedigree
+    
+    def _detect_communities(self, segments):
+        """Detect communities in the data using graph partitioning."""
+        # Implementation details...
+        pass
+    
+    def _filter_segments_by_community(self, segments, community):
+        """Filter segments to include only those within a community."""
+        # Implementation details...
+        pass
+    
+    def _filter_bio_info_by_community(self, bio_info, community):
+        """Filter bio_info to include only individuals in a community."""
+        # Implementation details...
+        pass
+    
+    def _process_community(self, individuals, segments, bio_info, community_id):
+        """Process a single community using standard Bonsai."""
+        # Create a new Bonsai instance for this community
+        bonsai = Bonsai(config=self.config)
+        
+        # Run Bonsai on the community data
+        pedigree = bonsai.run(individuals, segments, bio_info)
+        
+        return {
+            'community_id': community_id,
+            'pedigree': pedigree
+        }
+    
+    def _merge_pedigrees(self, community_pedigrees):
+        """Merge pedigrees from different communities."""
+        # Implementation details...
+        pass</code></pre>
+            
+            <p>This parallel implementation can achieve near-linear speedup with the number of CPU cores for large datasets.</p>
+
+            <h4>Memory Optimization</h4>
+            <p>For large datasets, memory usage can be a bottleneck. Bonsai implements several memory optimization strategies:</p>
+            
+            <pre><code># Example memory optimization implementation
+
+class MemoryOptimizedBonsai:
+    """Memory-optimized implementation of Bonsai."""
+    
+    def __init__(self, config=None):
+        """Initialize memory-optimized Bonsai."""
+        self.config = config or {}
+        self.segments_file = None
+        self.index_file = None
+    
+    def load_segments(self, segments_path):
+        """
+        Load segments using memory-mapped files.
+        
+        Args:
+            segments_path: Path to segments file
+            
+        Returns:
+            Memory-mapped segment array
+        """
+        import numpy as np
+        
+        # Create memory-mapped array
+        self.segments_file = np.memmap(
+            segments_path,
+            dtype=[
+                ('ind1', np.int32),
+                ('ind2', np.int32),
+                ('chrom', np.int8),
+                ('start_pos', np.int64),
+                ('end_pos', np.int64),
+                ('is_ibd2', np.bool_),
+                ('seg_len', np.float32)
+            ],
+            mode='r'
+        )
+        
+        return self.segments_file
+    
+    def build_index(self, segments_file, index_path):
+        """
+        Build and save index for fast access.
+        
+        Args:
+            segments_file: Memory-mapped segment array
+            index_path: Path to save the index file
+            
+        Returns:
+            Memory-mapped index array
+        """
+        import numpy as np
+        
+        # Get unique pairs
+        pairs = set([(seg['ind1'], seg['ind2']) for seg in segments_file])
+        
+        # Build index
+        pair_to_segments = {}
+        for i, seg in enumerate(segments_file):
+            pair = (seg['ind1'], seg['ind2'])
+            if pair not in pair_to_segments:
+                pair_to_segments[pair] = []
+            pair_to_segments[pair].append(i)
+        
+        # Save index to disk
+        with open(index_path, 'wb') as f:
+            pickle.dump(pair_to_segments, f)
+        
+        # Load index with memory mapping
+        self.index_file = pickle.load(open(index_path, 'rb'))
+        
+        return self.index_file
+    
+    def get_segments_for_pair(self, ind1, ind2):
+        """
+        Get segments for a specific pair.
+        
+        Args:
+            ind1: First individual ID
+            ind2: Second individual ID
+            
+        Returns:
+            List of segments for the pair
+        """
+        if self.segments_file is None or self.index_file is None:
+            raise ValueError("Segments and index must be loaded first")
+        
+        pair = tuple(sorted([ind1, ind2]))
+        
+        if pair not in self.index_file:
+            return []
+        
+        segment_indices = self.index_file[pair]
+        return [self.segments_file[i] for i in segment_indices]
+    
+    def run_with_low_memory(self, individuals, segments_path, index_path=None, bio_info=None):
+        """
+        Run Bonsai with low memory usage.
+        
+        Args:
+            individuals: List of individual IDs
+            segments_path: Path to segments file
+            index_path: Path to index file (optional)
+            bio_info: Biological information
+            
+        Returns:
+            Reconstructed pedigree
+        """
+        # Load segments with memory mapping
+        segments = self.load_segments(segments_path)
+        
+        # Build or load index
+        if index_path is None:
+            index_path = segments_path + ".index"
+        
+        if os.path.exists(index_path):
+            self.index_file = pickle.load(open(index_path, 'rb'))
+        else:
+            self.build_index(segments, index_path)
+        
+        # Process individuals using streaming approach
+        pedigree = {ind: {} for ind in individuals}
+        
+        # Process pairs in batches to limit memory usage
+        batch_size = 1000
+        pairs = [(ind1, ind2) for i, ind1 in enumerate(individuals)
+                            for ind2 in individuals[i+1:]]
+        
+        for i in range(0, len(pairs), batch_size):
+            batch_pairs = pairs[i:i+batch_size]
+            
+            # Process this batch
+            for ind1, ind2 in batch_pairs:
+                segs = self.get_segments_for_pair(ind1, ind2)
+                
+                if not segs:
+                    continue
+                
+                # Infer relationship and update pedigree
+                # ...
+        
+        return pedigree</code></pre>
+            
+            <p>These memory optimizations enable Bonsai to handle datasets with millions of segments and thousands of individuals on standard hardware.</p>
+
+            <h3>Integration with Other Tools</h3>
+            
+            <p>Bonsai can be integrated with other genetic analysis tools to create comprehensive workflows.</p>
+            
+            <h4>Integration with IBD Detection Tools</h4>
+            <p>Bonsai can be seamlessly integrated with various IBD detection tools:</p>
+            
+            <pre><code># Example integration with IBD detection tools
+
+class IBDDetectionPipeline:
+    """Pipeline integrating IBD detection with Bonsai."""
+    
+    def __init__(self, ibd_method='refinedibd', bonsai_config=None):
+        """
+        Initialize the pipeline.
+        
+        Args:
+            ibd_method: IBD detection method ('refinedibd', 'hapibd', 'ibis')
+            bonsai_config: Configuration for Bonsai
+        """
+        self.ibd_method = ibd_method
+        self.bonsai_config = bonsai_config or {}
+    
+    def run(self, vcf_path, output_dir, population=None):
+        """
+        Run the full pipeline from VCF to pedigree.
+        
+        Args:
+            vcf_path: Path to input VCF file
+            output_dir: Directory for output files
+            population: Population identifier (optional)
+            
+        Returns:
+            Reconstructed pedigree
+        """
+        # 1. Detect IBD segments
+        ibd_segments = self._detect_ibd(vcf_path, output_dir)
+        
+        # 2. Process bio information
+        bio_info = self._extract_bio_info(vcf_path)
+        
+        # 3. Run Bonsai
+        bonsai = Bonsai(config=self.bonsai_config)
+        pedigree = bonsai.run(bio_info=bio_info, segments=ibd_segments)
+        
+        # 4. Save results
+        self._save_results(pedigree, output_dir)
+        
+        return pedigree
+    
+    def _detect_ibd(self, vcf_path, output_dir):
+        """Detect IBD segments using specified method."""
+        segments_path = os.path.join(output_dir, f"segments_{self.ibd_method}.csv")
+        
+        if self.ibd_method == 'refinedibd':
+            # Run Refined-IBD
+            cmd = [
+                "java", "-jar", "refined-ibd.jar",
+                "gt=" + vcf_path,
+                "out=" + os.path.join(output_dir, "refined-ibd"),
+                "length=1.0"
+            ]
+            subprocess.run(cmd, check=True)
+            
+            # Convert to segments format
+            segments = self._parse_refinedibd_output(
+                os.path.join(output_dir, "refined-ibd.ibd"))
+            
+        elif self.ibd_method == 'hapibd':
+            # Run hap-IBD
+            cmd = [
+                "java", "-jar", "hap-ibd.jar",
+                "gt=" + vcf_path,
+                "out=" + os.path.join(output_dir, "hap-ibd"),
+                "min-output=1.0"
+            ]
+            subprocess.run(cmd, check=True)
+            
+            # Convert to segments format
+            segments = self._parse_hapibd_output(
+                os.path.join(output_dir, "hap-ibd.ibd"))
+            
+        elif self.ibd_method == 'ibis':
+            # Run IBIS
+            cmd = [
+                "ibis",
+                "--vcf", vcf_path,
+                "--out", os.path.join(output_dir, "ibis"),
+                "--min-cm", "1.0"
+            ]
+            subprocess.run(cmd, check=True)
+            
+            # Convert to segments format
+            segments = self._parse_ibis_output(
+                os.path.join(output_dir, "ibis.segments.gz"))
+        
+        else:
+            raise ValueError(f"Unsupported IBD method: {self.ibd_method}")
+        
+        # Save segments to CSV
+        with open(segments_path, 'w') as f:
+            writer = csv.writer(f)
+            writer.writerow(['ind1', 'ind2', 'chrom', 'start_pos', 'end_pos', 'is_ibd2', 'seg_len'])
+            for seg in segments:
+                writer.writerow([
+                    seg['ind1'], seg['ind2'], seg['chrom'],
+                    seg['start_pos'], seg['end_pos'],
+                    1 if seg['is_ibd2'] else 0,
+                    seg['seg_len']
+                ])
+        
+        return segments
+    
+    def _extract_bio_info(self, vcf_path):
+        """Extract biological information from VCF file."""
+        # Implementation details...
+        pass
+    
+    def _parse_refinedibd_output(self, ibd_path):
+        """Parse Refined-IBD output file."""
+        # Implementation details...
+        pass
+    
+    def _parse_hapibd_output(self, ibd_path):
+        """Parse hap-IBD output file."""
+        # Implementation details...
+        pass
+    
+    def _parse_ibis_output(self, segments_path):
+        """Parse IBIS output file."""
+        # Implementation details...
+        pass
+    
+    def _save_results(self, pedigree, output_dir):
+        """Save pedigree results to various formats."""
+        # Implementation details...
+        pass</code></pre>
+            
+            <p>This integration enables end-to-end pipelines from raw genetic data to reconstructed pedigrees.</p>
+
+            <h4>Visualization and Analysis Integration</h4>
+            <p>Bonsai can be integrated with visualization and analysis tools:</p>
+            
+            <pre><code># Example integration with visualization tools
+
+class BonsaiVisualizer:
+    """Visualization tools for Bonsai pedigrees."""
+    
+    def __init__(self, pedigree, bio_info=None):
+        """
+        Initialize the visualizer.
+        
+        Args:
+            pedigree: Up-node dictionary representing the pedigree
+            bio_info: Biological information
+        """
+        self.pedigree = pedigree
+        self.bio_info = bio_info or []
+        self.bio_info_dict = {item['genotype_id']: item for item in self.bio_info}
+    
+    def to_networkx(self):
+        """Convert pedigree to NetworkX graph."""
+        import networkx as nx
+        
+        G = nx.DiGraph()
+        
+        # Add nodes with attributes
+        for ind_id in self.pedigree:
+            # Node attributes
+            attrs = {'id': ind_id}
+            
+            # Add biological information if available
+            if ind_id in self.bio_info_dict:
+                for key, value in self.bio_info_dict[ind_id].items():
+                    attrs[key] = value
+            
+            # Inferred node?
+            attrs['inferred'] = ind_id < 0
+            
+            # Add node to graph
+            G.add_node(ind_id, **attrs)
+        
+        # Add edges (parent -> child)
+        for child_id, parents in self.pedigree.items():
+            for parent_id in parents:
+                G.add_edge(parent_id, child_id)
+        
+        return G
+    
+    def to_graphviz(self, output_path=None):
+        """Convert pedigree to GraphViz format."""
+        import graphviz
+        
+        dot = graphviz.Digraph(comment='Pedigree')
+        
+        # Add nodes
+        for ind_id in self.pedigree:
+            # Node label
+            label = str(ind_id)
+            if ind_id in self.bio_info_dict:
+                info = self.bio_info_dict[ind_id]
+                if 'sex' in info:
+                    label += f" ({info['sex']})"
+                if 'age' in info:
+                    label += f"\nAge: {info['age']}"
+            
+            # Node attributes
+            attrs = {
+                'label': label,
+                'shape': 'box' if ind_id > 0 else 'ellipse',
+                'style': 'filled',
+                'fillcolor': 'lightblue' if ind_id > 0 else 'lightgray'
+            }
+            
+            # Add node
+            dot.node(str(ind_id), **attrs)
+        
+        # Add edges (parent -> child)
+        for child_id, parents in self.pedigree.items():
+            for parent_id in parents:
+                dot.edge(str(parent_id), str(child_id))
+        
+        # Render if output path provided
+        if output_path:
+            dot.render(output_path, format='png', cleanup=True)
+        
+        return dot
+    
+    def to_cytoscape(self, output_path=None):
+        """Convert pedigree to Cytoscape.js JSON format."""
+        # Implementation details...
+        pass
+    
+    def to_d3(self, output_path=None):
+        """Convert pedigree to D3.js format."""
+        # Implementation details...
+        pass
+    
+    def to_ped(self, output_path):
+        """Convert pedigree to PLINK .ped format."""
+        # Implementation details...
+        pass</code></pre>
+            
+            <p>These visualization integrations help researchers interpret and communicate Bonsai's results effectively.</p>
+
+            <h3>Extending Bonsai</h3>
+            
+            <p>Bonsai's modular architecture makes it straightforward to extend with new features.</p>
+            
+            <h4>Custom Relationship Models</h4>
+            <p>Researchers can implement custom relationship models for specific scenarios:</p>
+            
+            <pre><code># Example custom relationship model
+
+class CustomRelationshipModel:
+    """Custom relationship model for specific populations."""
+    
+    def __init__(self, population='EUR', config=None):
+        """
+        Initialize the model.
+        
+        Args:
+            population: Population identifier
+            config: Configuration parameters
+        """
+        self.population = population
+        self.config = config or {}
+        
+        # Load population-specific parameters
+        self.params = self._load_population_params(population)
+    
+    def _load_population_params(self, population):
+        """Load population-specific parameters."""
+        # Default parameters
+        params = {
+            'parent_child': {
+                'expected_segments': 23,
+                'expected_length': 3500
+            },
+            'siblings': {
+                'expected_segments': 37,
+                'expected_length': 2600
+            },
+            # Additional relationship types...
+        }
+        
+        # Apply population-specific adjustments
+        if population == 'EUR':
+            pass  # Default parameters are for EUR
+        elif population == 'AFR':
+            # Adjust for higher recombination rate
+            for rel in params:
+                params[rel]['expected_segments'] *= 1.12
+                params[rel]['expected_length'] *= 0.95
+        elif population == 'EAS':
+            # Adjust for lower recombination rate
+            for rel in params:
+                params[rel]['expected_segments'] *= 0.92
+                params[rel]['expected_length'] *= 1.05
+        # Additional populations...
+        
+        return params
+    
+    def calculate_likelihood(self, relationship, segments):
+        """
+        Calculate likelihood of a relationship given segments.
+        
+        Args:
+            relationship: Relationship type
+            segments: Segment data
+            
+        Returns:
+            Log-likelihood of the relationship
+        """
+        # Extract relationship parameters
+        params = self.params.get(relationship, {})
+        expected_segments = params.get('expected_segments', 0)
+        expected_length = params.get('expected_length', 0)
+        
+        # Calculate observed statistics
+        observed_segments = len(segments)
+        observed_length = sum(seg['seg_len'] for seg in segments)
+        
+        # Calculate likelihoods using appropriate distributions
+        # For segment count: use Poisson distribution
+        count_log_like = poisson.logpmf(observed_segments, expected_segments)
+        
+        # For total length: use Gamma distribution with shape based on segment count
+        shape = expected_segments
+        scale = expected_length / expected_segments if expected_segments > 0 else 1
+        length_log_like = gamma.logpdf(observed_length, shape, scale=scale)
+        
+        # Combine likelihoods with weights
+        count_weight = self.config.get('count_weight', 0.4)
+        length_weight = self.config.get('length_weight', 0.6)
+        
+        total_log_like = count_weight * count_log_like + length_weight * length_log_like
+        
+        return total_log_like</code></pre>
+            
+            <p>These custom models can incorporate population-specific patterns, special cases, or domain knowledge.</p>
+
+            <h4>Advanced Extensions</h4>
+            <p>Bonsai can be extended with advanced features for specialized applications:</p>
+            
+            <ul>
+                <li><strong>Y-Chromosome and mtDNA Integration:</strong> Incorporating uniparental markers for enhanced accuracy</li>
+                <li><strong>Ethnicity Estimation:</strong> Integrating ancestry information to improve relationship inference</li>
+                <li><strong>Multi-Generation Optimization:</strong> Specialized algorithms for historical pedigree reconstruction</li>
+                <li><strong>Admixture-Aware Models:</strong> Handling populations with complex admixture patterns</li>
+                <li><strong>Cloud-Based Distributed Processing:</strong> Scaling to very large datasets using cloud computing</li>
+            </ul>
+            
+            <p>These extensions can significantly enhance Bonsai's capabilities for specialized research applications.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Implement a custom relationship model for a specific population or scenario.</li>
+                <li>Create a visualization tool that renders Bonsai pedigrees in an interactive format.</li>
+                <li>Develop a memory-optimized version of the segment indexing system for large datasets.</li>
+                <li>Implement a plugin that integrates Bonsai with a specific IBD detection tool.</li>
+                <li>Design and implement a parallelized version of the pedigree reconstruction algorithm.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When extending Bonsai, focus on maintaining the modular architecture. This ensures your extensions can be easily integrated, tested, and maintained. Also, consider contributing your extensions back to the community to benefit other researchers.</p>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab15_bonsai_calibration.html" class="prev-lab">Model Calibration</a>
+                <a href="lab17_bonsai_likelihood.html" class="next-lab">Likelihood Calculations</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

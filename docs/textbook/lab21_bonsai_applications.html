@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 21: Bonsai Applications | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <header>
+        <h1>Computational Genetic Genealogy</h1>
+        <p>Real-world Applications of Bonsai</p>
+    </header>
+
+    <nav class="main-nav">
+        <a href="../index.html">Home</a>
+        <a href="contents.html">Contents</a>
+        <a href="lab20_bonsai_visualization.html">Lab 20: Visualization</a>
+        <a href="lab21_bonsai_applications.html" class="active">Lab 21: Applications</a>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 21: Real-world Applications of Bonsai</h2>
+
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Understanding how Bonsai is applied to real-world scenarios demonstrates
+ its practical value and helps researchers identify opportunities for its application in diverse domains. These applications
+showcase how computational genetic genealogy can address important scientific, medical, and cultural questions.</p>
+            </div>
+
+            <h3>Learning Objectives</h3>
+            <ul class="objectives-list">
+                <li>Discover how Bonsai is used in diverse research domains</li>
+                <li>Implement Bonsai workflows for specific application areas</li>
+                <li>Learn to adapt Bonsai parameters and strategies for different research contexts</li>
+                <li>Understand the ethical considerations in applied genetic genealogy</li>
+                <li>Develop approaches for communicating findings to different stakeholders</li>
+                <li>Apply Bonsai to a real-world dataset and interpret the results</li>
+            </ul>
+
+            <h3>Genetic Genealogy and Family History</h3>
+
+            <p>Bonsai has revolutionized family history research by making pedigree reconstruction from genetic data
+accessible and reliable.</p>
+
+            <h4>Genealogical Research Workflows</h4>
+
+            <p>Standard workflows for genealogical research using Bonsai:</p>
+
+            <pre><code>def genealogical_research_workflow(segments, individuals, config=None):
+    """
+    Standard workflow for genealogical research using Bonsai.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of workflow results including pedigree and analysis
+    """
+    if config is None:
+        config = {}
+
+    results = {}
+
+    # Step 1: Data preparation
+    print("Step 1: Preparing data...")
+    processed_segments, processed_individuals = preprocess_data_for_genealogy(
+        segments, individuals, config)
+
+    # Step 2: Identify close relatives
+    print("Step 2: Identifying close relatives...")
+    close_relatives = identify_close_relatives(processed_segments)
+    results['close_relatives'] = close_relatives
+
+    # Step 3: Reconstruct core family units
+    print("Step 3: Reconstructing core family units...")
+    family_units = reconstruct_family_units(close_relatives, processed_segments, processed_individuals)
+    results['family_units'] = family_units
+
+    # Step 4: Connect family units into broader pedigree
+    print("Step 4: Connecting family units...")
+    pedigree = connect_family_units(family_units, processed_segments)
+    results['pedigree'] = pedigree
+
+    # Step 5: Analyze DNA matches against pedigree
+    print("Step 5: Analyzing DNA matches against pedigree...")
+    match_analysis = analyze_matches_against_pedigree(pedigree, processed_segments)
+    results['match_analysis'] = match_analysis
+
+    # Step 6: Identify research opportunities
+    print("Step 6: Identifying research opportunities...")
+    research_opportunities = identify_research_opportunities(pedigree, match_analysis)
+    results['research_opportunities'] = research_opportunities
+
+    return results
+
+def preprocess_data_for_genealogy(segments, individuals, config):
+    """Preprocess data for genealogical research."""
+    # Implementation details...
+    return segments, individuals
+
+def identify_close_relatives(segments):
+    """Identify close relatives from IBD segments."""
+    # Implementation details...
+    return []
+
+def reconstruct_family_units(close_relatives, segments, individuals):
+    """Reconstruct core family units."""
+    # Implementation details...
+    return []
+
+def connect_family_units(family_units, segments):
+    """Connect family units into a broader pedigree."""
+    # Implementation details...
+    return {}
+
+def analyze_matches_against_pedigree(pedigree, segments):
+    """Analyze DNA matches against the reconstructed pedigree."""
+    # Implementation details...
+    return {}
+
+def identify_research_opportunities(pedigree, match_analysis):
+    """Identify opportunities for further genealogical research."""
+    # Implementation details...
+    return []</code></pre>
+
+            <p>This workflow illustrates how Bonsai can be integrated into genealogical research, providing a systematic
+approach to reconstructing family trees from genetic data.</p>
+
+            <h4>Integrating Documentary Evidence</h4>
+
+            <p>Techniques for integrating documentary evidence with genetic data:</p>
+
+            <pre><code>def integrate_documentary_evidence(pedigree, documentary_records, config=None):
+    """
+    Integrate documentary evidence with a Bonsai-reconstructed pedigree.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        documentary_records: List of documentary records with relationship information
+        config: Optional configuration parameters
+
+    Returns:
+        Updated pedigree with integrated documentary evidence
+    """
+    if config is None:
+        config = {
+            'confidence_weights': {
+                'genetic': 0.6,
+                'documentary': 0.4
+            },
+            'conflict_resolution': 'weighted',  # 'genetic', 'documentary', 'weighted'
+            'documentary_reliability': {
+                'birth_certificate': 1.0,
+                'marriage_record': 0.9,
+                'census': 0.8,
+                'obituary': 0.7,
+                'family_bible': 0.7,
+                'newspaper': 0.6,
+                'oral_history': 0.5
+            }
+        }
+
+    # Create a working copy of the pedigree
+    updated_pedigree = copy.deepcopy(pedigree)
+
+    # Track conflicts between genetic and documentary evidence
+    conflicts = []
+
+    # Process each documentary record
+    for record in documentary_records:
+        record_type = record.get('type')
+        reliability = config['documentary_reliability'].get(record_type, 0.5)
+
+        # Apply record information based on type
+        if record_type in ['birth_certificate', 'baptism']:
+            # Birth records typically establish parent-child relationships
+            child_id = record.get('child_id')
+            father_id = record.get('father_id')
+            mother_id = record.get('mother_id')
+
+            if child_id:
+                # Update individual information
+                if child_id in updated_pedigree['individuals']:
+                    # Update existing individual
+                    if 'birth_date' in record:
+                        updated_pedigree['individuals'][child_id]['birth_date'] = record['birth_date']
+                    if 'birth_place' in record:
+                        updated_pedigree['individuals'][child_id]['birth_place'] = record['birth_place']
+                else:
+                    # Add new individual
+                    updated_pedigree['individuals'][child_id] = {
+                        'id': child_id,
+                        'birth_date': record.get('birth_date'),
+                        'birth_place': record.get('birth_place'),
+                        'sex': record.get('sex')
+                    }
+
+                # Add parent-child relationships
+                if father_id:
+                    # Check for conflicts with genetic evidence
+                    genetic_father = find_genetic_father(pedigree, child_id)
+
+                    if genetic_father and genetic_father != father_id:
+                        # Conflict between genetic and documentary evidence
+                        conflicts.append({
+                            'type': 'paternity',
+                            'child': child_id,
+                            'genetic_father': genetic_father,
+                            'documentary_father': father_id,
+                            'record_type': record_type,
+                            'reliability': reliability
+                        })
+
+                        # Resolve conflict based on configuration
+                        if config['conflict_resolution'] == 'genetic':
+                            # Keep genetic father
+                            pass
+                        elif config['conflict_resolution'] == 'documentary':
+                            # Use documentary father
+                            add_or_update_relationship(updated_pedigree, father_id, child_id, 'father-child', reliability)
+                        elif config['conflict_resolution'] == 'weighted':
+                            # Compare weighted confidences
+                            genetic_confidence = get_relationship_confidence(pedigree, genetic_father, child_id)
+                            documentary_confidence = reliability
+
+                            genetic_weight = genetic_confidence * config['confidence_weights']['genetic']
+                            documentary_weight = documentary_confidence * config['confidence_weights']['documentary']
+
+                            if documentary_weight > genetic_weight:
+                                add_or_update_relationship(updated_pedigree, father_id, child_id, 'father-child', reliability)
+                    else:
+                        # No conflict, add relationship
+                        add_or_update_relationship(updated_pedigree, father_id, child_id, 'father-child', reliability)
+
+                # Similar logic for mother-child relationship
+                if mother_id:
+                    # Implementation details similar to father-child...
+                    pass
+
+        elif record_type in ['marriage_record', 'marriage_license']:
+            # Marriage records establish spouse relationships
+            spouse1_id = record.get('spouse1_id')
+            spouse2_id = record.get('spouse2_id')
+
+            if spouse1_id and spouse2_id:
+                # Add spouse relationship
+                add_or_update_relationship(updated_pedigree, spouse1_id, spouse2_id, 'spouse', reliability)
+
+        # Additional record types can be processed similarly...
+
+    # Record conflicts in the updated pedigree
+    updated_pedigree['evidence_conflicts'] = conflicts
+
+    return updated_pedigree
+
+def find_genetic_father(pedigree, child_id):
+    """Find the genetic father of an individual in the pedigree."""
+    # Implementation details...
+    return None
+
+def get_relationship_confidence(pedigree, ind1_id, ind2_id):
+    """Get the confidence value for a relationship in the pedigree."""
+    # Implementation details...
+    return 0.0
+
+def add_or_update_relationship(pedigree, ind1_id, ind2_id, rel_type, confidence):
+    """Add or update a relationship in the pedigree."""
+    # Implementation details...
+    pass</code></pre>
+
+            <p>Integrating documentary evidence with genetic data creates a more comprehensive and accurate family tree,
+leveraging the strengths of both types of evidence.</p>
+
+            <h4>Finding Unknown Parents</h4>
+
+            <p>Using Bonsai to identify unknown parents:</p>
+
+            <pre><code>def identify_unknown_parents(target_id, segments, individuals, config=None):
+    """
+    Use Bonsai to identify unknown parents of an individual.
+
+    Args:
+        target_id: ID of the individual with unknown parent(s)
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary with parent candidates and supporting evidence
+    """
+    if config is None:
+        config = {
+            'min_confidence': 0.8,
+            'max_parent_candidates': 5,
+            'min_parent_child_ibd': 2000,  # cM
+            'infer_latent_ancestors': True
+        }
+
+    results = {
+        'target_id': target_id,
+        'father_candidates': [],
+        'mother_candidates': [],
+        'paternal_relatives': [],
+        'maternal_relatives': []
+    }
+
+    # Step 1: Identify close relatives of the target
+    target_matches = find_individual_matches(target_id, segments)
+
+    # Step 2: Group relatives by parental line
+    paternal_group, maternal_group = separate_paternal_maternal_matches(target_id, target_matches)
+
+    # Step 3: Reconstruct paternal side mini-pedigree
+    if paternal_group:
+        paternal_pedigree = reconstruct_partial_pedigree(target_id, paternal_group, segments, individuals, config)
+
+        # Find most likely father candidates
+        father_candidates = identify_parent_candidates(target_id, paternal_pedigree, 'father', config)
+        results['father_candidates'] = father_candidates
+
+        # List paternal relatives for further research
+        results['paternal_relatives'] = analyze_paternal_relatives(target_id, paternal_pedigree)
+
+    # Step 4: Reconstruct maternal side mini-pedigree
+    if maternal_group:
+        maternal_pedigree = reconstruct_partial_pedigree(target_id, maternal_group, segments, individuals, config)
+
+        # Find most likely mother candidates
+        mother_candidates = identify_parent_candidates(target_id, maternal_pedigree, 'mother', config)
+        results['mother_candidates'] = mother_candidates
+
+        # List maternal relatives for further research
+        results['maternal_relatives'] = analyze_maternal_relatives(target_id, maternal_pedigree)
+
+    # Step 5: Generate recommendations for further research
+    results['recommendations'] = generate_research_recommendations(
+        target_id, results['father_candidates'], results['mother_candidates'])
+
+    return results
+
+def find_individual_matches(target_id, segments):
+    """Find all IBD matches for a specific individual."""
+    # Implementation details...
+    return []
+
+def separate_paternal_maternal_matches(target_id, matches):
+    """Separate matches into paternal and maternal groups."""
+    # Implementation details...
+    return [], []
+
+def reconstruct_partial_pedigree(target_id, relatives, segments, individuals, config):
+    """Reconstruct a partial pedigree focused on one parental line."""
+    # Implementation details...
+    return {}
+
+def identify_parent_candidates(target_id, pedigree, parent_type, config):
+    """Identify candidates for unknown parent from a partial pedigree."""
+    # Implementation details...
+    return []
+
+def analyze_paternal_relatives(target_id, pedigree):
+    """Analyze paternal relatives for further research."""
+    # Implementation details...
+    return []
+
+def analyze_maternal_relatives(target_id, pedigree):
+    """Analyze maternal relatives for further research."""
+    # Implementation details...
+    return []
+
+def generate_research_recommendations(target_id, father_candidates, mother_candidates):
+    """Generate recommendations for further research to identify unknown parents."""
+    # Implementation details...
+    return []</code></pre>
+
+            <p>This approach to identifying unknown parents combines genetic evidence with pedigree reconstruction, helping
+individuals connect with their biological heritage.</p>
+
+            <h3>Population Genetics and Demographic History</h3>
+
+            <p>Bonsai applications in population genetics and demographic history research.</p>
+
+            <h4>Reconstructing Historical Populations</h4>
+
+            <p>Using Bonsai to study historical population structure:</p>
+
+            <pre><code>def reconstruct_historical_population(segments, individuals, config=None):
+    """
+    Reconstruct a historical population structure using Bonsai.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of population reconstruction results
+    """
+    if config is None:
+        config = {
+            'start_year': 1750,
+            'end_year': 1950,
+            'time_increment': 50,
+            'geographical_resolution': 'county',
+            'min_confidence': 0.7,
+            'max_latent_ancestors': 500
+        }
+
+    results = {
+        'population_structure': {},
+        'demographic_parameters': {},
+        'temporal_dynamics': {},
+        'spatial_patterns': {}
+    }
+
+    # Step 1: Preprocess data for historical reconstruction
+    print("Step 1: Preprocessing data...")
+    processed_segments, processed_individuals = preprocess_data_for_historical_reconstruction(
+        segments, individuals, config)
+
+    # Step 2: Reconstruct full population pedigree
+    print("Step 2: Reconstructing population pedigree...")
+    population_pedigree = reconstruct_population_pedigree(processed_segments, processed_individuals, config)
+    results['population_structure']['pedigree'] = population_pedigree
+
+    # Step 3: Analyze temporal population dynamics
+    print("Step 3: Analyzing temporal dynamics...")
+    temporal_dynamics = analyze_temporal_dynamics(population_pedigree, config)
+    results['temporal_dynamics'] = temporal_dynamics
+
+    # Step 4: Analyze spatial patterns
+    print("Step 4: Analyzing spatial patterns...")
+    spatial_patterns = analyze_spatial_patterns(population_pedigree, processed_individuals, config)
+    results['spatial_patterns'] = spatial_patterns
+
+    # Step 5: Estimate demographic parameters
+    print("Step 5: Estimating demographic parameters...")
+    demographic_parameters = estimate_demographic_parameters(
+        population_pedigree, temporal_dynamics, spatial_patterns, config)
+    results['demographic_parameters'] = demographic_parameters
+
+    # Step 6: Identify founder lineages
+    print("Step 6: Identifying founder lineages...")
+    founder_lineages = identify_founder_lineages(population_pedigree, config)
+    results['population_structure']['founder_lineages'] = founder_lineages
+
+    # Step 7: Detect migration patterns
+    print("Step 7: Detecting migration patterns...")
+    migration_patterns = detect_migration_patterns(population_pedigree, processed_individuals, config)
+    results['spatial_patterns']['migration'] = migration_patterns
+
+    return results
+
+def preprocess_data_for_historical_reconstruction(segments, individuals, config):
+    """Preprocess data for historical population reconstruction."""
+    # Implementation details...
+    return segments, individuals
+
+def reconstruct_population_pedigree(segments, individuals, config):
+    """Reconstruct a complete population pedigree."""
+    # Implementation details...
+    return {}
+
+def analyze_temporal_dynamics(pedigree, config):
+    """Analyze temporal dynamics of a historical population."""
+    # Implementation details...
+    return {}
+
+def analyze_spatial_patterns(pedigree, individuals, config):
+    """Analyze spatial patterns in a historical population."""
+    # Implementation details...
+    return {}
+
+def estimate_demographic_parameters(pedigree, temporal_dynamics, spatial_patterns, config):
+    """Estimate demographic parameters from a reconstructed population."""
+    # Implementation details...
+    return {}
+
+def identify_founder_lineages(pedigree, config):
+    """Identify founder lineages in a historical population."""
+    # Implementation details...
+    return []
+
+def detect_migration_patterns(pedigree, individuals, config):
+    """Detect migration patterns in a historical population."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Using Bonsai for historical population reconstruction provides insights into demographic history, migration
+patterns, and the evolution of population structure over time.</p>
+
+            <h4>Endogamy and Isolated Populations</h4>
+
+            <p>Specialized approaches for endogamous populations:</p>
+
+            <pre><code>def analyze_endogamous_population(segments, individuals, config=None):
+    """
+    Analyze an endogamous population using specialized Bonsai techniques.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of endogamy analysis results
+    """
+    if config is None:
+        config = {
+            'endogamy_factor': 3.0,
+            'min_segment_length': 15.0,  # Higher threshold for endogamous populations
+            'min_confidence': 0.85,
+            'collapse_detection': True,
+            'max_latent_ancestors': 200
+        }
+
+    results = {
+        'endogamy_metrics': {},
+        'pedigree': {},
+        'founder_structure': {},
+        'relationship_patterns': {}
+    }
+
+    # Step 1: Calculate endogamy metrics
+    print("Step 1: Calculating endogamy metrics...")
+    endogamy_metrics = calculate_endogamy_metrics(segments, individuals)
+    results['endogamy_metrics'] = endogamy_metrics
+
+    # Step 2: Apply endogamy-specific preprocessing
+    print("Step 2: Applying endogamy-specific preprocessing...")
+    processed_segments, processed_individuals = preprocess_for_endogamy(
+        segments, individuals, endogamy_metrics, config)
+
+    # Step 3: Reconstruct population pedigree with endogamy adjustments
+    print("Step 3: Reconstructing endogamous pedigree...")
+    pedigree = reconstruct_endogamous_pedigree(processed_segments, processed_individuals, config)
+    results['pedigree'] = pedigree
+
+    # Step 4: Detect pedigree collapse patterns
+    print("Step 4: Detecting pedigree collapse patterns...")
+    collapse_patterns = detect_pedigree_collapse(pedigree)
+    results['pedigree']['collapse_patterns'] = collapse_patterns
+
+    # Step 5: Identify founder structure
+    print("Step 5: Identifying founder structure...")
+    founder_structure = identify_founder_structure(pedigree, collapse_patterns)
+    results['founder_structure'] = founder_structure
+
+    # Step 6: Analyze relationship patterns
+    print("Step 6: Analyzing relationship patterns...")
+    relationship_patterns = analyze_endogamous_relationships(pedigree, processed_segments)
+    results['relationship_patterns'] = relationship_patterns
+
+    # Step 7: Calculate inbreeding coefficients
+    print("Step 7: Calculating inbreeding coefficients...")
+    inbreeding_coefficients = calculate_inbreeding_coefficients(pedigree)
+    results['endogamy_metrics']['inbreeding_coefficients'] = inbreeding_coefficients
+
+    return results
+
+def calculate_endogamy_metrics(segments, individuals):
+    """Calculate metrics of endogamy for a population."""
+    # Implementation details...
+    return {}
+
+def preprocess_for_endogamy(segments, individuals, endogamy_metrics, config):
+    """Apply endogamy-specific preprocessing to IBD segments."""
+    # Implementation details...
+    return segments, individuals
+
+def reconstruct_endogamous_pedigree(segments, individuals, config):
+    """Reconstruct a pedigree for an endogamous population."""
+    # Implementation details...
+    return {}
+
+def detect_pedigree_collapse(pedigree):
+    """Detect patterns of pedigree collapse in an endogamous population."""
+    # Implementation details...
+    return {}
+
+def identify_founder_structure(pedigree, collapse_patterns):
+    """Identify the founder structure of an endogamous population."""
+    # Implementation details...
+    return {}
+
+def analyze_endogamous_relationships(pedigree, segments):
+    """Analyze relationship patterns in an endogamous population."""
+    # Implementation details...
+    return {}
+
+def calculate_inbreeding_coefficients(pedigree):
+    """Calculate inbreeding coefficients for individuals in a pedigree."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>These specialized approaches enable the study of endogamous populations, providing insights into their unique
+genetic structures and historical patterns.</p>
+
+            <h4>Inferring Recent Selection</h4>
+
+            <p>Using pedigree information to detect recent selection:</p>
+
+            <pre><code>def detect_recent_selection(pedigree, genotype_data, phenotype_data=None, config=None):
+    """
+    Detect signatures of recent selection using pedigree information.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        genotype_data: Dictionary of genotype data for individuals in the pedigree
+        phenotype_data: Optional dictionary of phenotype data
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of selection analysis results
+    """
+    if config is None:
+        config = {
+            'min_allele_frequency': 0.05,
+            'min_generations': 3,
+            'significance_threshold': 0.01,
+            'min_transmission_distortion': 1.5
+        }
+
+    results = {
+        'transmission_distortion': {},
+        'haplotype_selection': {},
+        'phenotype_association': {},
+        'selected_regions': []
+    }
+
+    # Step 1: Calculate allele transmission patterns through the pedigree
+    print("Step 1: Calculating allele transmission patterns...")
+    transmission_patterns = calculate_transmission_patterns(pedigree, genotype_data)
+
+    # Step 2: Detect transmission distortion
+    print("Step 2: Detecting transmission distortion...")
+    transmission_distortion = detect_transmission_distortion(
+        transmission_patterns, config['min_transmission_distortion'], config['significance_threshold'])
+    results['transmission_distortion'] = transmission_distortion
+
+    # Step 3: Identify extended haplotypes with evidence of selection
+    print("Step 3: Identifying selected haplotypes...")
+    selected_haplotypes = identify_selected_haplotypes(pedigree, genotype_data, transmission_distortion)
+    results['haplotype_selection'] = selected_haplotypes
+
+    # Step 4: Associate selection signatures with phenotypes (if available)
+    if phenotype_data:
+        print("Step 4: Associating selection with phenotypes...")
+        phenotype_associations = associate_selection_with_phenotypes(
+            selected_haplotypes, phenotype_data, pedigree)
+        results['phenotype_association'] = phenotype_associations
+
+    # Step 5: Identify genomic regions under selection
+    print("Step 5: Identifying genomic regions under selection...")
+    selected_regions = identify_selected_regions(transmission_distortion, selected_haplotypes)
+    results['selected_regions'] = selected_regions
+
+    # Step 6: Estimate selection coefficients
+    print("Step 6: Estimating selection coefficients...")
+    selection_coefficients = estimate_selection_coefficients(
+        pedigree, genotype_data, selected_regions)
+    results['selection_coefficients'] = selection_coefficients
+
+    return results
+
+def calculate_transmission_patterns(pedigree, genotype_data):
+    """Calculate patterns of allele transmission through a pedigree."""
+    # Implementation details...
+    return {}
+
+def detect_transmission_distortion(transmission_patterns, min_distortion, significance_threshold):
+    """Detect statistically significant transmission distortion."""
+    # Implementation details...
+    return {}
+
+def identify_selected_haplotypes(pedigree, genotype_data, transmission_distortion):
+    """Identify extended haplotypes showing evidence of selection."""
+    # Implementation details...
+    return {}
+
+def associate_selection_with_phenotypes(selected_haplotypes, phenotype_data, pedigree):
+    """Associate selection signatures with phenotypic traits."""
+    # Implementation details...
+    return {}
+
+def identify_selected_regions(transmission_distortion, selected_haplotypes):
+    """Identify genomic regions under selection."""
+    # Implementation details...
+    return []
+
+def estimate_selection_coefficients(pedigree, genotype_data, selected_regions):
+    """Estimate selection coefficients for regions under selection."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Combining pedigree information with genetic and phenotypic data enables detection of recent selection events
+that may be missed by traditional population genetics methods.</p>
+
+            <h3>Medical and Clinical Applications</h3>
+
+            <p>Bonsai applications in medical and clinical contexts.</p>
+
+            <h4>Disease Risk Assessment</h4>
+
+            <p>Using family structure for disease risk assessment:</p>
+
+            <pre><code>def assess_disease_risk(pedigree, medical_data, variant_data=None, config=None):
+    """
+    Assess disease risk using pedigree information and medical data.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        medical_data: Dictionary mapping individual IDs to medical histories
+        variant_data: Optional dictionary of genetic variant data
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of disease risk assessments
+    """
+    if config is None:
+        config = {
+            'diseases_of_interest': [
+                'diabetes', 'heart_disease', 'cancer', 'alzheimers',
+                'hypertension', 'autoimmune'
+            ],
+            'risk_model': 'combined',  # 'family_history', 'genetic', 'combined'
+            'min_confidence': 0.7,
+            'include_latent_ancestors': True
+        }
+
+    results = {
+        'individual_risks': {},
+        'family_patterns': {},
+        'genetic_factors': {},
+        'risk_recommendations': {}
+    }
+
+    # Step 1: Analyze family history patterns
+    print("Step 1: Analyzing family history patterns...")
+    family_patterns = analyze_family_disease_patterns(pedigree, medical_data, config)
+    results['family_patterns'] = family_patterns
+
+    # Step 2: Calculate empirical risk based on family structure
+    print("Step 2: Calculating empirical risk...")
+    empirical_risks = calculate_empirical_risks(pedigree, medical_data, family_patterns, config)
+
+    # Step 3: Incorporate genetic variant data if available
+    if variant_data:
+        print("Step 3: Incorporating genetic variant data...")
+        genetic_risks = calculate_genetic_risks(variant_data, config)
+        results['genetic_factors'] = genetic_risks
+
+        # Step 4: Calculate combined risk
+        print("Step 4: Calculating combined risk...")
+        combined_risks = calculate_combined_risks(empirical_risks, genetic_risks, config)
+        results['individual_risks'] = combined_risks
+    else:
+        # Use only empirical risks
+        results['individual_risks'] = empirical_risks
+
+    # Step 5: Generate risk recommendations
+    print("Step 5: Generating risk recommendations...")
+    risk_recommendations = generate_risk_recommendations(
+        results['individual_risks'], pedigree, medical_data, config)
+    results['risk_recommendations'] = risk_recommendations
+
+    # Step 6: Identify high-risk individuals
+    print("Step 6: Identifying high-risk individuals...")
+    high_risk_individuals = identify_high_risk_individuals(results['individual_risks'], config)
+    results['high_risk_individuals'] = high_risk_individuals
+
+    return results
+
+def analyze_family_disease_patterns(pedigree, medical_data, config):
+    """Analyze patterns of disease occurrence in a family."""
+    # Implementation details...
+    return {}
+
+def calculate_empirical_risks(pedigree, medical_data, family_patterns, config):
+    """Calculate empirical disease risks based on family structure."""
+    # Implementation details...
+    return {}
+
+def calculate_genetic_risks(variant_data, config):
+    """Calculate genetic risks based on variant data."""
+    # Implementation details...
+    return {}
+
+def calculate_combined_risks(empirical_risks, genetic_risks, config):
+    """Calculate combined risks using both family history and genetic data."""
+    # Implementation details...
+    return {}
+
+def generate_risk_recommendations(individual_risks, pedigree, medical_data, config):
+    """Generate recommendations based on risk assessments."""
+    # Implementation details...
+    return {}
+
+def identify_high_risk_individuals(individual_risks, config):
+    """Identify individuals at high risk for specific diseases."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Integrating pedigree information with medical and genetic data improves disease risk assessment, enabling more
+targeted screening and prevention strategies.</p>
+
+            <h4>Studying Inheritance Patterns</h4>
+
+            <p>Using Bonsai to study inheritance patterns of traits and diseases:</p>
+
+            <pre><code>def analyze_inheritance_patterns(pedigree, trait_data, variant_data=None, config=None):
+    """
+    Analyze inheritance patterns of traits or diseases using pedigree information.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        trait_data: Dictionary mapping individual IDs to trait information
+        variant_data: Optional dictionary of genetic variant data
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of inheritance pattern analysis results
+    """
+    if config is None:
+        config = {
+            'traits_of_interest': [],  # If empty, analyze all traits in trait_data
+            'include_latent_ancestors': True,
+            'min_generations': 2,
+            'inheritance_models': [
+                'autosomal_dominant', 'autosomal_recessive',
+                'x_linked', 'complex', 'mitochondrial'
+            ]
+        }
+
+    results = {
+        'trait_inheritance': {},
+        'model_fits': {},
+        'segregation_analysis': {},
+        'candidate_variants': {}
+    }
+
+    # Determine traits to analyze
+    traits_to_analyze = config['traits_of_interest']
+    if not traits_to_analyze:
+        # Extract all traits from trait_data
+        all_traits = set()
+        for ind_traits in trait_data.values():
+            all_traits.update(ind_traits.keys())
+        traits_to_analyze = list(all_traits)
+
+    # Analyze each trait
+    for trait in traits_to_analyze:
+        print(f"Analyzing inheritance pattern for trait: {trait}...")
+
+        # Step 1: Prepare trait distribution data
+        trait_distribution = extract_trait_distribution(pedigree, trait_data, trait)
+
+        # Step 2: Test different inheritance models
+        model_fits = test_inheritance_models(pedigree, trait_distribution, config['inheritance_models'])
+        results['model_fits'][trait] = model_fits
+
+        # Step 3: Perform segregation analysis
+        segregation_results = perform_segregation_analysis(pedigree, trait_distribution)
+        results['segregation_analysis'][trait] = segregation_results
+
+        # Step 4: Determine most likely inheritance pattern
+        best_model = determine_best_model(model_fits, segregation_results)
+        results['trait_inheritance'][trait] = {
+            'model': best_model['model'],
+            'confidence': best_model['confidence'],
+            'parameters': best_model['parameters']
+        }
+
+        # Step 5: If variant data is available, identify candidate causal variants
+        if variant_data:
+            candidate_variants = identify_candidate_variants(
+                pedigree, trait_distribution, variant_data, best_model)
+            results['candidate_variants'][trait] = candidate_variants
+
+    return results
+
+def extract_trait_distribution(pedigree, trait_data, trait):
+    """Extract the distribution of a trait across a pedigree."""
+    # Implementation details...
+    return {}
+
+def test_inheritance_models(pedigree, trait_distribution, models):
+    """Test different inheritance models against observed trait distribution."""
+    # Implementation details...
+    return {}
+
+def perform_segregation_analysis(pedigree, trait_distribution):
+    """Perform segregation analysis for a trait."""
+    # Implementation details...
+    return {}
+
+def determine_best_model(model_fits, segregation_results):
+    """Determine the best inheritance model based on fit and segregation analysis."""
+    # Implementation details...
+    return {
+        'model': 'unknown',
+        'confidence': 0.0,
+        'parameters': {}
+    }
+
+def identify_candidate_variants(pedigree, trait_distribution, variant_data, best_model):
+    """Identify candidate causal variants based on inheritance pattern."""
+    # Implementation details...
+    return []</code></pre>
+
+            <p>This approach enables identification of inheritance patterns for both simple Mendelian traits and more complex
+polygenic traits, aiding in gene discovery and genetic counseling.</p>
+
+            <h4>Rare Disease Gene Discovery</h4>
+
+            <p>Using Bonsai for rare disease gene discovery:</p>
+
+            <pre><code>def discover_rare_disease_genes(pedigree, phenotype_data, sequence_data, config=None):
+    """
+    Use pedigree information to discover genes associated with rare diseases.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        phenotype_data: Dictionary mapping individual IDs to phenotype information
+        sequence_data: Dictionary of genetic sequence data for individuals
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of gene discovery results
+    """
+    if config is None:
+        config = {
+            'inheritance_models': [
+                'autosomal_dominant', 'autosomal_recessive',
+                'x_linked', 'de_novo'
+            ],
+            'max_population_frequency': 0.01,
+            'min_causal_confidence': 0.7,
+            'max_candidate_genes': 10
+        }
+
+    results = {
+        'disease_inheritance': {},
+        'candidate_genes': {},
+        'candidate_variants': {},
+        'supporting_evidence': {}
+    }
+
+    # Step 1: Determine disease inheritance pattern
+    print("Step 1: Determining disease inheritance pattern...")
+    inheritance_pattern = determine_disease_inheritance(pedigree, phenotype_data)
+    results['disease_inheritance'] = inheritance_pattern
+
+    # Step 2: Prepare for variant filtering
+    print("Step 2: Preparing for variant filtering...")
+    affected_status = get_affected_status(pedigree, phenotype_data)
+
+    # Step 3: Filter variants based on inheritance pattern
+    print("Step 3: Filtering variants based on inheritance pattern...")
+    filtered_variants = filter_variants_by_inheritance(
+        sequence_data, affected_status, inheritance_pattern, config)
+
+    # Step 4: Prioritize candidate genes
+    print("Step 4: Prioritizing candidate genes...")
+    candidate_genes = prioritize_candidate_genes(filtered_variants, phenotype_data, config)
+    results['candidate_genes'] = candidate_genes
+
+    # Step 5: Identify candidate causal variants
+    print("Step 5: Identifying candidate causal variants...")
+    candidate_variants = identify_causal_variants(
+        candidate_genes, filtered_variants, pedigree, affected_status, config)
+    results['candidate_variants'] = candidate_variants
+
+    # Step 6: Gather supporting evidence
+    print("Step 6: Gathering supporting evidence...")
+    supporting_evidence = gather_supporting_evidence(
+        candidate_genes, candidate_variants, phenotype_data)
+    results['supporting_evidence'] = supporting_evidence
+
+    # Step 7: Calculate causal probabilities
+    print("Step 7: Calculating causal probabilities...")
+    causal_probabilities = calculate_causal_probabilities(
+        candidate_genes, candidate_variants, supporting_evidence, inheritance_pattern)
+    results['causal_probabilities'] = causal_probabilities
+
+    return results
+
+def determine_disease_inheritance(pedigree, phenotype_data):
+    """Determine the inheritance pattern of a disease from pedigree data."""
+    # Implementation details...
+    return {}
+
+def get_affected_status(pedigree, phenotype_data):
+    """Determine affected status for all individuals in the pedigree."""
+    # Implementation details...
+    return {}
+
+def filter_variants_by_inheritance(sequence_data, affected_status, inheritance_pattern, config):
+    """Filter variants based on inheritance pattern."""
+    # Implementation details...
+    return {}
+
+def prioritize_candidate_genes(filtered_variants, phenotype_data, config):
+    """Prioritize candidate genes based on variant data and phenotype."""
+    # Implementation details...
+    return []
+
+def identify_causal_variants(candidate_genes, filtered_variants, pedigree, affected_status, config):
+    """Identify candidate causal variants in prioritized genes."""
+    # Implementation details...
+    return {}
+
+def gather_supporting_evidence(candidate_genes, candidate_variants, phenotype_data):
+    """Gather supporting evidence for candidate genes and variants."""
+    # Implementation details...
+    return {}
+
+def calculate_causal_probabilities(candidate_genes, candidate_variants, supporting_evidence, inheritance_pattern):
+    """Calculate probabilities that candidates are causally related to the disease."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Using pedigree information to guide variant filtering and interpretation accelerates gene discovery for rare
+diseases, potentially leading to improved diagnostics and treatments.</p>
+
+            <h3>Cultural and Historical Applications</h3>
+
+            <p>Bonsai applications in cultural and historical research.</p>
+
+            <h4>Reconstructing Historical Communities</h4>
+
+            <p>Using Bonsai to reconstruct historical communities:</p>
+
+            <pre><code>def reconstruct_historical_community(segments, individuals, historical_records=None, config=None):
+    """
+    Reconstruct a historical community using genetic and historical data.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        historical_records: Optional list of historical records
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of community reconstruction results
+    """
+    if config is None:
+        config = {
+            'time_period': {
+                'start_year': 1800,
+                'end_year': 1950
+            },
+            'geographic_focus': 'local',  # 'local', 'regional', 'migration'
+            'min_confidence': 0.7,
+            'max_latent_ancestors': 200
+        }
+
+    results = {
+        'community_structure': {},
+        'kinship_network': {},
+        'temporal_evolution': {},
+        'geographical_distribution': {},
+        'cultural_patterns': {}
+    }
+
+    # Step 1: Preprocess data for community reconstruction
+    print("Step 1: Preprocessing data...")
+    processed_segments, processed_individuals = preprocess_for_community_reconstruction(
+        segments, individuals, historical_records, config)
+
+    # Step 2: Reconstruct kinship network
+    print("Step 2: Reconstructing kinship network...")
+    kinship_network = reconstruct_kinship_network(
+        processed_segments, processed_individuals, config)
+    results['kinship_network'] = kinship_network
+
+    # Step 3: Identify community structure
+    print("Step 3: Identifying community structure...")
+    community_structure = identify_community_structure(kinship_network, config)
+    results['community_structure'] = community_structure
+
+    # Step 4: Analyze temporal evolution
+    print("Step 4: Analyzing temporal evolution...")
+    temporal_evolution = analyze_community_evolution(
+        community_structure, processed_individuals, config)
+    results['temporal_evolution'] = temporal_evolution
+
+    # Step 5: Map geographical distribution
+    print("Step 5: Mapping geographical distribution...")
+    geographical_distribution = map_geographical_distribution(
+        community_structure, processed_individuals, config)
+    results['geographical_distribution'] = geographical_distribution
+
+    # Step 6: If historical records available, analyze cultural patterns
+    if historical_records:
+        print("Step 6: Analyzing cultural patterns...")
+        cultural_patterns = analyze_cultural_patterns(
+            community_structure, historical_records, config)
+        results['cultural_patterns'] = cultural_patterns
+
+    # Step 7: Generate community narrative
+    print("Step 7: Generating community narrative...")
+    community_narrative = generate_community_narrative(results, config)
+    results['community_narrative'] = community_narrative
+
+    return results
+
+def preprocess_for_community_reconstruction(segments, individuals, historical_records, config):
+    """Preprocess data for historical community reconstruction."""
+    # Implementation details...
+    return segments, individuals
+
+def reconstruct_kinship_network(segments, individuals, config):
+    """Reconstruct a kinship network from genetic data."""
+    # Implementation details...
+    return {}
+
+def identify_community_structure(kinship_network, config):
+    """Identify community structure from a kinship network."""
+    # Implementation details...
+    return {}
+
+def analyze_community_evolution(community_structure, individuals, config):
+    """Analyze the temporal evolution of a community."""
+    # Implementation details...
+    return {}
+
+def map_geographical_distribution(community_structure, individuals, config):
+    """Map the geographical distribution of a community."""
+    # Implementation details...
+    return {}
+
+def analyze_cultural_patterns(community_structure, historical_records, config):
+    """Analyze cultural patterns within a community."""
+    # Implementation details...
+    return {}
+
+def generate_community_narrative(results, config):
+    """Generate a narrative description of the community."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Reconstructing historical communities through genetic and historical data provides insights into social
+structures, migration patterns, and cultural practices.</p>
+
+            <h4>Genetic Genealogy for Cultural Heritage</h4>
+
+            <p>Using Bonsai for cultural heritage reconstruction:</p>
+
+            <pre><code>def analyze_cultural_heritage(segments, individuals, reference_data=None, config=None):
+    """
+    Analyze cultural heritage using genetic data and pedigree reconstruction.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        reference_data: Optional reference data for ancestry analysis
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of cultural heritage analysis results
+    """
+    if config is None:
+        config = {
+            'cultural_groups': [],  # If empty, will be detected from data
+            'time_depth': 10,  # Generations
+            'min_confidence': 0.7,
+            'geographic_resolution': 'region'
+        }
+
+    results = {
+        'ancestry_composition': {},
+        'cultural_lineages': {},
+        'heritage_communities': {},
+        'admixture_history': {},
+        'geographical_origins': {}
+    }
+
+    # Step 1: Reconstruct pedigree
+    print("Step 1: Reconstructing pedigree...")
+    pedigree = reconstruct_heritage_pedigree(segments, individuals, config)
+
+    # Step 2: Analyze ancestry composition
+    print("Step 2: Analyzing ancestry composition...")
+    ancestry_composition = analyze_ancestry_composition(
+        pedigree, individuals, reference_data, config)
+    results['ancestry_composition'] = ancestry_composition
+
+    # Step 3: Trace cultural lineages
+    print("Step 3: Tracing cultural lineages...")
+    cultural_lineages = trace_cultural_lineages(pedigree, ancestry_composition, config)
+    results['cultural_lineages'] = cultural_lineages
+
+    # Step 4: Identify heritage communities
+    print("Step 4: Identifying heritage communities...")
+    heritage_communities = identify_heritage_communities(
+        pedigree, ancestry_composition, cultural_lineages, config)
+    results['heritage_communities'] = heritage_communities
+
+    # Step 5: Analyze admixture history
+    print("Step 5: Analyzing admixture history...")
+    admixture_history = analyze_admixture_history(
+        pedigree, ancestry_composition, cultural_lineages, config)
+    results['admixture_history'] = admixture_history
+
+    # Step 6: Infer geographical origins
+    print("Step 6: Inferring geographical origins...")
+    geographical_origins = infer_geographical_origins(
+        pedigree, ancestry_composition, reference_data, config)
+    results['geographical_origins'] = geographical_origins
+
+    # Step 7: Generate cultural heritage report
+    print("Step 7: Generating cultural heritage report...")
+    heritage_report = generate_heritage_report(results, config)
+    results['heritage_report'] = heritage_report
+
+    return results
+
+def reconstruct_heritage_pedigree(segments, individuals, config):
+    """Reconstruct a pedigree focused on cultural heritage analysis."""
+    # Implementation details...
+    return {}
+
+def analyze_ancestry_composition(pedigree, individuals, reference_data, config):
+    """Analyze ancestry composition of individuals in a pedigree."""
+    # Implementation details...
+    return {}
+
+def trace_cultural_lineages(pedigree, ancestry_composition, config):
+    """Trace cultural lineages through a pedigree."""
+    # Implementation details...
+    return {}
+
+def identify_heritage_communities(pedigree, ancestry_composition, cultural_lineages, config):
+    """Identify heritage communities based on shared ancestry and culture."""
+    # Implementation details...
+    return {}
+
+def analyze_admixture_history(pedigree, ancestry_composition, cultural_lineages, config):
+    """Analyze the history of admixture in a pedigree."""
+    # Implementation details...
+    return {}
+
+def infer_geographical_origins(pedigree, ancestry_composition, reference_data, config):
+    """Infer geographical origins of ancestral lineages."""
+    # Implementation details...
+    return {}
+
+def generate_heritage_report(results, config):
+    """Generate a comprehensive cultural heritage report."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Cultural heritage analysis using genetic data and pedigree reconstruction helps individuals connect with their
+ancestral roots and understand the cultural factors that shaped their lineages.</p>
+
+            <h4>Linking Genetic and Documentary Archives</h4>
+
+            <p>Connecting genetic data with historical archives:</p>
+
+            <pre><code>def link_genetic_and_documentary_archives(segments, individuals, archives, config=None):
+    """
+    Link genetic data with documentary archives using pedigree reconstruction.
+
+    Args:
+        segments: List of IBD segments
+        individuals: List of individual information dictionaries
+        archives: Dictionary mapping archive IDs to archive information
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary of linked archive results
+    """
+    if config is None:
+        config = {
+            'archive_types': ['census', 'church_records', 'land_records',
+                             'military_records', 'newspapers', 'court_records'],
+            'time_period': {
+                'start_year': 1750,
+                'end_year': 1950
+            },
+            'min_match_confidence': 0.7,
+            'geographic_focus': 'local'
+        }
+
+    results = {
+        'pedigree': {},
+        'archive_links': {},
+        'individual_records': {},
+        'family_narratives': {},
+        'historical_context': {}
+    }
+
+    # Step 1: Reconstruct pedigree from genetic data
+    print("Step 1: Reconstructing pedigree from genetic data...")
+    pedigree = reconstruct_pedigree_for_archives(segments, individuals, config)
+    results['pedigree'] = pedigree
+
+    # Step 2: Match individuals to documentary records
+    print("Step 2: Matching individuals to documentary records...")
+    individual_matches = match_individuals_to_records(pedigree, archives, config)
+    results['individual_records'] = individual_matches
+
+    # Step 3: Link family units to archive collections
+    print("Step 3: Linking family units to archive collections...")
+    family_links = link_families_to_archives(pedigree, individual_matches, archives, config)
+    results['archive_links'] = family_links
+
+    # Step 4: Resolve identity conflicts
+    print("Step 4: Resolving identity conflicts...")
+    resolved_identities = resolve_identity_conflicts(pedigree, individual_matches, config)
+    results['resolved_identities'] = resolved_identities
+
+    # Step 5: Enhance pedigree with documentary evidence
+    print("Step 5: Enhancing pedigree with documentary evidence...")
+    enhanced_pedigree = enhance_pedigree_with_archives(
+        pedigree, individual_matches, family_links, archives, config)
+    results['enhanced_pedigree'] = enhanced_pedigree
+
+    # Step 6: Generate family narratives
+    print("Step 6: Generating family narratives...")
+    family_narratives = generate_family_narratives(
+        enhanced_pedigree, individual_matches, archives, config)
+    results['family_narratives'] = family_narratives
+
+    # Step 7: Provide historical context
+    print("Step 7: Providing historical context...")
+    historical_context = provide_historical_context(
+        enhanced_pedigree, archives, config['time_period'])
+    results['historical_context'] = historical_context
+
+    return results
+
+def reconstruct_pedigree_for_archives(segments, individuals, config):
+    """Reconstruct a pedigree optimized for matching to archives."""
+    # Implementation details...
+    return {}
+
+def match_individuals_to_records(pedigree, archives, config):
+    """Match individuals in a pedigree to documentary records."""
+    # Implementation details...
+    return {}
+
+def link_families_to_archives(pedigree, individual_matches, archives, config):
+    """Link family units to archive collections."""
+    # Implementation details...
+    return {}
+
+def resolve_identity_conflicts(pedigree, individual_matches, config):
+    """Resolve conflicts in individual identity matching."""
+    # Implementation details...
+    return {}
+
+def enhance_pedigree_with_archives(pedigree, individual_matches, family_links, archives, config):
+    """Enhance a pedigree with information from documentary archives."""
+    # Implementation details...
+    return {}
+
+def generate_family_narratives(pedigree, individual_matches, archives, config):
+    """Generate narratives about families based on genetic and documentary evidence."""
+    # Implementation details...
+    return {}
+
+def provide_historical_context(pedigree, archives, time_period):
+    """Provide historical context for a reconstructed pedigree."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Linking genetic data with documentary archives creates a more comprehensive understanding of family history,
+placing ancestors in their historical and cultural context.</p>
+
+            <h3>Ethical Considerations and Best Practices</h3>
+
+            <p>Ethical considerations and best practices in applying Bonsai to real-world scenarios.</p>
+
+            <h4>Privacy and Consent in Pedigree Reconstruction</h4>
+
+            <p>Balancing research value with privacy concerns:</p>
+
+            <pre><code>def apply_privacy_protections(pedigree, privacy_settings, config=None):
+    """
+    Apply privacy protections to a reconstructed pedigree.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        privacy_settings: Dictionary mapping individual IDs to privacy preferences
+        config: Optional configuration parameters
+
+    Returns:
+        Privacy-protected version of the pedigree
+    """
+    if config is None:
+        config = {
+            'default_privacy_level': 'standard',  # 'minimal', 'standard', 'strict', 'complete'
+            'living_individuals_protection': 'strict',
+            'include_anonymized_structure': True,
+            'minimum_generations_for_display': 1,
+            'sensitive_information': ['medical', 'adoption', 'genetic_variants']
+        }
+
+    # Create a working copy of the pedigree
+    protected_pedigree = copy.deepcopy(pedigree)
+
+    # Step 1: Identify living individuals
+    print("Step 1: Identifying living individuals...")
+    living_status = identify_living_individuals(protected_pedigree)
+
+    # Step 2: Apply individual privacy settings
+    print("Step 2: Applying individual privacy settings...")
+    for ind_id, ind_data in protected_pedigree['individuals'].items():
+        # Get privacy level for this individual
+        privacy_level = get_privacy_level(
+            ind_id, privacy_settings, living_status, config)
+
+        # Apply privacy protections based on level
+        if privacy_level == 'complete':
+            # Remove individual entirely
+            del protected_pedigree['individuals'][ind_id]
+            # Remove relationships involving this individual
+            remove_individual_relationships(protected_pedigree, ind_id)
+            continue
+
+        elif privacy_level == 'strict':
+            # Replace with minimal anonymized data
+            protected_pedigree['individuals'][ind_id] = {
+                'id': generate_anonymous_id(ind_id),
+                'privacy_level': 'strict'
+            }
+
+        elif privacy_level == 'standard':
+            # Keep basic information, remove sensitive details
+            sanitized_data = {
+                'id': ind_id,
+                'sex': ind_data.get('sex'),
+                'birth_year': ind_data.get('birth_year'),
+                'privacy_level': 'standard'
+            }
+            protected_pedigree['individuals'][ind_id] = sanitized_data
+
+        elif privacy_level == 'minimal':
+            # Keep most information, remove only highly sensitive details
+            protected_data = copy.deepcopy(ind_data)
+            for sensitive_field in config['sensitive_information']:
+                if sensitive_field in protected_data:
+                    del protected_data[sensitive_field]
+            protected_data['privacy_level'] = 'minimal'
+            protected_pedigree['individuals'][ind_id] = protected_data
+
+    # Step 3: Adjust relationship representation
+    print("Step 3: Adjusting relationship representation...")
+    adjust_relationships_for_privacy(protected_pedigree, living_status, config)
+
+    # Step 4: If configured, replace with anonymized structure
+    if config['include_anonymized_structure']:
+        print("Step 4: Creating anonymized structure...")
+        anonymized_structure = create_anonymized_structure(protected_pedigree, config)
+        protected_pedigree['anonymized_structure'] = anonymized_structure
+
+    # Step 5: Add privacy metadata
+    print("Step 5: Adding privacy metadata...")
+    protected_pedigree['privacy_metadata'] = {
+        'protection_applied': True,
+        'protection_date': datetime.now().isoformat(),
+        'protection_config': config
+    }
+
+    return protected_pedigree
+
+def identify_living_individuals(pedigree):
+    """Identify which individuals in a pedigree are likely living."""
+    # Implementation details...
+    return {}
+
+def get_privacy_level(ind_id, privacy_settings, living_status, config):
+    """Determine the appropriate privacy level for an individual."""
+    # Implementation details...
+    return 'standard'
+
+def remove_individual_relationships(pedigree, ind_id):
+    """Remove relationships involving a specific individual."""
+    # Implementation details...
+    pass
+
+def generate_anonymous_id(original_id):
+    """Generate an anonymized identifier for privacy protection."""
+    # Implementation details...
+    return f"anon_{hash(original_id) % 10000}"
+
+def adjust_relationships_for_privacy(pedigree, living_status, config):
+    """Adjust relationship representation for privacy protection."""
+    # Implementation details...
+    pass
+
+def create_anonymized_structure(pedigree, config):
+    """Create an anonymized representation of pedigree structure."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Implementing robust privacy protections is essential when applying Bonsai in real-world settings, particularly
+when working with living individuals or sensitive information.</p>
+
+            <h4>Handling Unexpected Findings</h4>
+
+            <p>Guidelines for handling unexpected findings in pedigree reconstruction:</p>
+
+            <pre><code>def manage_unexpected_findings(pedigree, expected_relationships=None, config=None):
+    """
+    Identify and manage unexpected findings in pedigree reconstruction.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        expected_relationships: Optional list of expected relationships
+        config: Optional configuration parameters
+
+    Returns:
+        Dictionary with information about unexpected findings and management recommendations
+    """
+    if config is None:
+        config = {
+            'unexpected_finding_types': [
+                'misattributed_parentage', 'unknown_relatives',
+                'adoption', 'medical_implications', 'endogamy'
+            ],
+            'disclosure_thresholds': {
+                'confidence': 0.9,
+                'significance': 'high'
+            },
+            'communication_approach': 'tiered',  # 'full', 'tiered', 'minimal'
+            'include_support_resources': True
+        }
+
+    results = {
+        'unexpected_findings': [],
+        'management_recommendations': {},
+        'disclosure_plans': {},
+        'support_resources': {}
+    }
+
+    # Step 1: Detect unexpected findings
+    print("Step 1: Detecting unexpected findings...")
+    unexpected_findings = detect_unexpected_findings(pedigree, expected_relationships, config)
+    results['unexpected_findings'] = unexpected_findings
+
+    # Step 2: Assess significance of findings
+    print("Step 2: Assessing significance of findings...")
+    assessed_findings = assess_finding_significance(unexpected_findings, config)
+    results['assessed_findings'] = assessed_findings
+
+    # Step 3: Determine appropriate management approach
+    print("Step 3: Determining management approach...")
+    management_recommendations = determine_management_approach(assessed_findings, config)
+    results['management_recommendations'] = management_recommendations
+
+    # Step 4: Create disclosure plans
+    print("Step 4: Creating disclosure plans...")
+    disclosure_plans = create_disclosure_plans(assessed_findings, management_recommendations, config)
+    results['disclosure_plans'] = disclosure_plans
+
+    # Step 5: Identify support resources
+    if config['include_support_resources']:
+        print("Step 5: Identifying support resources...")
+        support_resources = identify_support_resources(assessed_findings, config)
+        results['support_resources'] = support_resources
+
+    # Step 6: Prepare communication materials
+    print("Step 6: Preparing communication materials...")
+    communication_materials = prepare_communication_materials(
+        assessed_findings, disclosure_plans, results.get('support_resources', {}), config)
+    results['communication_materials'] = communication_materials
+
+    return results
+
+def detect_unexpected_findings(pedigree, expected_relationships, config):
+    """Detect unexpected findings in a reconstructed pedigree."""
+    # Implementation details...
+    return []
+
+def assess_finding_significance(unexpected_findings, config):
+    """Assess the significance of unexpected findings."""
+    # Implementation details...
+    return []
+
+def determine_management_approach(assessed_findings, config):
+    """Determine the appropriate management approach for unexpected findings."""
+    # Implementation details...
+    return {}
+
+def create_disclosure_plans(assessed_findings, management_recommendations, config):
+    """Create plans for disclosing unexpected findings."""
+    # Implementation details...
+    return {}
+
+def identify_support_resources(assessed_findings, config):
+    """Identify appropriate support resources for unexpected findings."""
+    # Implementation details...
+    return {}
+
+def prepare_communication_materials(assessed_findings, disclosure_plans, support_resources, config):
+    """Prepare materials for communicating unexpected findings."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Having a systematic approach to handling unexpected findings ensures ethical treatment of sensitive information
+ while supporting individuals affected by these discoveries.</p>
+
+            <h4>Communicating Results to Different Audiences</h4>
+
+            <p>Tailoring communication for different audiences:</p>
+
+            <pre><code>def prepare_results_for_audience(pedigree, analysis_results, audience_type, config=None):
+    """
+    Prepare pedigree reconstruction results for a specific audience.
+
+    Args:
+        pedigree: Dictionary representing the reconstructed pedigree
+        analysis_results: Dictionary of analysis results
+        audience_type: Type of audience ('research', 'clinical', 'public', 'personal')
+        config: Optional configuration parameters
+
+    Returns:
+        Tailored presentation of results for the specified audience
+    """
+    if config is None:
+        config = {
+            'detail_level': {
+                'research': 'comprehensive',
+                'clinical': 'focused',
+                'public': 'simplified',
+                'personal': 'detailed'
+            },
+            'language_complexity': {
+                'research': 'technical',
+                'clinical': 'medical',
+                'public': 'accessible',
+                'personal': 'balanced'
+            },
+            'include_visualizations': True,
+            'privacy_filters': True
+        }
+
+    # Step 1: Apply audience-appropriate privacy filters
+    print("Step 1: Applying privacy filters...")
+    filtered_pedigree, filtered_results = apply_audience_privacy_filters(
+        pedigree, analysis_results, audience_type, config)
+
+    # Step 2: Adjust detail level
+    print("Step 2: Adjusting detail level...")
+    detail_level = config['detail_level'].get(audience_type, 'balanced')
+    adjusted_content = adjust_detail_level(filtered_pedigree, filtered_results, detail_level)
+
+    # Step 3: Adapt language and terminology
+    print("Step 3: Adapting language and terminology...")
+    language_complexity = config['language_complexity'].get(audience_type, 'balanced')
+    adapted_content = adapt_language(adjusted_content, language_complexity)
+
+    # Step 4: Create appropriate visualizations
+    if config['include_visualizations']:
+        print("Step 4: Creating visualizations...")
+        visualizations = create_audience_appropriate_visualizations(
+            filtered_pedigree, filtered_results, audience_type)
+        adapted_content['visualizations'] = visualizations
+
+    # Step 5: Format for delivery
+    print("Step 5: Formatting for delivery...")
+    formatted_content = format_for_delivery(adapted_content, audience_type)
+
+    # Step 6: Add audience-specific context
+    print("Step 6: Adding audience-specific context...")
+    final_content = add_audience_context(formatted_content, audience_type)
+
+    return final_content
+
+def apply_audience_privacy_filters(pedigree, analysis_results, audience_type, config):
+    """Apply audience-appropriate privacy filters to results."""
+    # Implementation details...
+    return pedigree, analysis_results
+
+def adjust_detail_level(pedigree, analysis_results, detail_level):
+    """Adjust the level of detail in results based on audience needs."""
+    # Implementation details...
+    return {}
+
+def adapt_language(content, language_complexity):
+    """Adapt language and terminology for the target audience."""
+    # Implementation details...
+    return {}
+
+def create_audience_appropriate_visualizations(pedigree, analysis_results, audience_type):
+    """Create visualizations appropriate for the target audience."""
+    # Implementation details...
+    return {}
+
+def format_for_delivery(content, audience_type):
+    """Format content for delivery to the target audience."""
+    # Implementation details...
+    return {}
+
+def add_audience_context(content, audience_type):
+    """Add contextual information specific to the target audience."""
+    # Implementation details...
+    return {}</code></pre>
+
+            <p>Tailoring communication for different audiences ensures that Bonsai results are accessible, useful, and
+ethically presented to researchers, clinicians, and the general public.</p>
+
+            <h3>Exercises</h3>
+            <ol>
+                <li>Design a workflow for using Bonsai to identify unknown parents in a genealogical research scenario.</li>
+                <li>Implement a procedure for handling unexpected findings in pedigree reconstruction, including ethical
+considerations.</li>
+                <li>Create a program to integrate documentary evidence with genetic data for reconstructing historical
+communities.</li>
+                <li>Develop a protocol for privacy protection when working with reconstructed pedigrees.</li>
+                <li>Design a case study applying Bonsai to a real-world research question in population genetics or cultural
+heritage.</li>
+            </ol>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When applying Bonsai to real-world scenarios, always begin by clearly defining your
+research questions and ethical boundaries. Understanding what you're trying to learn and what ethical constraints you need to
+respect will guide everything from parameter selection to communication of results. Remember that genetic genealogy is a
+powerful tool that requires careful, thoughtful application.</p>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab20_bonsai_visualization.html" class="prev-lab">Visualization</a>
+                <a href="contents.html">Back to Contents</a>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+    </footer>
+</body>
+</html>

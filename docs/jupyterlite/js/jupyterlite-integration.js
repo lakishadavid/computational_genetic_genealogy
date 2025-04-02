@@ -14,9 +14,9 @@ class JupyterLiteIntegration {
             storageKeyPrefix: 'genetic_genealogy_',
             notebookPath: 'files/notebooks',
             notebookURLs: {
-                'lab1': 'lab1/starter.ipynb',
-                'lab2': 'lab2/starter.ipynb',
-                'lab3': 'lab3/starter.ipynb'
+                'lab1': 'lab1/lab1_exploring.ipynb',
+                'lab2': 'lab2/lab2_processing.ipynb',
+                'lab3': 'lab3/lab3_quality.ipynb'
             }
         }, options);
 
@@ -48,10 +48,13 @@ class JupyterLiteIntegration {
     }
 
     openJupyterLite(labId) {
-        // Just open the lab interface - the simplest approach that works
-        const labUrl = `${this.options.labPath}lab/`;
+        // Get the unique notebook path for this specific lab
+        const notebookPath = this.options.notebookURLs[labId];
         
-        console.log(`Opening JupyterLite for ${labId}`);
+        // Build the full URL to directly open the specific notebook for this lab
+        const labUrl = `${this.options.labPath}lab/?path=${this.options.notebookPath}/${notebookPath}`;
+        
+        console.log(`Opening JupyterLite for ${labId} at URL: ${labUrl}`);
         
         // Open in new window
         window.open(labUrl, 'jupyterlite', 'width=1200,height=800');

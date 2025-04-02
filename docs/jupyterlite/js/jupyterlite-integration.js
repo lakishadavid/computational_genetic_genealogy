@@ -48,13 +48,23 @@ class JupyterLiteIntegration {
     }
 
     openJupyterLite(labId) {
-        // Get the notebook path for this specific lab
-        const notebookPath = this.options.notebookURLs[labId];
+        // We need a completely different approach that works
+        // Map each lab button to a fixed, full URL that directly opens the correct notebook
+        let labUrl;
         
-        // Build the full URL to directly open the specific notebook for this lab
-        const labUrl = `${this.options.labPath}lab/?path=${this.options.notebookPath}/${notebookPath}`;
+        // Explicitly set the exact URL for each lab
+        if (labId === 'lab1') {
+            labUrl = `${this.options.labPath}lab/index.html?path=files/notebooks/lab1/starter.ipynb`;
+        } else if (labId === 'lab2') {
+            labUrl = `${this.options.labPath}lab/index.html?path=files/notebooks/lab2/starter.ipynb`;
+        } else if (labId === 'lab3') {
+            labUrl = `${this.options.labPath}lab/index.html?path=files/notebooks/lab3/starter.ipynb`;
+        } else {
+            // Fallback to just opening the interface
+            labUrl = `${this.options.labPath}lab/`;
+        }
         
-        console.log(`Opening JupyterLite for ${labId} at URL: ${labUrl}`);
+        console.log(`Opening JupyterLite URL: ${labUrl}`);
         
         // Open in new window
         window.open(labUrl, 'jupyterlite', 'width=1200,height=800');

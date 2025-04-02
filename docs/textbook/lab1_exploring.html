@@ -5,12 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab 1: Exploring Genomic Data | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
 </head>
 <body class="textbook-page">
     <header class="textbook-header">
@@ -172,30 +170,25 @@
             <h3>Interactive Lab Environment</h3>
             
             <div class="jupyter-integration">
-                <p>You can now work directly in your browser with the interactive notebook below. No installation required!</p>
+                <p>Click the button below to open the interactive Lab 1 notebook directly in your browser using JupyterLite. No installation required!</p>
                 
                 <div class="jupyterlite-container">
                     
                     <div class="jupyterlite-info">
                         <h4>Browser-Based Analysis</h4>
-                        <p>This browser-based Jupyter environment lets you run Python code for genomic analysis directly in your browser - no installation needed!</p>
-                        <ol>
-                            <li>Click the "Open Lab 1 in JupyterLite" button below</li>
-                            <li>In the file browser that appears, click on "<strong>lab1_exploring.ipynb</strong>" to open this lab's notebook</li>
-                            <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
-                        </ol>
-                        <p>Your progress is automatically saved in your browser's storage.</p>
+                        <p>This link will open the <strong>Lab1_Exploring_onekgenomes.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
                     </div>
                     
-                    <button class="open-jupyterlite" data-lab="lab1">Open Lab 1 in JupyterLite</button>
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite/app/lab/index.html?path=Lab1_Exploring_onekgenomes.ipynb" 
+                       class="open-jupyterlite-link" 
+                       target="_blank" 
+                       role="button">
+                        Open Lab 1 Notebook in JupyterLite
+                    </a>
                     
-                    <div class="lab-progress" data-lab="lab1">
-                        <!-- Progress will be populated by JavaScript -->
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically to save your work locally.</p>
                 </div>
             </div>
 

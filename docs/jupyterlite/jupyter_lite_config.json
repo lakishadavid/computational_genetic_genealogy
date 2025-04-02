@@ -1,7 +1,7 @@
 {
   "LiteBuildConfig": {
-    "output_dir": "_output",
-    "cache_dir": "app",
+    "output_dir": "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/_output",
+    "cache_dir": "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/app",
     "federated_extensions": []
   },
   "jupyter-config-data": {

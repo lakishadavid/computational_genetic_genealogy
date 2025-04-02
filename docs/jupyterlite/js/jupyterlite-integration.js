@@ -51,7 +51,10 @@ class JupyterLiteIntegration {
         const notebookPath = this.options.notebookURLs[labId] || 'lab1/starter.ipynb';
         
         // Construct the full URL to the JupyterLite environment
-        const labUrl = `${this.options.labPath}lab/?path=${notebookPath}`;
+        const labUrl = `${this.options.labPath}lab/?path=files/notebooks/${notebookPath}`;
+        
+        // Log the URL for debugging
+        console.log("Opening JupyterLite at URL: " + labUrl);
         
         // Check if we should open in new window or same window
         const openInNewWindow = true; // Could be an option

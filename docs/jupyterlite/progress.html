@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course Progress - Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="jupyterlite-integration.css">
+    <style>
+        .progress-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .progress-summary {
+            background-color: #f8f9fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .progress-bar-container {
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            margin: 10px 0 20px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: #2e7eb8;
+            border-radius: 10px;
+            transition: width 0.5s;
+        }
+        
+        .lab-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .lab-card {
+            background-color: #fff;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 15px;
+            transition: all 0.2s;
+        }
+        
+        .lab-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .lab-card.completed {
+            border-left: 4px solid #52c41a;
+        }
+        
+        .lab-card.in-progress {
+            border-left: 4px solid #faad14;
+        }
+        
+        .lab-title {
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 5px;
+        }
+        
+        .lab-description {
+            color: #586069;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        
+        .lab-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8em;
+            color: #6a737d;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+        
+        .status-completed {
+            background-color: #e6f7e6;
+            color: #2c662d;
+        }
+        
+        .status-in-progress {
+            background-color: #fff7e6;
+            color: #ad6800;
+        }
+        
+        .status-not-started {
+            background-color: #f1f2f4;
+            color: #6a737d;
+        }
+        
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .btn-primary {
+            background-color: #2e7eb8;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background-color: #f1f2f4;
+            color: #24292e;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Your Learning Progress</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="../textbook/contents.html">Table of Contents</a>
+        </div>
+    </nav>
+    
+    <main class="progress-container">
+        <div class="progress-header">
+            <h2>Course Progress</h2>
+            <div class="last-activity">Last activity: <span id="last-activity-date">Loading...</span></div>
+        </div>
+        
+        <div class="progress-summary">
+            <h3>Overall Progress</h3>
+            <div class="progress-stats">
+                <p>You've completed <span id="completed-count">0</span> of <span id="total-count">21</span> labs (<span id="completion-percentage">0%</span>)</p>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="overall-progress-bar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <h3>Lab Progress</h3>
+        <div class="lab-grid" id="lab-grid">
+            <!-- Lab cards will be dynamically generated here -->
+        </div>
+        
+        <div class="actions">
+            <button class="btn btn-primary" id="continue-btn">Continue Where You Left Off</button>
+            <button class="btn btn-secondary" id="download-progress">Download Progress Report</button>
+            <button class="btn btn-secondary" id="reset-progress">Reset Progress</button>
+        </div>
+    </main>
+    
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+    
+    <script>
+        // Lab definitions
+        const labs = [
+            { id: 'lab0_environment', title: 'Environment Setup', path: '../textbook/lab0_environment.html', description: 'Set up your computational environment for genetic genealogy' },
+            { id: 'lab0_data', title: 'Data Acquisition', path: '../textbook/lab0_data.html', description: 'Learn how to acquire genetic data for analysis' },
+            { id: 'lab1', title: 'Exploring Genomic Data', path: '../textbook/lab1_exploring.html', description: 'Explore population genomic data and understand patterns of variation' },
+            { id: 'lab2', title: 'Processing Raw DNA Profiles', path: '../textbook/lab2_process.html', description: 'Process raw DNA profiles from consumer testing companies' },
+            { id: 'lab3', title: 'Quality Control', path: '../textbook/lab3_qc.html', description: 'Learn essential quality control steps for genetic data' },
+            { id: 'lab4', title: 'IBD Detection with IBIS', path: '../textbook/lab4_ibis.html', description: 'Detect identity-by-descent segments using IBIS' },
+            { id: 'lab5', title: 'IBD Detection with hapIBD', path: '../textbook/lab5_hapibd.html', description: 'Detect identity-by-descent segments using hapIBD' },
+            { id: 'lab6', title: 'IBD Detection with refined-IBD', path: '../textbook/lab6_refinedibd.html', description: 'Detect identity-by-descent segments using refined-IBD' },
+            { id: 'lab7', title: 'Simulating Data with ped-sim', path: '../textbook/lab7_pedsim.html', description: 'Simulate pedigree data with ped-sim' },
+            { id: 'lab8', title: 'Evaluate IBD Detection', path: '../textbook/lab8_evaluation.html', description: 'Evaluate and compare different IBD detection methods' },
+            { id: 'lab9', title: 'Simulate Data with msprime', path: '../textbook/lab9_msprime.html', description: 'Simulate population genetic data with msprime' },
+            { id: 'lab10', title: 'Statistical Distributions', path: '../textbook/lab10_distributions.html', description: 'Understand statistical distributions in genetic sharing' },
+            { id: 'lab11', title: 'Introduction to Bonsai', path: '../textbook/lab11_bonsai.html', description: 'Introduction to pedigree reconstruction with Bonsai' },
+            { id: 'lab12', title: 'Bonsai Fundamentals', path: '../textbook/lab12_bonsai_fundamentals.html', description: 'Fundamental concepts of genetic genealogy and IBD segments' },
+            { id: 'lab13', title: 'Bonsai Mathematical Foundations', path: '../textbook/lab13_bonsai_mathematical.html', description: 'Mathematical foundations of pedigree reconstruction' },
+            { id: 'lab14', title: 'Bonsai Data Structures', path: '../textbook/lab14_bonsai_data_structures.html', description: 'Data structures used in pedigree reconstruction' },
+            { id: 'lab15', title: 'Bonsai Calibration', path: '../textbook/lab15_bonsai_calibration.html', description: 'Calibrating models for pedigree reconstruction' },
+            { id: 'lab16', title: 'Bonsai Architecture', path: '../textbook/lab16_bonsai_architecture.html', description: 'Architecture and implementation of Bonsai' },
+            { id: 'lab17', title: 'Bonsai Likelihood Calculations', path: '../textbook/lab17_bonsai_likelihood.html', description: 'Advanced likelihood calculations in Bonsai' },
+            { id: 'lab18', title: 'Bonsai Data Quality', path: '../textbook/lab18_bonsai_quality.html', description: 'Data quality and preprocessing in Bonsai' },
+            { id: 'lab19', title: 'Bonsai Advanced Construction', path: '../textbook/lab19_bonsai_advanced.html', description: 'Advanced construction techniques in Bonsai' },
+            { id: 'lab20', title: 'Bonsai Visualization', path: '../textbook/lab20_bonsai_visualization.html', description: 'Visualization techniques for pedigree data' },
+            { id: 'lab21', title: 'Bonsai Applications', path: '../textbook/lab21_bonsai_applications.html', description: 'Real-world applications of genetic kinship inference' }
+        ];
+        
+        // Load progress data from localStorage
+        function loadProgressData() {
+            try {
+                const progressKey = 'geneticGenealogy_courseProgress';
+                const courseProgress = JSON.parse(localStorage.getItem(progressKey) || '{}');
+                return courseProgress;
+            } catch (error) {
+                console.error('Error loading progress data:', error);
+                return {};
+            }
+        }
+        
+        // Update the progress display
+        function updateProgressDisplay() {
+            const progressData = loadProgressData();
+            const labGrid = document.getElementById('lab-grid');
+            labGrid.innerHTML = ''; // Clear existing content
+            
+            // Count completed labs
+            let completedCount = 0;
+            let lastActivityDate = null;
+            
+            // Find last activity date
+            for (const labId in progressData) {
+                if (progressData[labId].completed) {
+                    completedCount++;
+                    
+                    const activityDate = new Date(progressData[labId].timestamp);
+                    if (!lastActivityDate || activityDate > lastActivityDate) {
+                        lastActivityDate = activityDate;
+                    }
+                }
+            }
+            
+            // Update summary statistics
+            const totalLabs = labs.length;
+            const completionPercentage = Math.round((completedCount / totalLabs) * 100);
+            
+            document.getElementById('completed-count').textContent = completedCount;
+            document.getElementById('total-count').textContent = totalLabs;
+            document.getElementById('completion-percentage').textContent = `${completionPercentage}%`;
+            document.getElementById('overall-progress-bar').style.width = `${completionPercentage}%`;
+            
+            // Update last activity date
+            if (lastActivityDate) {
+                document.getElementById('last-activity-date').textContent = lastActivityDate.toLocaleDateString();
+            } else {
+                document.getElementById('last-activity-date').textContent = 'No activity yet';
+            }
+            
+            // Create lab cards
+            labs.forEach(lab => {
+                const labProgress = progressData[lab.id] || { completed: false, timestamp: null };
+                
+                const card = document.createElement('div');
+                card.className = `lab-card ${labProgress.completed ? 'completed' : ''}`;
+                
+                // Determine status text and class
+                let statusText = 'Not Started';
+                let statusClass = 'status-not-started';
+                if (labProgress.completed) {
+                    statusText = 'Completed';
+                    statusClass = 'status-completed';
+                } else if (labProgress.timestamp) {
+                    statusText = 'In Progress';
+                    statusClass = 'status-in-progress';
+                }
+                
+                // Format date if available
+                let dateText = '';
+                if (labProgress.timestamp) {
+                    const date = new Date(labProgress.timestamp);
+                    dateText = date.toLocaleDateString();
+                }
+                
+                card.innerHTML = `
+                    <h4 class="lab-title">${lab.title}</h4>
+                    <p class="lab-description">${lab.description}</p>
+                    <div class="lab-meta">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                        ${dateText ? `<span class="date">${dateText}</span>` : ''}
+                    </div>
+                `;
+                
+                // Add click event to navigate to the lab
+                card.addEventListener('click', () => {
+                    window.location.href = lab.path;
+                });
+                
+                labGrid.appendChild(card);
+            });
+            
+            // Update continue button
+            const continueBtn = document.getElementById('continue-btn');
+            
+            // Find the next incomplete lab
+            const nextIncompleteLabIndex = labs.findIndex(lab => 
+                !(progressData[lab.id] && progressData[lab.id].completed)
+            );
+            
+            if (nextIncompleteLabIndex !== -1) {
+                const nextLab = labs[nextIncompleteLabIndex];
+                continueBtn.addEventListener('click', () => {
+                    window.location.href = nextLab.path;
+                });
+                continueBtn.textContent = `Continue with ${nextLab.title}`;
+            } else {
+                continueBtn.textContent = 'All Labs Completed!';
+                continueBtn.disabled = true;
+            }
+        }
+        
+        // Reset progress data
+        document.getElementById('reset-progress').addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all your progress? This cannot be undone.')) {
+                localStorage.removeItem('geneticGenealogy_courseProgress');
+                
+                // Also clear all lab-specific storage
+                labs.forEach(lab => {
+                    localStorage.removeItem(`geneticGenealogy_progress_${lab.id}`);
+                });
+                
+                updateProgressDisplay();
+                alert('Progress has been reset.');
+            }
+        });
+        
+        // Download progress report
+        document.getElementById('download-progress').addEventListener('click', () => {
+            const progressData = loadProgressData();
+            
+            // Create a formatted report
+            let report = '# Computational Genetic Genealogy - Progress Report\n\n';
+            report += `Generated on: ${new Date().toLocaleString()}\n\n`;
+            
+            const completedLabs = labs.filter(lab => progressData[lab.id] && progressData[lab.id].completed);
+            const inProgressLabs = labs.filter(lab => 
+                progressData[lab.id] && !progressData[lab.id].completed
+            );
+            const notStartedLabs = labs.filter(lab => !progressData[lab.id]);
+            
+            report += `## Summary\n`;
+            report += `- Completed labs: ${completedLabs.length} of ${labs.length}\n`;
+            report += `- In progress labs: ${inProgressLabs.length}\n`;
+            report += `- Not started labs: ${notStartedLabs.length}\n\n`;
+            
+            report += `## Completed Labs\n`;
+            completedLabs.forEach(lab => {
+                const date = new Date(progressData[lab.id].timestamp).toLocaleDateString();
+                report += `- ${lab.title} (completed on ${date})\n`;
+            });
+            
+            report += `\n## In Progress Labs\n`;
+            inProgressLabs.forEach(lab => {
+                const date = new Date(progressData[lab.id].timestamp).toLocaleDateString();
+                report += `- ${lab.title} (last activity on ${date})\n`;
+            });
+            
+            report += `\n## Not Started Labs\n`;
+            notStartedLabs.forEach(lab => {
+                report += `- ${lab.title}\n`;
+            });
+            
+            // Create a downloadable file
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'genetic_genealogy_progress_report.txt';
+            a.click();
+        });
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            updateProgressDisplay();
+        });
+    </script>
+</body>
+</html>

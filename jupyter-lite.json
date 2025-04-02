@@ -1,0 +1,34 @@
+{
+  "jupyter-config-data": {
+    "appName": "Computational Genetic Genealogy",
+    "collaborative": false,
+    "disabledExtensions": [],
+    "filesCellMarker": "# %%",
+    "mathjaxConfig": "TeX-AMS_CHTML-full,Safe",
+    "mathjaxUrl": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
+    "settingsOverrides": {
+      "@jupyterlab/notebook-extension:tracker": {
+        "codeCellConfig": {
+          "codeFolding": true
+        }
+      },
+      "@jupyterlab/apputils-extension:themes": {
+        "theme": "JupyterLab Light"
+      }
+    },
+    "federated_extensions": [
+      {
+        "name": "@jupyterlite/pyodide-kernel-extension"
+      },
+      {
+        "name": "@jupyterlite/javascript-kernel-extension"
+      },
+      {
+        "name": "@jupyter-widgets/jupyterlab-manager"
+      },
+      {
+        "name": "jupyterlab-plotly"
+      }
+    ]
+  }
+}

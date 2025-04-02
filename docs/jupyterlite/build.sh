@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for JupyterLite with Poetry - Fully Dynamic Version
+# Build script for JupyterLite with Poetry - With Exclusion Feature
 
 # Setup error handling
 set -e
@@ -45,17 +45,24 @@ mkdir -p "$SCRIPT_DIR/app"
 echo "Preparing jupyter_lite_config.json contents..."
 CONFIG_CONTENTS="["
 
-# Find and copy all notebooks from labs directory
-echo "Finding and copying all notebooks from labs directory..."
-for NOTEBOOK in "$LABS_DIR"/*.ipynb; do
+# Find and copy only Lab notebooks from labs directory
+echo "Finding and copying only Lab notebooks from labs directory..."
+for NOTEBOOK in "$LABS_DIR"/Lab*.ipynb; do
     if [ -f "$NOTEBOOK" ]; then
         NOTEBOOK_NAME=$(basename "$NOTEBOOK")
+        
+        # Skip instructor notebooks
+        if [[ "$NOTEBOOK_NAME" == *"For_Instructor"* ]]; then
+            echo "Skipping instructor notebook: $NOTEBOOK_NAME"
+            continue
+        fi
+        
         echo "Processing notebook: $NOTEBOOK_NAME"
         
         # Convert filename to lowercase for consistency
         LOWERCASE_NAME=$(echo "$NOTEBOOK_NAME" | tr '[:upper:]' '[:lower:]')
         
-        # Extract lab number (if any)
+        # Extract lab number
         if [[ $NOTEBOOK_NAME =~ Lab([0-9]+) ]]; then
             LAB_NUM=${BASH_REMATCH[1]}
             LAB_DIR="$SCRIPT_DIR/notebooks/lab$LAB_NUM"
@@ -69,16 +76,6 @@ for NOTEBOOK in "$LABS_DIR"/*.ipynb; do
                 CONFIG_CONTENTS="$CONFIG_CONTENTS,"
             fi
             CONFIG_CONTENTS="$CONFIG_CONTENTS\"$LAB_DIR/$LOWERCASE_NAME\""
-        else
-            # For notebooks without a lab number, put in the root
-            mkdir -p "$SCRIPT_DIR/notebooks/other"
-            cp "$NOTEBOOK" "$SCRIPT_DIR/notebooks/other/$LOWERCASE_NAME"
-            
-            # Add to config contents
-            if [ "$CONFIG_CONTENTS" != "[" ]; then
-                CONFIG_CONTENTS="$CONFIG_CONTENTS,"
-            fi
-            CONFIG_CONTENTS="$CONFIG_CONTENTS\"$SCRIPT_DIR/notebooks/other/$LOWERCASE_NAME\""
         fi
     fi
 done
@@ -142,8 +139,8 @@ fi
 # to include class_data directory for future builds
 echo "Updating jupyter_lite_config.json for future builds..."
 
-# Create a JSON array of notebook paths
-NOTEBOOK_PATHS=$(find "$SCRIPT_DIR/notebooks" -name "*.ipynb" | sed 's/^/      "/;s/$/"/' | tr '\n' ',' | sed 's/,$//')
+# Create a JSON array of notebook paths, excluding instructor notebooks
+NOTEBOOK_PATHS=$(find "$SCRIPT_DIR/notebooks" -name "*.ipynb" -not -name "*For_Instructor*" | sed 's/^/      "/;s/$/"/' | tr '\n' ',' | sed 's/,$//')
 
 cat > "$SCRIPT_DIR/jupyter_lite_config.json" << EOF
 {

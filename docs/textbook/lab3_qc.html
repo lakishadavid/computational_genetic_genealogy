@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab 3: Quality Control | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
 </head>
 <body class="textbook-page">
     <header class="textbook-header">
@@ -229,6 +231,31 @@
             
             <div class="alert alert-success">
                 <p><strong>Tip:</strong> Quality control isn't just a technical necessity—it's an ethical responsibility. When we use genomic data to make claims about relationships and identity, ensuring data quality becomes a matter of respecting the communities whose histories we're studying.</p>
+            </div>
+            
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Apply quality control measures to genetic data in your browser. This lab builds on data processed in Labs 1 and 2.</p>
+                
+                <div class="jupyterlite-container">
+                    <h3>Interactive Lab Environment</h3>
+                    
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Quality Control</h4>
+                        <p>This notebook automatically loads your processed data from previous labs and guides you through essential quality control measures for genetic data.</p>
+                    </div>
+                    
+                    <button class="open-jupyterlite" data-lab="lab3">Open Lab 3 in JupyterLite</button>
+                    
+                    <div class="lab-progress" data-lab="lab3">
+                        <!-- Progress will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <p><strong>Note:</strong> The interactive notebook automatically loads data from previous labs if you completed them. Your work is saved in your browser's storage between lab sessions.</p>
+                </div>
             </div>
             
             <div class="lab-navigation">

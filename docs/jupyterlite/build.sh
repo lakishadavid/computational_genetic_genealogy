@@ -15,9 +15,10 @@ echo "===== Building JupyterLite environment ====="
 # Clean previous builds
 rm -rf "$SCRIPT_DIR/app"
 
-# Build JupyterLite (minimal)
-echo "Running minimal JupyterLite build..."
-poetry run jupyter lite build --output-dir="$SCRIPT_DIR/app"
+# Build JupyterLite with proper configuration
+echo "Running JupyterLite build with configuration..."
+# Use the local jupyter_lite_config.json
+poetry run jupyter lite build --config="$SCRIPT_DIR/jupyter_lite_config.json" --output-dir="$SCRIPT_DIR/app"
 
 # Verify build success
 if [ ! -d "$SCRIPT_DIR/app" ]; then
@@ -52,5 +53,13 @@ if [ -d "$DATA_DIR" ] && [ "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
   cp -r "$DATA_DIR"/* "$SCRIPT_DIR/app/files/class_data/"
   echo "  Copied class_data from $DATA_DIR"
 fi
+
+# Fix app name in HTML files if needed
+for HTML_FILE in $(find "$SCRIPT_DIR/app" -name "*.html"); do
+  if grep -q "JupyterLite" "$HTML_FILE"; then
+    sed -i 's/JupyterLite/Computational Genetic Genealogy/g' "$HTML_FILE"
+    echo "  Updated title in $(basename "$HTML_FILE")"
+  fi
+done
 
 echo "Build complete!"

@@ -3,101 +3,66 @@
   This is the root document for _your_ JupyterLite. Thanks for viewing your source!
      ___ __   __ _______ __   __ _______ _______ ______   ___     ___ _______ _______
     |   |  | |  |       |  | |  |       |       |    _ | |   |   |   |       |       |
-    |   |  |_|  |    _  |  | |  |    ___|_     _|   | || |   |   |   |_     _|    ___|
-    |   |       |   |_| |  |_|  |   |___  |   | |   |_||_|   |   |   | |   | |   |___
- ___|   |       |    ___|       |    ___| |   | |    __  |   |___|   | |   | |    ___|
-|       |   _   |   |   |       |   |___  |   | |   |  | |       |   | |   | |   |___
-|_______|__| |__|___|   |_______|_______| |___| |___|  |_|_______|___| |___| |_______|
+    |   |  | |  |    _  |  |_|  |_     _|    ___|   | || |   |   |   |_     _|    ___|
+    |   |  |_|  |   |_| |       | |   | |   |___|   |_||_|   |   |   | |   | |   |___
+ ___|   |       |    ___|_     _| |   | |    ___|    __  |   |___|   | |   | |    ___|
+|       |       |   |     |   |   |   | |   |___|   |  | |       |   | |   | |   |___
+|_______|_______|___|     |___|   |___| |_______|___|  |_|_______|___| |___| |_______|
 
-  JupyterLite: https://github.com/jupyterlite
-  Jupyter: https://jupyter.org
+Code: https://github.com/jupyterlite/jupyterlite
+Demo: https://jupyterlite.rtfd.io/en/latest/try
+
+# FILES
+
+Your JupyterLite is structured like this:
+
+    index.html             <---- you are here
+    {:app}/                <---- currently-known: `lab` (semi-required) and `notebook`
+      index.html
+      extensions/
+        {:org}/{:package}/ <---|
+        {:package}/        <---+- federated extensions
+          schema/
+          package.json
+    # TBD
+    files/                 <----- also need to populate `api/contents/`!
+    static/                <----- might save duplication
+      {:app}
+
 -->
 <html>
   <head>
-    <title>Computational Genetic Genealogy</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="Description" content="Computational Genetic Genealogy - JupyterLite" />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" type="image/x-icon" href="./static/favicons/favicon.ico" />
-    <script
-      id="jupyter-config-data"
-      type="application/json"
-    >
-      {
-        "appName": "Computational Genetic Genealogy",
-        "appUrl": "./lab",
-        "appVersion": "0.5.1",
-        "baseUrl": "./",
-        "defaultKernelName": "python",
-        "faviconUrl": "./lab/favicon.ico",
-        "collaborative": false,
-        "disabledExtensions": [],
-        "filesCellMarker": "# %%",
-        "mathjaxConfig": "TeX-AMS_CHTML-full,Safe",
-        "mathjaxUrl": "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
-        "settingsOverrides": {
-          "@jupyterlab/notebook-extension:tracker": {
-            "codeCellConfig": {
-              "codeFolding": true
-            }
-          },
-          "@jupyterlab/apputils-extension:themes": {
-            "theme": "JupyterLab Light"
-          }
-        }
-      }
+    <!--
+      # jupyter-config-data
+
+      The JSON in `jupyter-lite.json` is the last that will be loaded by most
+      child `index.html` pages, and every field can be overridden.
+
+      See the recognized schema as described in the documentation:
+
+      - https://jupyterlite.rtfd.io/en/latest/reference/schema.html
+
+      Notes
+        - fields that...
+          - are relative paths values
+            - will have the parent directory of _this_ file appended, accounting
+              for "magic" hosts which redirect to `{:path}index.html` to `{:path}`,
+              with or without a slash
+        - some fields, such as `federated_extensions` will be _added together_
+    -->
+    <script id="jupyter-config-data" type="application/json" data-jupyter-lite-root=".">
+      {}
     </script>
-    <style>
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
-          Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        background-color: var(--jp-layout-color0);
-        color: var(--jp-ui-font-color1);
-        user-select: none;
-        -webkit-user-select: none;
-        -moz-user-select: none;
-        -ms-user-select: none;
-      }
-      .lm-Widget,
-      .jupyter-widgets {
-        box-sizing: border-box;
-      }
-    </style>
-    <!-- Preload both dark and light themes simultaneously -->
-    <link
-      id="jupyter-ui-theme-light"
-      rel="preload"
-      href="./build/themes/material/index.css"
-      as="style"
-    />
-    <link
-      id="jupyter-ui-theme-dark"
-      rel="preload"
-      href="./build/themes/material-darker/index.css"
-      as="style"
-    />
-    <script>
-      (async function () {
-        const { pathname, origin, search, hash } = window.location;
-        const appUrl = document.querySelector("script#jupyter-config-data")
-          ? JSON.parse(
-              document.querySelector("script#jupyter-config-data").textContent
-            ).appUrl
-          : "./lab";
-        if (
-          pathname === "/" ||
-          pathname === "/index.html" ||
-          pathname === "" ||
-          pathname === null
-        ) {
-          window.location.href = `${origin}${appUrl}${search}${hash}`;
-        }
-      })();
+    <!--
+      # jupyter-lite-root
+
+      The source of truth for relative path locations. The `.` means _this_
+      is the root, and will redirect to the `appUrl` defined in
+      `.jupyter-lite/#jupyter-config-data`.
+    -->
+    <script type="module">
+      await import('./config-utils.js');
     </script>
+    <!-- that's it, there shouldn't be anything below here in head! -->
   </head>
-  <body></body>
 </html>

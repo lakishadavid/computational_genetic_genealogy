@@ -87,10 +87,6 @@ class JupyterLiteIntegration {
         
         console.log(`Opening JupyterLite for ${labId} at URL: ${labUrl}`);
         
-        // Show simple navigation instructions
-        const message = `Opening ${filename} for ${labId}.\n\nIf the notebook doesn't load automatically, please look for the file in the Files tab.`;
-        alert(message);
-        
         // Save the last accessed lab for persistence
         localStorage.setItem(`${this.options.storageKeyPrefix}last_lab`, labId);
         
@@ -233,23 +229,15 @@ class JupyterLiteIntegration {
         const localNotebookPath = labConfig.localNotebook;
         
         if (!localNotebookPath) {
-            alert('No local notebook path configured for this lab.');
+            console.log('No local notebook path configured for this lab.');
             return;
         }
         
-        // Show transition instructions
-        const message = `
-        Transitioning to Local Environment
+        // Log transition information
+        console.log(`Transitioning to local environment: ${localNotebookPath}`);
         
-        1. Save your JupyterLite notebook using Export Data
-        2. Open the full notebook at: ${localNotebookPath}
-        3. Copy relevant code from your exported notebook
-        
-        The browser version is a simplified version of the full analysis.
-        The local environment provides additional tools and capabilities.
-        `;
-        
-        alert(message);
+        // Open the local notebook path in a new tab if possible
+        window.open(localNotebookPath, '_blank');
     }
 
     addIntegrationInfo() {

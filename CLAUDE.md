@@ -5,6 +5,8 @@
 - Run scripts: `poetry run python -m scripts_work.<script_name> [arguments]`
 - Run specific script: `poetry run python -m scripts_work.run_ibd_detection --algorithm IBIS`
 - Run notebook: Navigate to instruction directory and execute Jupyter notebooks
+- JupyterLite build: `cd docs/jupyterlite && poetry run jupyter lite build --output-dir=app`
+- Test JupyterLite: `cd docs/jupyterlite/app && python -m http.server 8000`
 
 ## Code Style Guidelines
 - **Imports**: Standard library → third-party → project-specific, with blank lines between

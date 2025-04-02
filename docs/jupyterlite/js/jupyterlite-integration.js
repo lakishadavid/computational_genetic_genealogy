@@ -12,6 +12,7 @@ class JupyterLiteIntegration {
             jupyterContainerClass: 'jupyterlite-container',
             labPath: '/computational_genetic_genealogy/jupyterlite/app/',
             storageKeyPrefix: 'genetic_genealogy_',
+            notebookPath: 'files/notebooks',
             notebookURLs: {
                 'lab1': 'lab1/starter.ipynb',
                 'lab2': 'lab2/starter.ipynb',
@@ -47,14 +48,19 @@ class JupyterLiteIntegration {
     }
 
     openJupyterLite(labId) {
-        // Simply open the lab interface without specifying a notebook path
-        // This avoids file path resolution issues and lets users navigate via the file browser
+        // Build the lab URL with the notebook path
+        // We now direct users straight to the notebook browser folder for the right lab
         const labUrl = `${this.options.labPath}lab/`;
         
-        console.log("Opening JupyterLite at URL: " + labUrl);
+        console.log(`Opening JupyterLite for lab ${labId} at URL: ${labUrl}`);
         
         // Open in new window
         window.open(labUrl, 'jupyterlite', 'width=1200,height=800');
+        
+        // Show user a hint about finding the notebook for this specific lab
+        setTimeout(() => {
+            alert(`Please open the files > notebooks > ${labId} folder and click on starter.ipynb to begin ${labId.toUpperCase()}`);
+        }, 100);
     }
 
     checkProgress() {

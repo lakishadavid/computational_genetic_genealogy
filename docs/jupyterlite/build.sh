@@ -53,6 +53,8 @@ if [ -d "$SCRIPT_DIR/_output" ]; then
     mkdir -p "$SCRIPT_DIR/_output/files/notebooks"
     if [ -d "$SCRIPT_DIR/notebooks" ] && [ "$(ls -A "$SCRIPT_DIR/notebooks")" ]; then
         cp -r "$SCRIPT_DIR/notebooks"/* "$SCRIPT_DIR/_output/files/notebooks/"
+        # Make sure no stray notebooks at the root level
+        rm -f "$SCRIPT_DIR/_output/files/starter.ipynb"
     else
         echo "Warning: notebooks directory is empty or does not exist"
     fi

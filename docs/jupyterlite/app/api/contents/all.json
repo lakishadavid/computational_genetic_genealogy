@@ -2,7 +2,7 @@
   "content": [
     {
       "content": null,
-      "created": "2025-04-02T08:33:40.454609Z",
+      "created": "2025-04-02T08:38:16.106725Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -16,21 +16,21 @@
     },
     {
       "content": null,
-      "created": "2025-04-02T08:33:40.454609Z",
+      "created": "2025-04-02T08:38:16.106725Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
-      "last_modified": "2025-04-02T08:33:32.657310Z",
+      "last_modified": "2025-04-02T08:38:02.389724Z",
       "mimetype": null,
       "name": "lab3_quality.ipynb",
       "path": "lab3_quality.ipynb",
-      "size": 1670,
+      "size": 28786,
       "type": "notebook",
       "writable": true
     },
     {
       "content": null,
-      "created": "2025-04-02T08:33:40.454609Z",
+      "created": "2025-04-02T08:38:16.106725Z",
       "format": null,
       "hash": null,
       "hash_algorithm": null,
@@ -43,11 +43,11 @@
       "writable": true
     }
   ],
-  "created": "2025-04-02T08:33:40.454609Z",
+  "created": "2025-04-02T08:38:16.106725Z",
   "format": "json",
   "hash": null,
   "hash_algorithm": null,
-  "last_modified": "2025-04-02T08:33:40.454609Z",
+  "last_modified": "2025-04-02T08:38:16.106725Z",
   "mimetype": null,
   "name": "",
   "path": "",

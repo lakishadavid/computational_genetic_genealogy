@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build script for JupyterLite with Poetry - With Exclusion Feature
+# Build script for JupyterLite with Poetry - With Exclusion Feature and Cleanup
 
 # Setup error handling
 set -e
@@ -37,9 +37,14 @@ rm -rf "$ROOT_DIR/_output"
 rm -rf "$ROOT_DIR/lab1" "$ROOT_DIR/lab2" "$ROOT_DIR/lab3"
 
 # Create directory structure
+echo "Creating directory structure..."
 mkdir -p "$SCRIPT_DIR/notebooks"
 mkdir -p "$SCRIPT_DIR/_output"
 mkdir -p "$SCRIPT_DIR/app"
+
+# Clean the notebooks directory to remove any old files
+echo "Cleaning notebooks directory to remove old files..."
+rm -rf "$SCRIPT_DIR/notebooks"/*
 
 # Prepare the contents array for jupyter_lite_config.json
 echo "Preparing jupyter_lite_config.json contents..."
@@ -101,6 +106,11 @@ echo "Building JupyterLite..."
 cd "$SCRIPT_DIR"
 poetry run jupyter lite build --output-dir="$SCRIPT_DIR/_output"
 
+# Clean up any existing files in the output directory
+echo "Cleaning up output files directory..."
+mkdir -p "$SCRIPT_DIR/_output/files"
+rm -rf "$SCRIPT_DIR/_output/files"/*
+
 # Copy notebooks to the build
 echo "Copying notebooks to the build..."
 if [ -d "$SCRIPT_DIR/_output" ]; then
@@ -127,6 +137,7 @@ find "$SCRIPT_DIR/notebooks" -name "*.ipynb" -exec cp {} "$SCRIPT_DIR/_output/fi
 # Move build to the final location
 echo "Moving build to the final location..."
 if [ -d "$SCRIPT_DIR/_output" ]; then
+    # Completely remove old app directory to ensure no old files remain
     rm -rf "$SCRIPT_DIR/app"
     mv "$SCRIPT_DIR/_output" "$SCRIPT_DIR/app"
     echo "Build moved to app directory"

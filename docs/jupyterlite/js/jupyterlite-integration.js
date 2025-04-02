@@ -47,23 +47,14 @@ class JupyterLiteIntegration {
     }
 
     openJupyterLite(labId) {
-        // Get the notebook URL
-        const notebookPath = this.options.notebookURLs[labId] || 'lab1/starter.ipynb';
+        // Simply open the lab interface without specifying a notebook path
+        // This avoids file path resolution issues and lets users navigate via the file browser
+        const labUrl = `${this.options.labPath}lab/`;
         
-        // Construct the full URL to the JupyterLite environment
-        const labUrl = `${this.options.labPath}lab/?path=files/notebooks/${notebookPath}`;
-        
-        // Log the URL for debugging
         console.log("Opening JupyterLite at URL: " + labUrl);
         
-        // Check if we should open in new window or same window
-        const openInNewWindow = true; // Could be an option
-        
-        if (openInNewWindow) {
-            window.open(labUrl, 'jupyterlite', 'width=1200,height=800');
-        } else {
-            window.location.href = labUrl;
-        }
+        // Open in new window
+        window.open(labUrl, 'jupyterlite', 'width=1200,height=800');
     }
 
     checkProgress() {

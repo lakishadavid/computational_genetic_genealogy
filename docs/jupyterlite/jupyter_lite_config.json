@@ -1,0 +1,26 @@
+{
+  "LiteBuildConfig": {
+    "output_dir": "_output",
+    "cache_dir": "app",
+    "federated_extensions": []
+  },
+  "jupyter-config-data": {
+    "appName": "Computational Genetic Genealogy",
+    "appVersion": "0.1.0",
+    "collaborative": false,
+    "disabledExtensions": [],
+    "mathjax": {
+      "url": "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"
+    },
+    "settingsOverrides": {
+      "@jupyterlab/apputils-extension:themes": {
+        "theme": "JupyterLab Light"
+      }
+    },
+    "settingsConsoleOverrides": {},
+    "enableMemoryStorage": "always",
+    "binder": {
+      "enabled": false
+    }
+  }
+}

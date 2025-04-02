@@ -22,19 +22,19 @@ class JupyterLiteIntegration {
             labConfigs: {
                 'lab1': {
                     title: 'Exploring Genomic Data',
-                    filename: 'lab1_exploring.ipynb',
+                    filename: 'Lab1_Exploring_onekgenomes.ipynb',
                     dataSources: ['sample_data.csv'],
                     localNotebook: '../../instructions/Lab1_Exploring_onekgenomes.ipynb'
                 },
                 'lab2': {
                     title: 'Processing Raw DNA',
-                    filename: 'lab2_processing.ipynb',
+                    filename: 'Lab2_Process_Raw_DNA_profile.ipynb',
                     dataSources: ['raw_dna.txt'],
                     localNotebook: '../../instructions/Lab2_Process_Raw_DNA_profile.ipynb'
                 },
                 'lab3': {
                     title: 'Quality Control',
-                    filename: 'lab3_quality.ipynb',
+                    filename: 'Lab3_Quality_Control.ipynb',
                     dataSources: ['qc_data.vcf'],
                     localNotebook: '../../instructions/Lab3_Quality_Control.ipynb'
                 }

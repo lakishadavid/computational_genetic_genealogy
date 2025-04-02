@@ -1,10 +1,9 @@
 {
   "LiteBuildConfig": {
     "contents": [
-      "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/notebooks/lab1/starter.ipynb"
-    ],
-    "extra_files": [
-      "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/notebooks/lab1/starter.ipynb"
+      "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/notebooks/lab1/lab1_exploring.ipynb",
+      "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/notebooks/lab2/lab2_processing.ipynb",
+      "/home/lakishadavid/computational_genetic_genealogy/docs/jupyterlite/notebooks/lab3/lab3_quality.ipynb"
     ]
   }
 }

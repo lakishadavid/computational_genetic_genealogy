@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lab 3: Processing Raw DNA Profiles | Computational Genetic Genealogy</title>
     <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="../jupyterlite/jupyterlite-integration.css">
+    <link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="../jupyterlite/jupyterlite-manager.js" defer></script>
+    <script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
 </head>
 <body class="textbook-page">
     <header class="textbook-header">
@@ -219,17 +219,21 @@
             <div class="jupyter-integration">
                 <p>Process raw DNA data interactively in your browser! This lab builds on concepts from Lab 1.</p>
                 
-                <div class="jupyter-buttons">
-                    <button class="load-notebook" data-notebook="lab2/starter.ipynb">Load Notebook</button>
-                    <button class="save-progress">Save Progress</button>
-                    <button class="download-notebook">Download Notebook</button>
+                <div class="jupyterlite-container">
+                    <h3>Interactive Lab Environment</h3>
+                    
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Processing</h4>
+                        <p>This notebook automatically loads your data from Lab 1 (if completed) and guides you through processing raw DNA profiles from consumer testing companies.</p>
+                    </div>
+                    
+                    <button class="open-jupyterlite" data-lab="lab2">Open Lab 2 in JupyterLite</button>
+                    
+                    <div class="lab-progress" data-lab="lab2">
+                        <!-- Progress will be populated by JavaScript -->
+                    </div>
                 </div>
                 
-                <div class="jupyterlite-status"></div>
-                
-                <iframe id="jupyterlite-frame" src="../jupyterlite/lab/index.html" 
-                    width="100%" height="600px" style="border: 1px solid #ddd;"></iframe>
-                    
                 <div class="alert alert-info">
                     <p><strong>Note:</strong> The interactive notebook automatically loads data from Lab 1 if you completed it. Your work is saved in your browser's storage between lab sessions.</p>
                 </div>

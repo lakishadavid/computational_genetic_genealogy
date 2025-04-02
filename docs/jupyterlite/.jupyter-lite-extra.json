@@ -1,0 +1,16 @@
+{
+    "jupyter-config-data": {
+      "contentsManager": {
+        "allowHidden": true,
+        "displayHidden": true
+      },
+      "settingsManager": {
+        "settings": {
+          "@jupyterlite/contents:drive": {
+            "showHiddenFiles": true,
+            "displayFoldersInFileBrowser": true
+          }
+        }
+      }
+    }
+  }

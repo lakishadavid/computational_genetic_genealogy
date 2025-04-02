@@ -1,5 +1,5 @@
 #!/bin/bash
-# Simple JupyterLite build script
+# JupyterLite build script with proper configuration injection
 
 # Setup error handling
 set -e
@@ -55,10 +55,22 @@ if [ -d "$DATA_DIR" ] && [ "$(ls -A "$DATA_DIR" 2>/dev/null)" ]; then
 fi
 
 # Fix app name in HTML files if needed
+echo "Checking HTML files for title updates..."
 for HTML_FILE in $(find "$SCRIPT_DIR/app" -name "*.html"); do
-  if grep -q "JupyterLite" "$HTML_FILE"; then
-    sed -i 's/JupyterLite/Computational Genetic Genealogy/g' "$HTML_FILE"
+  if grep -q 'title>JupyterLite' "$HTML_FILE"; then
+    sed -i 's|<title>JupyterLite</title>|<title>Computational Genetic Genealogy</title>|g' "$HTML_FILE"
     echo "  Updated title in $(basename "$HTML_FILE")"
+  fi
+done
+
+# Make sure labs with numbers work correctly
+echo "Creating lab file symlinks for direct access..."
+cd "$SCRIPT_DIR/app/files"
+for FILE in Lab*.ipynb; do
+  if [[ $FILE =~ Lab([0-9]+)_ ]]; then
+    LAB_NUM="${BASH_REMATCH[1]}"
+    ln -sf "$FILE" "lab${LAB_NUM}.ipynb"
+    echo "  Created symlink lab${LAB_NUM}.ipynb -> $FILE"
   fi
 done
 

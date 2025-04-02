@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JupyterLite Direct Test</title>
+</head>
+<body>
+    <h1>JupyterLite Direct Test Page</h1>
+    
+    <p>This page contains direct links to JupyterLite notebooks to verify access paths.</p>
+    
+    <h2>Direct Links to Notebooks</h2>
+    <ul>
+        <li><a href="app/lab/index.html?path=files/lab1_exploring.ipynb" target="_blank">Lab 1: Exploring (Direct Link)</a></li>
+        <li><a href="app/lab/index.html?path=files/lab2_processing.ipynb" target="_blank">Lab 2: Processing (Direct Link)</a></li>
+        <li><a href="app/lab/index.html?path=files/lab3_quality.ipynb" target="_blank">Lab 3: Quality Control (Direct Link)</a></li>
+    </ul>
+    
+    <h2>Links to Notebooks inside the Notebooks Directory</h2>
+    <ul>
+        <li><a href="app/lab/index.html?path=files/notebooks/lab1/lab1_exploring.ipynb" target="_blank">Lab 1: Exploring (Nested Link)</a></li>
+        <li><a href="app/lab/index.html?path=files/notebooks/lab2/lab2_processing.ipynb" target="_blank">Lab 2: Processing (Nested Link)</a></li>
+        <li><a href="app/lab/index.html?path=files/notebooks/lab3/lab3_quality.ipynb" target="_blank">Lab 3: Quality Control (Nested Link)</a></li>
+    </ul>
+    
+    <h2>Just the Lab Interface</h2>
+    <ul>
+        <li><a href="app/lab/" target="_blank">JupyterLite Lab Interface</a></li>
+    </ul>
+    
+    <script>
+        // Function to open directly (no JS file needed)
+        function openNotebook(filename) {
+            const url = `app/lab/index.html?path=files/${filename}`;
+            window.open(url, 'jupyterlite', 'width=1200,height=800');
+        }
+    </script>
+    
+    <h2>JavaScript Direct Links</h2>
+    <button onclick="openNotebook('lab1_exploring.ipynb')">Open Lab 1 via JS</button>
+    <button onclick="openNotebook('lab2_processing.ipynb')">Open Lab 2 via JS</button>
+    <button onclick="openNotebook('lab3_quality.ipynb')">Open Lab 3 via JS</button>
+</body>
+</html>

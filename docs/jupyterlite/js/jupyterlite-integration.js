@@ -48,19 +48,16 @@ class JupyterLiteIntegration {
     }
 
     openJupyterLite(labId) {
-        // Build the lab URL with the notebook path
-        // We now direct users straight to the notebook browser folder for the right lab
-        const labUrl = `${this.options.labPath}lab/`;
+        // Get the notebook path for this specific lab
+        const notebookPath = this.options.notebookURLs[labId];
         
-        console.log(`Opening JupyterLite for lab ${labId} at URL: ${labUrl}`);
+        // Build the full URL to directly open the specific notebook for this lab
+        const labUrl = `${this.options.labPath}lab/?path=${this.options.notebookPath}/${notebookPath}`;
+        
+        console.log(`Opening JupyterLite for ${labId} at URL: ${labUrl}`);
         
         // Open in new window
         window.open(labUrl, 'jupyterlite', 'width=1200,height=800');
-        
-        // Show user a hint about finding the notebook for this specific lab
-        setTimeout(() => {
-            alert(`Please open the files > notebooks > ${labId} folder and click on starter.ipynb to begin ${labId.toUpperCase()}`);
-        }, 100);
     }
 
     checkProgress() {

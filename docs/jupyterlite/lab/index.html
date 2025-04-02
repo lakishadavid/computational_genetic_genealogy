@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computational Genetic Genealogy - JupyterLite</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .toolbar {
+            background-color: #f5f5f5;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .lab-selector {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .lab-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .lab-button:hover {
+            background-color: #3e8e41;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .action-button {
+            background-color: #2196F3;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .action-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .jupyter-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #jupyterlite-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .status-bar {
+            background-color: #f5f5f5;
+            padding: 5px 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+            }
+            
+            .toolbar, .status-bar {
+                background-color: #2d2d2d;
+                border-color: #444;
+            }
+            
+            .lab-button {
+                background-color: #388e3c;
+            }
+            
+            .lab-button:hover {
+                background-color: #2e7d32;
+            }
+            
+            .action-button {
+                background-color: #1976d2;
+            }
+            
+            .action-button:hover {
+                background-color: #1565c0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <div class="lab-selector">
+                <button class="lab-button" id="lab1-button">Lab 1: Exploring</button>
+                <button class="lab-button" id="lab2-button">Lab 2: Processing</button>
+                <button class="lab-button" id="lab3-button">Lab 3: QC</button>
+            </div>
+            <div class="action-buttons">
+                <button class="action-button" id="save-button">Save Progress</button>
+                <button class="action-button" id="download-button">Download Notebook</button>
+                <button class="action-button" id="return-button">Return to Course</button>
+            </div>
+        </div>
+        
+        <div class="jupyter-container">
+            <!-- Use RetroLab from CDN -->
+            <iframe id="jupyterlite-iframe" src="https://jupyterlite.rtfd.io/en/latest/retro/notebooks/?path=demo/Untitled.ipynb"></iframe>
+        </div>
+        
+        <div class="status-bar">
+            <div id="status-info">Ready</div>
+            <div id="storage-info">Storage: <span id="storage-used">0</span> MB used</div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Define notebook URLs (replace with your actual notebook URLs)
+            const lab1Url = 'https://jupyterlite.rtfd.io/en/latest/retro/notebooks/?path=demo/Untitled.ipynb';
+            const lab2Url = 'https://jupyterlite.rtfd.io/en/latest/retro/notebooks/?path=demo/Untitled.ipynb';
+            const lab3Url = 'https://jupyterlite.rtfd.io/en/latest/retro/notebooks/?path=demo/Untitled.ipynb';
+            
+            // Elements
+            const iframe = document.getElementById('jupyterlite-iframe');
+            const lab1Button = document.getElementById('lab1-button');
+            const lab2Button = document.getElementById('lab2-button');
+            const lab3Button = document.getElementById('lab3-button');
+            const saveButton = document.getElementById('save-button');
+            const downloadButton = document.getElementById('download-button');
+            const returnButton = document.getElementById('return-button');
+            const statusInfo = document.getElementById('status-info');
+            const storageUsed = document.getElementById('storage-used');
+            
+            // Load Lab 1 by default
+            iframe.src = lab1Url;
+            
+            // Update storage usage info (dummy function for now)
+            function updateStorageInfo() {
+                // This would be replaced with actual logic to check storage usage
+                const storageMB = Math.floor(Math.random() * 50);
+                storageUsed.textContent = storageMB;
+            }
+            
+            // Initialize storage info
+            updateStorageInfo();
+            
+            // Lab button event listeners
+            lab1Button.addEventListener('click', function() {
+                statusInfo.textContent = 'Loading Lab 1...';
+                iframe.src = lab1Url;
+                setTimeout(() => {
+                    statusInfo.textContent = 'Lab 1 loaded';
+                }, 1500);
+            });
+            
+            lab2Button.addEventListener('click', function() {
+                statusInfo.textContent = 'Loading Lab 2...';
+                iframe.src = lab2Url;
+                setTimeout(() => {
+                    statusInfo.textContent = 'Lab 2 loaded';
+                }, 1500);
+            });
+            
+            lab3Button.addEventListener('click', function() {
+                statusInfo.textContent = 'Loading Lab 3...';
+                iframe.src = lab3Url;
+                setTimeout(() => {
+                    statusInfo.textContent = 'Lab 3 loaded';
+                }, 1500);
+            });
+            
+            // Save button
+            saveButton.addEventListener('click', function() {
+                statusInfo.textContent = 'Saving progress...';
+                
+                // This would be replaced with actual communication with the iframe
+                // to trigger notebook saving
+                
+                setTimeout(() => {
+                    statusInfo.textContent = 'Progress saved';
+                    updateStorageInfo();
+                }, 1000);
+            });
+            
+            // Download button
+            downloadButton.addEventListener('click', function() {
+                statusInfo.textContent = 'Preparing download...';
+                
+                // This would be replaced with actual communication with the iframe
+                // to trigger notebook download
+                
+                setTimeout(() => {
+                    statusInfo.textContent = 'Download ready';
+                }, 1000);
+            });
+            
+            // Return to course button
+            returnButton.addEventListener('click', function() {
+                // This would be replaced with logic to return to the course page
+                window.history.back();
+            });
+            
+            // Message listener for iframe communication
+            window.addEventListener('message', function(event) {
+                // Simple security check - adjust as needed
+                if (event.origin !== 'https://jupyterlite.rtfd.io') {
+                    return;
+                }
+                
+                // Handle messages from the iframe
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'status') {
+                        statusInfo.textContent = data.message;
+                    } else if (data.type === 'storage') {
+                        storageUsed.textContent = data.usedMB;
+                    }
+                } catch (e) {
+                    console.error('Error parsing message from iframe:', e);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

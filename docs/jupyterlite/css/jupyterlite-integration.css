@@ -99,6 +99,13 @@
     color: #155724;
 }
 
+/* Navigation instructions */
+.jupyterlite-instruction {
+    margin: 5px 0 15px 0;
+    color: #666;
+    font-style: italic;
+}
+
 /* Info box for JupyterLite */
 .jupyterlite-info {
     background-color: #e7f3fe;
@@ -146,6 +153,10 @@
     
     .lab-progress.completed {
         background-color: #1b3620;
+    }
+    
+    .jupyterlite-instruction {
+        color: #aaa;
     }
     
     .jupyterlite-info {

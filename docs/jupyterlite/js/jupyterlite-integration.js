@@ -51,8 +51,9 @@ class JupyterLiteIntegration {
         // Get the unique notebook path for this specific lab
         const notebookPath = this.options.notebookURLs[labId];
         
-        // Build the full URL to directly open the specific notebook for this lab
-        const labUrl = `${this.options.labPath}lab/?path=${this.options.notebookPath}/${notebookPath}`;
+        // Try a simpler, more direct approach to open the notebook
+        // Going straight to the specific file in the files directory
+        const labUrl = `${this.options.labPath}lab/index.html?path=files/${labId}_${labId.substring(3)}.ipynb`;
         
         console.log(`Opening JupyterLite for ${labId} at URL: ${labUrl}`);
         

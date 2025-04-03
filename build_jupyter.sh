@@ -8,8 +8,7 @@ STAGING_DIR="jupyterlite_staging"       # Temporary area for preparing content
 DEPLOY_DIR="docs/jupyterlite_app"       # Final location AND build target
 LAB_SRC_DIR="labs"
 DATA_SRC_DIR="data/class_data"
-ROOT_CONFIG_FILE="jupyter_lite_config.json"
-PROCESSED_DIR="${STAGING_DIR}/processed" # Directory for preprocessed notebooks
+ROOT_CONFIG_FILE="jupyter_lite_config.json" # Explicit root config file
 
 # --- Script Start ---
 echo "Starting JupyterLite build process directly into deployment directory..."
@@ -28,130 +27,36 @@ fi
 # 2. Create staging directories
 echo "Creating staging directory structure in $STAGING_DIR..."
 mkdir -p "$STAGING_DIR/class_data"
-mkdir -p "$PROCESSED_DIR"
 
-# 3. Copy content to staging area for preprocessing
-echo "Copying Lab notebooks ($LAB_SRC_DIR/Lab*.ipynb) to $STAGING_DIR for preprocessing..."
+# 3. Copy content to staging area
+echo "Copying Lab notebooks ($LAB_SRC_DIR/Lab*.ipynb) to $STAGING_DIR..."
+# Ensure only .ipynb files are copied if that's desired
+# If you have other 'Lab*' files/dirs you want, change back to Lab*
 cp "$LAB_SRC_DIR"/Lab*.ipynb "$STAGING_DIR/"
 
 echo "Copying class data ($DATA_SRC_DIR) to $STAGING_DIR/class_data..."
+# Use trailing slash on source to copy contents
 cp -r "$DATA_SRC_DIR"/. "$STAGING_DIR/class_data/"
 
-# 3b. Create and run the preprocessing script
-cat > "$STAGING_DIR/preprocess_notebooks.py" << 'EOF'
-#!/usr/bin/env python3
-import os
-import json
-import sys
-import re
-from pathlib import Path
-
-# Directory containing the notebooks to preprocess
-src_dir = sys.argv[1]
-# Directory to store preprocessed notebooks
-out_dir = sys.argv[2]
-
-# Skip these notebooks (don't modify)
-skip_notebooks = ["Lab0_Code_Environment.ipynb"]
-
-def preprocess_notebook(notebook_path, output_path):
-    with open(notebook_path, 'r', encoding='utf-8') as f:
-        notebook = json.load(f)
-    
-    cells = notebook['cells']
-    
-    # Identify cells to remove or modify
-    filtered_cells = []
-    for cell in cells:
-        if cell['cell_type'] == 'code':
-            source = ''.join(cell['source'])
-            
-            # Remove cells containing:
-            # - poetry install commands
-            # - os.makedirs calls
-            # - find_comp_gen_dir function
-            # - Setting environment variables with os.environ
-            # - Changing directories with os.chdir
-            if (
-                'poetry install' in source or 
-                'os.makedirs' in source or
-                'def find_comp_gen_dir' in source or
-                'comp_gen_dir = find_comp_gen_dir()' in source or
-                'load_env_file()' in source or
-                'os.environ[' in source or
-                'os.chdir(' in source or
-                # Keep the cell if it doesn't match any of the above conditions
-                False
-            ):
-                continue
-                
-            # Keep this cell, but modify specific parts if needed
-            # - Replace absolute paths like /home/lakishadavid/... with relative paths
-            new_source = []
-            for line in cell['source']:
-                # Replace paths with browser-compatible alternatives
-                line = re.sub(r'/home/lakishadavid/computational_genetic_genealogy/data', 'class_data', line)
-                line = re.sub(r'/home/lakishadavid/computational_genetic_genealogy/results', 'results', line)
-                new_source.append(line)
-            
-            cell['source'] = new_source
-            
-        filtered_cells.append(cell)
-    
-    # Update the notebook with the filtered cells
-    notebook['cells'] = filtered_cells
-    
-    # Write the modified notebook
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(notebook, f, indent=1)
-
-def main():
-    for filename in os.listdir(src_dir):
-        if not filename.endswith('.ipynb'):
-            continue
-            
-        if filename in skip_notebooks:
-            # Copy without modification
-            source_path = os.path.join(src_dir, filename)
-            target_path = os.path.join(out_dir, filename)
-            with open(source_path, 'r', encoding='utf-8') as f_in, open(target_path, 'w', encoding='utf-8') as f_out:
-                f_out.write(f_in.read())
-            print(f"Copied without modification: {filename}")
-            continue
-        
-        notebook_path = os.path.join(src_dir, filename)
-        output_path = os.path.join(out_dir, filename)
-        
-        print(f"Processing: {filename}")
-        preprocess_notebook(notebook_path, output_path)
-
-if __name__ == "__main__":
-    main()
-EOF
-
-chmod +x "$STAGING_DIR/preprocess_notebooks.py"
-echo "Preprocessing notebooks to make them JupyterLite-compatible..."
-python3 "$STAGING_DIR/preprocess_notebooks.py" "$STAGING_DIR" "$PROCESSED_DIR"
-
-# 4. Run the JupyterLite build command using the preprocessed notebooks
+# 4. Run the JupyterLite build command directly into DEPLOY_DIR
 echo "Running JupyterLite build directly into $DEPLOY_DIR using $ROOT_CONFIG_FILE..."
-# Copy the preprocessed notebooks to where class_data is located
-cp "$PROCESSED_DIR"/* "$STAGING_DIR/"
-
 # NOTE: Output dir is now DEPLOY_DIR
 poetry run jupyter lite build \
     --config "$ROOT_CONFIG_FILE" \
     --contents "$STAGING_DIR" \
     --output-dir "$DEPLOY_DIR"
 
-# 5. Clean up temporary staging directory ONLY
+# 5. PATCH Section was REMOVED as it was incorrect
+
+# 6. Clean up temporary staging directory ONLY
 echo "Cleaning up temporary staging directory ($STAGING_DIR)..."
 rm -rf "$STAGING_DIR"
 
 # --- Script End ---
 echo "Build successful!"
 echo "JupyterLite site generated directly in: $DEPLOY_DIR"
-echo "Add $DEPLOY_DIR to Git, commit, and push to deploy via GitHub Pages."
-echo "The expected base URL on GitHub Pages will be: https://lakishadavid.github.io/computational_genetic_genealogy/$(basename $DEPLOY_DIR)/lab/index.html"
+echo "Remember to check/update .gitignore if needed and add $DEPLOY_DIR to Git."
+echo "Commit and push to deploy via GitHub Pages."
+echo "The expected base URL on GitHub Pages is: https://lakishadavid.github.io/computational_genetic_genealogy/$(basename $DEPLOY_DIR)/lab/index.html"
 
 exit 0

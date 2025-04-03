@@ -1,239 +1,255 @@
-{% extends "../lab_lecture_template.html" %}
-
-{% block title %}Lab 3: Quality Control | Computational Genetic Genealogy{% endblock %}
-
-{% block css_path %}../styles.css{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
-<script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
-{% endblock %}
-
-{% block body_class %}textbook-page{% endblock %}
-
-{% block header_class %}textbook-header{% endblock %}
-{% block header_container_class %}container{% endblock %}
-{% block header_title %}Computational Genetic Genealogy{% endblock %}
-{% block header_subtitle %}Quality Control for Genetic Data{% endblock %}
-{% block header_content %}{% endblock %}
-
-{% block nav_class %}textbook-nav{% endblock %}
-{% block nav_content %}
-<a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
-<a href="contents.html">Table of Contents</a>
-<a href="lab3_qc.html" class="active">Lab 3 qc</a>
-{% endblock %}
-
-{% block lab_title %}Lab 3: Quality Control for Genetic Data{% endblock %}
-
-{% block why_this_matters %}
-<div class="alert alert-info">
-    <p><strong>Conceptual Foundations:</strong> The reliability of genetic genealogy analyses depends fundamentally on the quality of the underlying genetic data. This lab explains why quality control is a critical step, what can go wrong in genetic data, and how to systematically identify and address data quality issues.</p>
-</div>
-{% endblock %}
-
-{% block core_concepts %}
-<h4>The Critical Role of Data Quality in Genetic Genealogy</h4>
-<p>Genetic genealogy relies on detecting subtle patterns of genetic similarity between individuals. Poor data quality can both:</p>
-<ul>
-    <li><strong>Create false signals</strong> of genetic relatedness where none exists</li>
-    <li><strong>Obscure true signals</strong> of genetic relationships</li>
-</ul>
-<p>The code you'll implement in this lab applies statistical methods to systematically identify and remove problematic data that could lead to incorrect genealogical conclusions. This is especially important when working with data from diverse sources like consumer testing companies and public databases, where standardization can be limited.</p>
-
-<h4>Types of Data Quality Issues</h4>
-<p>Several types of data quality problems can affect genetic analyses:</p>
-<ul>
-    <li><strong>Missing Data</strong>: Positions where no genotype could be determined, creating gaps in genetic profiles</li>
-    <li><strong>Low Call Rate Samples</strong>: Individuals with an unusually high proportion of missing genotypes</li>
-    <li><strong>Low Call Rate Variants</strong>: Specific genetic variants that couldn't be reliably genotyped across multiple samples</li>
-    <li><strong>Hardy-Weinberg Disequilibrium</strong>: Variants with genotype frequencies that deviate significantly from population genetics expectations</li>
-    <li><strong>Sex Chromosome Inconsistencies</strong>: Mismatches between reported sex and genetic sex markers</li>
-    <li><strong>Sample Contamination</strong>: Evidence that a sample contains DNA from multiple individuals</li>
-    <li><strong>Population Stratification</strong>: Substructure within a dataset that could confound relationship inference</li>
-</ul>
-<p>These issues can arise from technical limitations in genotyping, sample handling problems, or biological factors. The quality control pipeline you'll implement addresses each of these potential issues systematically.</p>
-
-<h4>Balancing Data Quality and Quantity</h4>
-<p>Quality control involves an inherent trade-off between data quality and quantity. More stringent filtering improves data reliability but reduces the number of variants and samples available for analysis. Finding the right balance requires understanding:</p>
-<ul>
-    <li>The specific requirements of downstream analyses</li>
-    <li>The relative importance of different types of errors</li>
-    <li>The characteristics of the specific dataset being analyzed</li>
-</ul>
-<p>In genetic genealogy, we generally prioritize variant quality over quantity, as false positives in relationship detection can be particularly problematic. The thresholds you'll apply in this lab are calibrated specifically for genealogical applications.</p>
-{% endblock %}
-
-{% block analytical_frameworks %}
-<h4>Sample-Level Quality Metrics</h4>
-<p>The first step in quality control is assessing the overall quality of each sample:</p>
-<ul>
-    <li><strong>Call Rate</strong>: The proportion of genotyped positions with non-missing values</li>
-    <li><strong>Heterozygosity Rate</strong>: The proportion of genotyped positions that are heterozygous, which can indicate sample contamination when unusually high</li>
-    <li><strong>Sex Verification</strong>: Concordance between reported sex and genetic markers on sex chromosomes</li>
-</ul>
-<p>Samples that fail these metrics are typically excluded from downstream analyses, as they may produce unreliable results. The computational methods you'll apply in this lab enable systematic evaluation of these metrics across large datasets.</p>
-
-<h4>Variant-Level Quality Metrics</h4>
-<p>After filtering out problematic samples, we assess the quality of each genetic variant:</p>
-<ul>
-    <li><strong>Variant Call Rate</strong>: The proportion of samples with non-missing data for a variant</li>
-    <li><strong>Minor Allele Frequency (MAF)</strong>: The frequency of the less common allele, with very rare variants often being technical artifacts</li>
-    <li><strong>Hardy-Weinberg Equilibrium (HWE)</strong>: A statistical test for whether genotype frequencies match theoretical expectations</li>
-    <li><strong>Mendelian Error Rate</strong>: For family datasets, the frequency of genotype combinations that violate Mendelian inheritance</li>
-</ul>
-<p>Variants failing these metrics are typically excluded, resulting in a filtered dataset with higher reliability. The statistical tests you'll implement assess the probability that observed deviations from expectations are due to chance versus genuine data quality issues.</p>
-
-<h4>Population Structure Analysis</h4>
-<p>Understanding population structure within a dataset is crucial for accurate relationship inference:</p>
-<ul>
-    <li><strong>Principal Component Analysis (PCA)</strong>: Visualizes genetic similarities and differences between samples</li>
-    <li><strong>Identity-by-State (IBS) Matrix</strong>: Quantifies overall genetic similarity between all pairs of samples</li>
-    <li><strong>Outlier Detection</strong>: Identifies samples that differ substantially from the rest of the dataset</li>
-</ul>
-<p>These analyses help identify population stratification, sample swaps, or close relatives that might not have been previously documented. The computational methods you'll apply create a multidimensional representation of genetic variation that facilitates these assessments.</p>
-{% endblock %}
-
-{% block application %}
-<h4>Impact of Data Quality on IBD Detection</h4>
-<p>Identity-by-Descent (IBD) detection—the cornerstone of genetic genealogy—is particularly sensitive to data quality issues:</p>
-<ul>
-    <li>Missing data can create artificial breaks in IBD segments</li>
-    <li>Genotyping errors can create false boundaries between IBD and non-IBD regions</li>
-    <li>Phase errors can affect the detection of IBD1 versus IBD2 segments</li>
-    <li>Reference population mismatches can lead to incorrect IBD likelihood calculations</li>
-</ul>
-<p>By implementing rigorous quality control, you're establishing the foundation for accurate IBD detection in subsequent analyses. The filtration steps you'll apply are specifically designed to minimize these impacts on IBD detection algorithms.</p>
-
-<h4>Lineage-Specific Quality Considerations</h4>
-<p>Different types of genetic data have specific quality considerations for genealogical applications:</p>
-<ul>
-    <li><strong>Autosomal DNA</strong>: Requires comprehensive quality control due to recombination and complex inheritance patterns</li>
-    <li><strong>X Chromosome</strong>: Needs sex-specific filtering approaches due to differential inheritance patterns in males and females</li>
-    <li><strong>Y Chromosome</strong>: Male-specific markers require specialized quality metrics focused on haplogroup consistency</li>
-    <li><strong>Mitochondrial DNA</strong>: Maternally inherited, typically requires higher read depth thresholds due to heteroplasmy</li>
-</ul>
-<p>The computational pipeline you'll implement in this lab focuses primarily on autosomal DNA, which provides the broadest information for genealogical reconstruction across all ancestral lines. However, the principles apply to all types of genetic data used in genealogy.</p>
-
-<h4>Confidence Metrics for Genealogical Inferences</h4>
-<p>Quality control doesn't end with data filtering—it extends to quantifying uncertainty in downstream analyses:</p>
-<ul>
-    <li><strong>Segment Quality Scores</strong>: Confidence metrics for each detected IBD segment</li>
-    <li><strong>Relationship Probability Distributions</strong>: Uncertainty estimates for inferred genealogical relationships</li>
-    <li><strong>Multiple Testing Correction</strong>: Statistical approaches to account for the large number of comparisons in genetic genealogy</li>
-</ul>
-<p>By understanding the quality characteristics of your dataset, you can propagate this information to provide appropriate confidence levels for genealogical inferences. The codebase you're developing incorporates these uncertainty metrics throughout the analytical pipeline.</p>
-{% endblock %}
-
-{% block exercises %}
-<div class="exercises-section">
-    <h4>Exercises</h4>
-    <ol>
-        <li>Compare quality filtering approaches in research versus consumer genetic testing contexts</li>
-        <li>Discuss how data quality standards might differ for different genealogical applications (e.g., close relative identification versus distant cousin matching)</li>
-        <li>Consider how quality control approaches might need to be adapted for genetic datasets from historically underrepresented populations</li>
-        <li>Analyze how the balance between false positives and false negatives in relationship detection influences quality control decisions</li>
-        <li>Calculate the expected impact of different missing data patterns on the ability to detect IBD segments of various lengths</li>
-        <li>Design an experimental approach to quantify how different quality control thresholds affect the accuracy of relationship inference</li>
-    </ol>
-</div>
-{% endblock %}
-
-{% block tips %}
-<div class="alert alert-success">
-    <p><strong>Tip:</strong> When working with real genetic data, always err on the side of more stringent quality filtering initially, then gradually relax criteria if needed. It's easier to recover data points that were unnecessarily filtered than to identify spurious relationships caused by poor quality data.</p>
-</div>
-{% endblock %}
-
-{% block interactive_lab %}
-<div class="jupyter-integration">
-    <p>Apply quality control methods to genetic data in this interactive notebook.</p>
-    
-    <div class="jupyterlite-container">
-        <div class="jupyterlite-info">
-            <h4>Browser-Based Analysis</h4>
-            <p>This tutorial guides you through implementing and applying various quality control methods to the genetic dataset we've been working with.</p>
-            <ol>
-                <li>Click the "Open Lab 3 Notebook in JupyterLite" button below</li>
-                <li>In the file browser that appears, click on "<strong>Lab3_Quality_Control.ipynb</strong>" to open this lab's notebook</li>
-                <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
-            </ol>
-            <p>Your progress is automatically saved in your browser's storage.</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 3: Quality Control | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Quality Control for Genetic Data</p>
         </div>
-        
-        <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab3_Quality_Control.ipynb"
-           class="open-jupyterlite-link"
-           target="_blank"
-           role="button">
-            Open Lab 3 Notebook in JupyterLite
-        </a>
-    </div>
-    
-    <div class="alert alert-info">
-        <p><strong>Note:</strong> The interactive notebook automatically loads data from Lab 2 if you completed it. Your work is saved in your browser's storage between lab sessions.</p>
-    </div>
-</div>
-{% endblock %}
+    </header>
 
-{% block beyond_code %}
-<p>Quality control in genetic genealogy connects to broader themes in data science and social science:</p>
-<ul>
-    <li><strong>Data Provenance:</strong> Understanding the origins and quality of data is essential for responsible interpretation</li>
-    <li><strong>Statistical Literacy:</strong> Evaluating thresholds and metrics requires understanding statistical principles</li>
-    <li><strong>Research Ethics:</strong> Quality control decisions impact which individuals' genetic histories can be recovered</li>
-    <li><strong>Scientific Reproducibility:</strong> Transparent quality control protocols enable verification of genealogical findings</li>
-</ul>
-<p>As you implement quality control procedures, you're engaging with fundamental issues of data integrity that extend far beyond technical considerations.</p>
-{% endblock %}
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab3_qc.html" class="active">Lab 3 QC</a>
+        </div>
+    </nav>
 
-{% block learning_pathway %}
-<div class="learning-pathway">
-    <p>This lab is part of the sequential learning track:</p>
-    <div class="pathway-steps">
-        <div class="pathway-step">
-            <h5>Step 1</h5>
-            <p>Environment Setup</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 2</h5>
-            <p>Data Acquisition</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 3</h5>
-            <p>Data Exploration</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 4</h5>
-            <p>Data Processing</p>
-        </div>
-        <div class="pathway-step active">
-            <h5>Step 5</h5>
-            <p>Quality Control</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 6</h5>
-            <p>IBD Detection</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 7</h5>
-            <p>Simulation</p>
-        </div>
-        <div class="pathway-step">
-            <h5>Step 8</h5>
-            <p>Pedigrees</p>
-        </div>
-    </div>
-</div>
-{% endblock %}
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 3: Quality Control for Genetic Data</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Conceptual Foundations:</strong> The reliability of genetic genealogy analyses depends fundamentally on the quality of the underlying genetic data. This lab explains why quality control is a critical step, what can go wrong in genetic data, and how to systematically identify and address data quality issues.</p>
+            </div>
 
-{% block lab_navigation %}
-<div class="lab-navigation">
-    <a href="lab2_process.html" class="prev-lab">Processing Raw DNA</a>
-    <a href="lab4_ibis.html" class="next-lab">IBD Detection with IBIS</a>
-</div>
-{% endblock %}
+            <h3>Core Concepts</h3>
+            
+            <div class="concept-section">
+                <h4>The Critical Role of Data Quality in Genetic Genealogy</h4>
+                <p>Genetic genealogy relies on detecting subtle patterns of genetic similarity between individuals. Poor data quality can both:</p>
+                <ul>
+                    <li><strong>Create false signals</strong> of genetic relatedness where none exists</li>
+                    <li><strong>Obscure true signals</strong> of genetic relationships</li>
+                </ul>
+                <p>The code you'll implement in this lab applies statistical methods to systematically identify and remove problematic data that could lead to incorrect genealogical conclusions. This is especially important when working with data from diverse sources like consumer testing companies and public databases, where standardization can be limited.</p>
+            </div>
 
-{% block footer_class %}textbook-footer{% endblock %}
-{% block footer_content %}
-<p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
-{% endblock %}
+            <div class="concept-section">
+                <h4>Types of Data Quality Issues</h4>
+                <p>Several types of data quality problems can affect genetic analyses:</p>
+                <ul>
+                    <li><strong>Missing Data</strong>: Positions where no genotype could be determined, creating gaps in genetic profiles</li>
+                    <li><strong>Low Call Rate Samples</strong>: Individuals with an unusually high proportion of missing genotypes</li>
+                    <li><strong>Low Call Rate Variants</strong>: Specific genetic variants that couldn't be reliably genotyped across multiple samples</li>
+                    <li><strong>Hardy-Weinberg Disequilibrium</strong>: Variants with genotype frequencies that deviate significantly from population genetics expectations</li>
+                    <li><strong>Sex Chromosome Inconsistencies</strong>: Mismatches between reported sex and genetic sex markers</li>
+                    <li><strong>Sample Contamination</strong>: Evidence that a sample contains DNA from multiple individuals</li>
+                    <li><strong>Population Stratification</strong>: Substructure within a dataset that could confound relationship inference</li>
+                </ul>
+                <p>These issues can arise from technical limitations in genotyping, sample handling problems, or biological factors. The quality control pipeline you'll implement addresses each of these potential issues systematically.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Balancing Data Quality and Quantity</h4>
+                <p>Quality control involves an inherent trade-off between data quality and quantity. More stringent filtering improves data reliability but reduces the number of variants and samples available for analysis. Finding the right balance requires understanding:</p>
+                <ul>
+                    <li>The specific requirements of downstream analyses</li>
+                    <li>The relative importance of different types of errors</li>
+                    <li>The characteristics of the specific dataset being analyzed</li>
+                </ul>
+                <p>In genetic genealogy, we generally prioritize variant quality over quantity, as false positives in relationship detection can be particularly problematic. The thresholds you'll apply in this lab are calibrated specifically for genealogical applications.</p>
+            </div>
+
+            <h3>Analytical Frameworks</h3>
+            
+            <div class="concept-section">
+                <h4>Sample-Level Quality Metrics</h4>
+                <p>The first step in quality control is assessing the overall quality of each sample:</p>
+                <ul>
+                    <li><strong>Call Rate</strong>: The proportion of genotyped positions with non-missing values</li>
+                    <li><strong>Heterozygosity Rate</strong>: The proportion of genotyped positions that are heterozygous, which can indicate sample contamination when unusually high</li>
+                    <li><strong>Sex Verification</strong>: Concordance between reported sex and genetic markers on sex chromosomes</li>
+                </ul>
+                <p>Samples that fail these metrics are typically excluded from downstream analyses, as they may produce unreliable results. The computational methods you'll apply in this lab enable systematic evaluation of these metrics across large datasets.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Variant-Level Quality Metrics</h4>
+                <p>After filtering out problematic samples, we assess the quality of each genetic variant:</p>
+                <ul>
+                    <li><strong>Variant Call Rate</strong>: The proportion of samples with non-missing data for a variant</li>
+                    <li><strong>Minor Allele Frequency (MAF)</strong>: The frequency of the less common allele, with very rare variants often being technical artifacts</li>
+                    <li><strong>Hardy-Weinberg Equilibrium (HWE)</strong>: A statistical test for whether genotype frequencies match theoretical expectations</li>
+                    <li><strong>Mendelian Error Rate</strong>: For family datasets, the frequency of genotype combinations that violate Mendelian inheritance</li>
+                </ul>
+                <p>Variants failing these metrics are typically excluded, resulting in a filtered dataset with higher reliability. The statistical tests you'll implement assess the probability that observed deviations from expectations are due to chance versus genuine data quality issues.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Population Structure Analysis</h4>
+                <p>Understanding population structure within a dataset is crucial for accurate relationship inference:</p>
+                <ul>
+                    <li><strong>Principal Component Analysis (PCA)</strong>: Visualizes genetic similarities and differences between samples</li>
+                    <li><strong>Identity-by-State (IBS) Matrix</strong>: Quantifies overall genetic similarity between all pairs of samples</li>
+                    <li><strong>Outlier Detection</strong>: Identifies samples that differ substantially from the rest of the dataset</li>
+                </ul>
+                <p>These analyses help identify population stratification, sample swaps, or close relatives that might not have been previously documented. The computational methods you'll apply create a multidimensional representation of genetic variation that facilitates these assessments.</p>
+            </div>
+
+            <h3>Applications</h3>
+            
+            <div class="concept-section">
+                <h4>Impact of Data Quality on IBD Detection</h4>
+                <p>Identity-by-Descent (IBD) detection—the cornerstone of genetic genealogy—is particularly sensitive to data quality issues:</p>
+                <ul>
+                    <li>Missing data can create artificial breaks in IBD segments</li>
+                    <li>Genotyping errors can create false boundaries between IBD and non-IBD regions</li>
+                    <li>Phase errors can affect the detection of IBD1 versus IBD2 segments</li>
+                    <li>Reference population mismatches can lead to incorrect IBD likelihood calculations</li>
+                </ul>
+                <p>By implementing rigorous quality control, you're establishing the foundation for accurate IBD detection in subsequent analyses. The filtration steps you'll apply are specifically designed to minimize these impacts on IBD detection algorithms.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Lineage-Specific Quality Considerations</h4>
+                <p>Different types of genetic data have specific quality considerations for genealogical applications:</p>
+                <ul>
+                    <li><strong>Autosomal DNA</strong>: Requires comprehensive quality control due to recombination and complex inheritance patterns</li>
+                    <li><strong>X Chromosome</strong>: Needs sex-specific filtering approaches due to differential inheritance patterns in males and females</li>
+                    <li><strong>Y Chromosome</strong>: Male-specific markers require specialized quality metrics focused on haplogroup consistency</li>
+                    <li><strong>Mitochondrial DNA</strong>: Maternally inherited, typically requires higher read depth thresholds due to heteroplasmy</li>
+                </ul>
+                <p>The computational pipeline you'll implement in this lab focuses primarily on autosomal DNA, which provides the broadest information for genealogical reconstruction across all ancestral lines. However, the principles apply to all types of genetic data used in genealogy.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Confidence Metrics for Genealogical Inferences</h4>
+                <p>Quality control doesn't end with data filtering—it extends to quantifying uncertainty in downstream analyses:</p>
+                <ul>
+                    <li><strong>Segment Quality Scores</strong>: Confidence metrics for each detected IBD segment</li>
+                    <li><strong>Relationship Probability Distributions</strong>: Uncertainty estimates for inferred genealogical relationships</li>
+                    <li><strong>Multiple Testing Correction</strong>: Statistical approaches to account for the large number of comparisons in genetic genealogy</li>
+                </ul>
+                <p>By understanding the quality characteristics of your dataset, you can propagate this information to provide appropriate confidence levels for genealogical inferences. The codebase you're developing incorporates these uncertainty metrics throughout the analytical pipeline.</p>
+            </div>
+
+            <h3>Exercises</h3>
+            <div class="exercises-section">
+                <ol>
+                    <li>Compare quality filtering approaches in research versus consumer genetic testing contexts</li>
+                    <li>Discuss how data quality standards might differ for different genealogical applications (e.g., close relative identification versus distant cousin matching)</li>
+                    <li>Consider how quality control approaches might need to be adapted for genetic datasets from historically underrepresented populations</li>
+                    <li>Analyze how the balance between false positives and false negatives in relationship detection influences quality control decisions</li>
+                    <li>Calculate the expected impact of different missing data patterns on the ability to detect IBD segments of various lengths</li>
+                    <li>Design an experimental approach to quantify how different quality control thresholds affect the accuracy of relationship inference</li>
+                </ol>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> When working with real genetic data, always err on the side of more stringent quality filtering initially, then gradually relax criteria if needed. It's easier to recover data points that were unnecessarily filtered than to identify spurious relationships caused by poor quality data.</p>
+            </div>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Apply quality control methods to genetic data in this interactive notebook.</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This tutorial guides you through implementing and applying various quality control methods to the genetic dataset we've been working with.</p>
+                        <ol>
+                            <li>Click the "Open Lab 3 Notebook in JupyterLite" button below</li>
+                            <li>In the file browser that appears, click on "<strong>Lab3_Quality_Control.ipynb</strong>" to open this lab's notebook</li>
+                            <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
+                        </ol>
+                        <p>Your progress is automatically saved in your browser's storage.</p>
+                    </div>
+                    
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab3_Quality_Control.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 3 Notebook in JupyterLite
+                    </a>
+                </div>
+                
+                <div class="alert alert-info">
+                    <p><strong>Note:</strong> The interactive notebook automatically loads data from Lab 2 if you completed it. Your work is saved in your browser's storage between lab sessions.</p>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>Quality control in genetic genealogy connects to broader themes in data science and social science:</p>
+            <ul>
+                <li><strong>Data Provenance:</strong> Understanding the origins and quality of data is essential for responsible interpretation</li>
+                <li><strong>Statistical Literacy:</strong> Evaluating thresholds and metrics requires understanding statistical principles</li>
+                <li><strong>Research Ethics:</strong> Quality control decisions impact which individuals' genetic histories can be recovered</li>
+                <li><strong>Scientific Reproducibility:</strong> Transparent quality control protocols enable verification of genealogical findings</li>
+            </ul>
+            <p>As you implement quality control procedures, you're engaging with fundamental issues of data integrity that extend far beyond technical considerations.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the sequential learning track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Step 1</h5>
+                        <p>Environment Setup</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 2</h5>
+                        <p>Data Acquisition</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 3</h5>
+                        <p>Data Exploration</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 4</h5>
+                        <p>Data Processing</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Step 5</h5>
+                        <p>Quality Control</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 6</h5>
+                        <p>IBD Detection</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 7</h5>
+                        <p>Simulation</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Step 8</h5>
+                        <p>Pedigrees</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="lab-navigation">
+                <a href="lab2_process.html" class="prev-lab">Processing Raw DNA</a>
+                <a href="lab4_ibis.html" class="next-lab">IBD Detection with IBIS</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

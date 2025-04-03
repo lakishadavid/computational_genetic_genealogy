@@ -1,283 +1,282 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 3: Processing Raw DNA Profiles | Computational Genetic Genealogy</title>
-    <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-    <script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
-</head>
-<body class="textbook-page">
-    <header class="textbook-header">
-        <div class="container">
-            <h1>Computational Genetic Genealogy</h1>
-            <p>Processing Raw DNA Profiles</p>
-        </div>
-    </header>
+{% extends "../lab_lecture_template.html" %}
 
-    <nav class="textbook-nav">
-        <div class="container">
-            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
-            <a href="contents.html">Table of Contents</a>
-            <a href="lab2_process.html" class="active">Lab 2 process</a>
-        </div>
-    </nav>
+{% block title %}Lab 2: Processing Raw DNA Profiles | Computational Genetic Genealogy{% endblock %}
 
-    <main class="container">
-        <article class="section lab-content">
-            <h2>Lab 3: Processing Raw DNA Profiles</h2>
-            
-            <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> The transformation of personal genetic information from consumer formats to scientific standards represents a critical boundary crossing between commercial, personal, and scientific domains. This process embodies the interdisciplinary nature of genetic genealogy, bridging individual self-discovery with collective knowledge production while raising fundamental questions about data standardization, compatibility, and representation.</p>
-            </div>
+{% block css_path %}../styles.css{% endblock %}
 
-            <h3>Core Concepts</h3>
-            
-            <h4>The Cultural Life of Genetic Data</h4>
-            <p>Genetic data moves through different social worlds, each with its own practices, values, and ways of representing biological information. Consumer DNA testing companies, academic research institutions, and governmental databases represent distinct knowledge communities with different priorities that shape how genetic information is formatted and interpreted.</p>
-            
-            <p>The journey of genetic data typically follows this path:</p>
-            <ul>
-                <li><strong>Collection</strong>: A highly personal process where individuals provide biological samples, often motivated by curiosity about ancestry or health</li>
-                <li><strong>Commercial Processing</strong>: Companies analyze these samples using proprietary genotyping arrays, focusing on markers relevant to their specific products</li>
-                <li><strong>Personal Delivery</strong>: Results are formatted for individual consumption, often emphasizing identity narratives and simplified interpretations</li>
-                <li><strong>Scientific Transformation</strong>: When consumers share their data, it undergoes reformatting to meet scientific standards, enabling integration with broader knowledge systems</li>
-                <li><strong>Research Utilization</strong>: The standardized data becomes part of collective knowledge production, informing understanding of human genetic relationships</li>
-            </ul>
-            
-            <p>Each stage in this journey involves not just technical transformations but also shifts in meaning, ownership, and purpose. When we convert consumer formats to VCF files, we're not simply changing file types—we're translating between different ways of knowing and using genetic information.</p>
+{% block extra_head %}
+<link rel="stylesheet" href="../jupyterlite/css/jupyterlite-integration.css">
+<script src="../jupyterlite/js/jupyterlite-integration.js" defer></script>
+{% endblock %}
 
-            <h4>The Language of Genetic Files</h4>
-            <p>File formats are never neutral vessels for information—they embody specific assumptions, priorities, and epistemological frameworks. The differences between consumer DNA formats and scientific standards like VCF reflect fundamentally different orientations toward genetic data:</p>
-            
-            <p><strong>Consumer Formats</strong> typically prioritize:</p>
-            <ul>
-                <li>Individual-centrism: Focusing on single-person results</li>
-                <li>Interpretive simplicity: Emphasizing genotypes without contextual ambiguities</li>
-                <li>Selective marker inclusion: Highlighting markers relevant to ancestry or health products</li>
-                <li>Proprietary organization: Creating company-specific conventions that may enhance product differentiation</li>
-                <li>End-user accessibility: Structuring files to be comprehensible to non-specialists</li>
-            </ul>
-            
-            <p><strong>Scientific Formats</strong> like VCF typically prioritize:</p>
-            <ul>
-                <li>Population perspective: Enabling multi-individual analysis</li>
-                <li>Technical completeness: Including metadata about confidence, coverage, and reference alignment</li>
-                <li>Comprehensive representation: Documenting all variation regardless of immediate utility</li>
-                <li>Standardized structure: Following community conventions to ensure interoperability</li>
-                <li>Analytical flexibility: Supporting diverse computational approaches and research questions</li>
-            </ul>
-            
-            <p>These different priorities create translation challenges that go beyond technical conversion issues. When transforming between formats, we negotiate between different understandings of what genetic information is for and how it should be structured to serve different knowledge communities.</p>
+{% block body_class %}textbook-page{% endblock %}
 
-            <h3>Technical Foundations</h3>
-            
-            <h4>Genomic Reference Systems</h4>
-            <p>The concept of a genomic reference system is fundamental to understanding genetic variation. All descriptions of genetic markers depend on a shared reference point—a standardized genome sequence against which variations are described. This reference-based approach has profound implications for how we understand genetic diversity:</p>
-            
-            <p>References are not neutral representations but historically and culturally situated artifacts:</p>
-            <ul>
-                <li>Early reference genomes were derived primarily from individuals of European ancestry</li>
-                <li>Reference genomes represent a composite that doesn't correspond to any actual human genome</li>
-                <li>The choice of what is "reference" and what is "alternate" reflects implicit assumptions about normality</li>
-                <li>Different reference versions (GRCh37/hg19 versus GRCh38) represent evolving scientific consensus</li>
-            </ul>
-            
-            <p>These reference systems shape whose genetic variation is considered "standard" and whose is considered "divergent." When we convert between reference systems (through processes like liftover), we're navigating between different frameworks for understanding human diversity.</p>
+{% block header_class %}textbook-header{% endblock %}
+{% block header_container_class %}container{% endblock %}
+{% block header_title %}Computational Genetic Genealogy{% endblock %}
+{% block header_subtitle %}Processing Raw DNA Profiles{% endblock %}
+{% block header_content %}{% endblock %}
 
-            <h4>The VCF Standard: Technical and Social Design</h4>
-            <p>The Variant Call Format (VCF) represents a community-developed standard for representing genetic variation. Its design reflects both technical needs and social values within the scientific community:</p>
-            
-            <p>Key technical features include:</p>
-            <ul>
-                <li><strong>Reference-Based Description</strong>: Variations are described relative to a reference genome</li>
-                <li><strong>Rich Metadata</strong>: The format includes extensive header information documenting data provenance and processing</li>
-                <li><strong>Flexible Annotation</strong>: The INFO field allows arbitrary annotations about variants</li>
-                <li><strong>Sample Scalability</strong>: The format efficiently handles from one to thousands of samples</li>
-                <li><strong>Genotype Representation</strong>: The GT field uses a numeric system to represent genotypes relative to reference/alternate alleles</li>
-            </ul>
-            
-            <p>These technical features embody social values such as:</p>
-            <ul>
-                <li>Scientific transparency and reproducibility</li>
-                <li>Community standardization over proprietary systems</li>
-                <li>Extensibility to accommodate diverse research needs</li>
-                <li>Computational efficiency to democratize access to genomic analysis</li>
-            </ul>
-            
-            <p>Understanding these dimensions helps us appreciate that converting to VCF isn't just a technical necessity—it's participating in a particular scientific culture with its own values and practices.</p>
+{% block nav_class %}textbook-nav{% endblock %}
+{% block nav_content %}
+<a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+<a href="contents.html">Table of Contents</a>
+<a href="lab2_process.html" class="active">Lab 2 process</a>
+{% endblock %}
 
-            <h3>Practical Approaches</h3>
-            
-            <h4>The Translation Process</h4>
-            <p>Converting consumer genetic data to scientific formats involves several key steps, each with its own challenges and decision points:</p>
-            
-            <p><strong>Format Identification</strong>: Different companies use distinct formats, requiring adaptive parsing approaches. This diversity reflects the commercial ecosystem of genetic testing, where standardization has not been prioritized.</p>
-            
-            <p><strong>Coordinate Standardization</strong>: Ensuring genetic markers are described using consistent genomic coordinates often requires reference lookups or conversion processes. This standardization represents a form of situated knowledge that depends on community-maintained resources.</p>
-            
-            <p><strong>Reference Allele Determination</strong>: Converting between genotype representations (e.g., "AA" versus "0/0") requires determining which allele is considered "reference." This step embodies assumptions about what genetic variants are considered standard versus alternate.</p>
-            
-            <p><strong>Data Integration</strong>: Merging multiple profiles requires resolving differences in marker coverage, handling missing data, and ensuring sample identifiers are consistent. This integration process reflects values about data completeness and compatibility.</p>
-            
-            <p>Each of these steps involves not just technical operations but also implicit decisions about how genetic information should be represented and what aspects of that information are considered essential.</p>
+{% block lab_title %}Lab 2: Processing Raw DNA Profiles{% endblock %}
 
-            <h4>Technical Artifacts and Their Implications</h4>
-            <p>The conversion process can introduce various technical artifacts that have implications for downstream analysis and interpretation:</p>
-            
-            <p><strong>Marker Filtering</strong>: Not all markers in consumer tests can be mapped to reference genomes or scientific standards, leading to data loss that may differentially affect individuals from underrepresented populations.</p>
-            
-            <p><strong>Reference Bias</strong>: Using a standard reference genome can make variants common in some populations appear as "alternate" alleles, potentially influencing statistical analyses.</p>
-            
-            <p><strong>Genotype Uncertainty</strong>: The conversion process may not capture the confidence levels or read depth information that informs genotype calls.</p>
-            
-            <p><strong>Platform Differences</strong>: Different testing companies use different marker sets, creating systematic differences in coverage that can affect relationship detection.</p>
-            
-            <p>Being aware of these artifacts helps us interpret results with appropriate caution and understand the limitations of converted genetic data.</p>
+{% block why_this_matters %}
+<div class="alert alert-info">
+    <p><strong>Why This Matters:</strong> The transformation of personal genetic information from consumer formats to scientific standards represents a critical boundary crossing between commercial, personal, and scientific domains. This process embodies the interdisciplinary nature of genetic genealogy, bridging individual self-discovery with collective knowledge production while raising fundamental questions about data standardization, compatibility, and representation.</p>
+</div>
+{% endblock %}
 
-            <h3>Broader Context</h3>
-            
-            <h4>Standardization and Power</h4>
-            <p>The process of standardizing genetic data raises important questions about power, representation, and whose interests are served by particular data standards:</p>
-            
-            <p>Standards like VCF were developed primarily within academic and governmental research contexts, reflecting the priorities and perspectives of these institutions. Commercial testing companies have developed their own standards optimized for their business models and consumer products.</p>
-            
-            <p>The tension between these different standardization approaches reflects broader questions about:</p>
-            <ul>
-                <li>Who has the authority to define how genetic information should be represented?</li>
-                <li>Whose uses of genetic information are prioritized in different standards?</li>
-                <li>How do standards create barriers or bridges between different communities?</li>
-                <li>How might standards evolve to better serve diverse community needs?</li>
-            </ul>
-            
-            <p>These questions remind us that seemingly technical decisions about file formats and data structures have political and ethical dimensions that affect whose genetic histories can be effectively studied and represented.</p>
+{% block core_concepts %}
+<h4>The Cultural Life of Genetic Data</h4>
+<p>Genetic data moves through different social worlds, each with its own practices, values, and ways of representing biological information. Consumer DNA testing companies, academic research institutions, and governmental databases represent distinct knowledge communities with different priorities that shape how genetic information is formatted and interpreted.</p>
 
-            <h4>Personal Data in Scientific Context</h4>
-            <p>The conversion of personal genetic profiles to scientific formats represents a significant transformation in how this information is conceptualized and used:</p>
-            
-            <p>In consumer contexts, genetic data is framed as personal property—something individuals own and can choose to share. The scientific framing often positions this same information as a contribution to collective knowledge production.</p>
-            
-            <p>This transition raises important ethical questions:</p>
-            <ul>
-                <li>How should individual control over genetic information be balanced with scientific needs for standardization?</li>
-                <li>What happens to personal meanings and narratives when genetic data is transformed into scientific formats?</li>
-                <li>How can we ensure that individuals who share their genetic data understand how it will be used in scientific contexts?</li>
-                <li>What responsibilities do researchers have to individuals whose genetic information they analyze?</li>
-            </ul>
-            
-            <p>As anthropologists, we need to be attentive to these transitions between personal and scientific domains, recognizing that genetic information carries different meanings and implications in different contexts.</p>
+<p>The journey of genetic data typically follows this path:</p>
+<ul>
+    <li><strong>Collection</strong>: A highly personal process where individuals provide biological samples, often motivated by curiosity about ancestry or health</li>
+    <li><strong>Commercial Processing</strong>: Companies analyze these samples using proprietary genotyping arrays, focusing on markers relevant to their specific products</li>
+    <li><strong>Personal Delivery</strong>: Results are formatted for individual consumption, often emphasizing identity narratives and simplified interpretations</li>
+    <li><strong>Scientific Transformation</strong>: When consumers share their data, it undergoes reformatting to meet scientific standards, enabling integration with broader knowledge systems</li>
+    <li><strong>Research Utilization</strong>: The standardized data becomes part of collective knowledge production, informing understanding of human genetic relationships</li>
+</ul>
 
-            <div class="exercises-section">
-                <h3>Exercises</h3>
+<p>Each stage in this journey involves not just technical transformations but also shifts in meaning, ownership, and purpose. When we convert consumer formats to VCF files, we're not simply changing file types—we're translating between different ways of knowing and using genetic information.</p>
+
+<h4>The Language of Genetic Files</h4>
+<p>File formats are never neutral vessels for information—they embody specific assumptions, priorities, and epistemological frameworks. The differences between consumer DNA formats and scientific standards like VCF reflect fundamentally different orientations toward genetic data:</p>
+
+<p><strong>Consumer Formats</strong> typically prioritize:</p>
+<ul>
+    <li>Individual-centrism: Focusing on single-person results</li>
+    <li>Interpretive simplicity: Emphasizing genotypes without contextual ambiguities</li>
+    <li>Selective marker inclusion: Highlighting markers relevant to ancestry or health products</li>
+    <li>Proprietary organization: Creating company-specific conventions that may enhance product differentiation</li>
+    <li>End-user accessibility: Structuring files to be comprehensible to non-specialists</li>
+</ul>
+
+<p><strong>Scientific Formats</strong> like VCF typically prioritize:</p>
+<ul>
+    <li>Population perspective: Enabling multi-individual analysis</li>
+    <li>Technical completeness: Including metadata about confidence, coverage, and reference alignment</li>
+    <li>Comprehensive representation: Documenting all variation regardless of immediate utility</li>
+    <li>Standardized structure: Following community conventions to ensure interoperability</li>
+    <li>Analytical flexibility: Supporting diverse computational approaches and research questions</li>
+</ul>
+
+<p>These different priorities create translation challenges that go beyond technical conversion issues. When transforming between formats, we negotiate between different understandings of what genetic information is for and how it should be structured to serve different knowledge communities.</p>
+{% endblock %}
+
+{% block theoretical_foundations %}
+<h4>Genomic Reference Systems</h4>
+<p>The concept of a genomic reference system is fundamental to understanding genetic variation. All descriptions of genetic markers depend on a shared reference point—a standardized genome sequence against which variations are described. This reference-based approach has profound implications for how we understand genetic diversity:</p>
+
+<p>References are not neutral representations but historically and culturally situated artifacts:</p>
+<ul>
+    <li>Early reference genomes were derived primarily from individuals of European ancestry</li>
+    <li>Reference genomes represent a composite that doesn't correspond to any actual human genome</li>
+    <li>The choice of what is "reference" and what is "alternate" reflects implicit assumptions about normality</li>
+    <li>Different reference versions (GRCh37/hg19 versus GRCh38) represent evolving scientific consensus</li>
+</ul>
+
+<p>These reference systems shape whose genetic variation is considered "standard" and whose is considered "divergent." When we convert between reference systems (through processes like liftover), we're navigating between different frameworks for understanding human diversity.</p>
+
+<h4>The VCF Standard: Technical and Social Design</h4>
+<p>The Variant Call Format (VCF) represents a community-developed standard for representing genetic variation. Its design reflects both technical needs and social values within the scientific community:</p>
+
+<p>Key technical features include:</p>
+<ul>
+    <li><strong>Reference-Based Description</strong>: Variations are described relative to a reference genome</li>
+    <li><strong>Rich Metadata</strong>: The format includes extensive header information documenting data provenance and processing</li>
+    <li><strong>Flexible Annotation</strong>: The INFO field allows arbitrary annotations about variants</li>
+    <li><strong>Sample Scalability</strong>: The format efficiently handles from one to thousands of samples</li>
+    <li><strong>Genotype Representation</strong>: The GT field uses a numeric system to represent genotypes relative to reference/alternate alleles</li>
+</ul>
+
+<p>These technical features embody social values such as:</p>
+<ul>
+    <li>Scientific transparency and reproducibility</li>
+    <li>Community standardization over proprietary systems</li>
+    <li>Extensibility to accommodate diverse research needs</li>
+    <li>Computational efficiency to democratize access to genomic analysis</li>
+</ul>
+
+<p>Understanding these dimensions helps us appreciate that converting to VCF isn't just a technical necessity—it's participating in a particular scientific culture with its own values and practices.</p>
+{% endblock %}
+
+{% block implementation_details %}
+<h4>The Translation Process</h4>
+<p>Converting consumer genetic data to scientific formats involves several key steps, each with its own challenges and decision points:</p>
+
+<p><strong>Format Identification</strong>: Different companies use distinct formats, requiring adaptive parsing approaches. This diversity reflects the commercial ecosystem of genetic testing, where standardization has not been prioritized.</p>
+
+<p><strong>Coordinate Standardization</strong>: Ensuring genetic markers are described using consistent genomic coordinates often requires reference lookups or conversion processes. This standardization represents a form of situated knowledge that depends on community-maintained resources.</p>
+
+<p><strong>Reference Allele Determination</strong>: Converting between genotype representations (e.g., "AA" versus "0/0") requires determining which allele is considered "reference." This step embodies assumptions about what genetic variants are considered standard versus alternate.</p>
+
+<p><strong>Data Integration</strong>: Merging multiple profiles requires resolving differences in marker coverage, handling missing data, and ensuring sample identifiers are consistent. This integration process reflects values about data completeness and compatibility.</p>
+
+<p>Each of these steps involves not just technical operations but also implicit decisions about how genetic information should be represented and what aspects of that information are considered essential.</p>
+
+<h4>Technical Artifacts and Their Implications</h4>
+<p>The conversion process can introduce various technical artifacts that have implications for downstream analysis and interpretation:</p>
+
+<p><strong>Marker Filtering</strong>: Not all markers in consumer tests can be mapped to reference genomes or scientific standards, leading to data loss that may differentially affect individuals from underrepresented populations.</p>
+
+<p><strong>Reference Bias</strong>: Using a standard reference genome can make variants common in some populations appear as "alternate" alleles, potentially influencing statistical analyses.</p>
+
+<p><strong>Genotype Uncertainty</strong>: The conversion process may not capture the confidence levels or read depth information that informs genotype calls.</p>
+
+<p><strong>Platform Differences</strong>: Different testing companies use different marker sets, creating systematic differences in coverage that can affect relationship detection.</p>
+
+<p>Being aware of these artifacts helps us interpret results with appropriate caution and understand the limitations of converted genetic data.</p>
+{% endblock %}
+
+{% block application %}
+<h4>Standardization and Power</h4>
+<p>The process of standardizing genetic data raises important questions about power, representation, and whose interests are served by particular data standards:</p>
+
+<p>Standards like VCF were developed primarily within academic and governmental research contexts, reflecting the priorities and perspectives of these institutions. Commercial testing companies have developed their own standards optimized for their business models and consumer products.</p>
+
+<p>The tension between these different standardization approaches reflects broader questions about:</p>
+<ul>
+    <li>Who has the authority to define how genetic information should be represented?</li>
+    <li>Whose uses of genetic information are prioritized in different standards?</li>
+    <li>How do standards create barriers or bridges between different communities?</li>
+    <li>How might standards evolve to better serve diverse community needs?</li>
+</ul>
+
+<p>These questions remind us that seemingly technical decisions about file formats and data structures have political and ethical dimensions that affect whose genetic histories can be effectively studied and represented.</p>
+
+<h4>Personal Data in Scientific Context</h4>
+<p>The conversion of personal genetic profiles to scientific formats represents a significant transformation in how this information is conceptualized and used:</p>
+
+<p>In consumer contexts, genetic data is framed as personal property—something individuals own and can choose to share. The scientific framing often positions this same information as a contribution to collective knowledge production.</p>
+
+<p>This transition raises important ethical questions:</p>
+<ul>
+    <li>How should individual control over genetic information be balanced with scientific needs for standardization?</li>
+    <li>What happens to personal meanings and narratives when genetic data is transformed into scientific formats?</li>
+    <li>How can we ensure that individuals who share their genetic data understand how it will be used in scientific contexts?</li>
+    <li>What responsibilities do researchers have to individuals whose genetic information they analyze?</li>
+</ul>
+
+<p>As anthropologists, we need to be attentive to these transitions between personal and scientific domains, recognizing that genetic information carries different meanings and implications in different contexts.</p>
+{% endblock %}
+
+{% block exercises %}
+<div class="exercises-section">
+    <h4>Exercises</h4>
+    <ol>
+        <li>Compare the documentation provided with different consumer testing formats and analyze what priorities and assumptions are reflected in their design</li>
+        <li>Consider how the representation of your own genetic information might change as it moves from consumer to scientific formats</li>
+        <li>Analyze which populations might be disadvantaged by current approaches to standardizing genetic data</li>
+        <li>Reflect on how anthropological perspectives might inform the development of more inclusive genetic data standards</li>
+        <li>Discuss how the technical aspects of format conversion might affect our ability to trace genetic connections in historically marginalized communities</li>
+        <li>Consider how the separation of genetic data from personal narratives in scientific formats might influence research approaches and outcomes</li>
+    </ol>
+</div>
+{% endblock %}
+
+{% block tips %}
+<div class="alert alert-success">
+    <p><strong>Tip:</strong> When converting between data formats, remember that you're not just performing a technical operation—you're mediating between different knowledge systems with their own priorities and assumptions. Being attentive to what might be lost or transformed in this process helps maintain awareness of the situated nature of all genetic data representations.</p>
+</div>
+{% endblock %}
+
+{% block interactive_lab %}
+<div class="jupyter-integration">
+    <p>Process raw DNA data interactively in your browser! This lab builds on concepts from Lab 1.</p>
+    
+    <div class="jupyterlite-container">
+        <div class="jupyterlite-info">
+            <h4>Browser-Based Processing</h4>
+            <p>This notebook automatically loads your data from Lab 1 (if completed) and guides you through processing raw DNA profiles from consumer testing companies.</p>
             <ol>
-                <li>Compare the documentation provided with different consumer testing formats and analyze what priorities and assumptions are reflected in their design</li>
-                <li>Consider how the representation of your own genetic information might change as it moves from consumer to scientific formats</li>
-                <li>Analyze which populations might be disadvantaged by current approaches to standardizing genetic data</li>
-                <li>Reflect on how anthropological perspectives might inform the development of more inclusive genetic data standards</li>
-                <li>Discuss how the technical aspects of format conversion might affect our ability to trace genetic connections in historically marginalized communities</li>
-                <li>Consider how the separation of genetic data from personal narratives in scientific formats might influence research approaches and outcomes</li>
+                <li>Click the "Open Lab 2 Notebook in JupyterLite" button below</li>
+                <li>In the file browser that appears, click on "<strong>lab2_processing.ipynb</strong>" to open this lab's notebook</li>
+                <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
             </ol>
-            </div>
-
-            <div class="alert alert-success">
-                <p><strong>Tip:</strong> When converting between data formats, remember that you're not just performing a technical operation—you're mediating between different knowledge systems with their own priorities and assumptions. Being attentive to what might be lost or transformed in this process helps maintain awareness of the situated nature of all genetic data representations.</p>
-            </div>
-            
-            <div class="learning-pathway">
-                <p>This lab is part of the sequential learning track:</p>
-                <div class="pathway-steps">
-                    <div class="pathway-step">
-                        <h5>Step 1</h5>
-                        <p>Environment Setup</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 2</h5>
-                        <p>Data Acquisition</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 3</h5>
-                        <p>Data Exploration</p>
-                    </div>
-                    <div class="pathway-step active">
-                        <h5>Step 4</h5>
-                        <p>Data Processing</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 5</h5>
-                        <p>Quality Control</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 6</h5>
-                        <p>IBD Detection</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 7</h5>
-                        <p>Simulation</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 8</h5>
-                        <p>Pedigrees</p>
-                    </div>
-                </div>
-            </div>
-            
-            <h3>Interactive Lab Environment</h3>
-            
-            <div class="jupyter-integration">
-                <p>Process raw DNA data interactively in your browser! This lab builds on concepts from Lab 1.</p>
-                
-                <div class="jupyterlite-container">
-                    
-                    <div class="jupyterlite-info">
-                        <h4>Browser-Based Processing</h4>
-                        <p>This notebook automatically loads your data from Lab 1 (if completed) and guides you through processing raw DNA profiles from consumer testing companies.</p>
-                        <ol>
-                            <li>Click the "Open Lab 2 Notebook in JupyterLite" button below</li>
-                            <li>In the file browser that appears, click on "<strong>lab2_processing.ipynb</strong>" to open this lab's notebook</li>
-                            <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
-                        </ol>
-                        <p>Your progress is automatically saved in your browser's storage.</p>
-                    </div>
-                    
-                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab2_Process_Raw_DNA_profile.ipynb"
-                       class="open-jupyterlite-link"
-                       target="_blank"
-                       role="button">
-                        Open Lab 2 Notebook in JupyterLite
-                    </a>
-                </div>
-                
-                <div class="alert alert-info">
-                    <p><strong>Note:</strong> The interactive notebook automatically loads data from Lab 1 if you completed it. Your work is saved in your browser's storage between lab sessions.</p>
-                </div>
-            </div>
-            
-            <h3>Beyond the Code</h3>
-            <p>As you work through the coding exercises in this lab, keep in mind these deeper concepts:</p>
-            <ul>
-                <li><strong>Data Integrity:</strong> Careful processing ensures genetic data maintains its biological significance while being computationally accessible</li>
-                <li><strong>Format Conversion:</strong> Understanding the relationship between different data formats reflects the balance between human readability and computational efficiency</li>
-                <li><strong>Reference Alignment:</strong> Placing individual variants in genomic context connects personal genetic data to the broader human genetic landscape</li>
-                <li><strong>Normalization:</strong> Standardizing genetic data makes individual profiles comparable across populations and genealogical analyses</li>
-            </ul>
-            <p>These conceptual frameworks help you understand that data processing is not just a technical necessity but a critical step in making genetic information interpretable for genealogical analysis.</p>
-            
-            <div class="lab-navigation">
-                <a href="lab1_exploring.html" class="prev-lab">Exploring Data</a>
-                <a href="lab3_qc.html" class="next-lab">Quality Control</a>
-            </div>
-        </article>
-    </main>
-
-    <footer class="textbook-footer">
-        <div class="container">
-            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+            <p>Your progress is automatically saved in your browser's storage.</p>
         </div>
-    </footer>
-</body>
-</html>
+        
+        <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab2_Process_Raw_DNA_profile.ipynb"
+           class="open-jupyterlite-link"
+           target="_blank"
+           role="button">
+            Open Lab 2 Notebook in JupyterLite
+        </a>
+    </div>
+    
+    <div class="alert alert-info">
+        <p><strong>Note:</strong> The interactive notebook automatically loads data from Lab 1 if you completed it. Your work is saved in your browser's storage between lab sessions.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block beyond_code %}
+<p>As you work through the coding exercises in this lab, keep in mind these deeper concepts:</p>
+<ul>
+    <li><strong>Data Integrity:</strong> Careful processing ensures genetic data maintains its biological significance while being computationally accessible</li>
+    <li><strong>Format Conversion:</strong> Understanding the relationship between different data formats reflects the balance between human readability and computational efficiency</li>
+    <li><strong>Reference Alignment:</strong> Placing individual variants in genomic context connects personal genetic data to the broader human genetic landscape</li>
+    <li><strong>Normalization:</strong> Standardizing genetic data makes individual profiles comparable across populations and genealogical analyses</li>
+</ul>
+<p>These conceptual frameworks help you understand that data processing is not just a technical necessity but a critical step in making genetic information interpretable for genealogical analysis.</p>
+{% endblock %}
+
+{% block learning_pathway %}
+<div class="learning-pathway">
+    <p>This lab is part of the sequential learning track:</p>
+    <div class="pathway-steps">
+        <div class="pathway-step">
+            <h5>Step 1</h5>
+            <p>Environment Setup</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 2</h5>
+            <p>Data Acquisition</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 3</h5>
+            <p>Data Exploration</p>
+        </div>
+        <div class="pathway-step active">
+            <h5>Step 4</h5>
+            <p>Data Processing</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 5</h5>
+            <p>Quality Control</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 6</h5>
+            <p>IBD Detection</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 7</h5>
+            <p>Simulation</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 8</h5>
+            <p>Pedigrees</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block lab_navigation %}
+<div class="lab-navigation">
+    <a href="lab1_exploring.html" class="prev-lab">Exploring Data</a>
+    <a href="lab3_qc.html" class="next-lab">Quality Control</a>
+</div>
+{% endblock %}
+
+{% block footer_class %}textbook-footer{% endblock %}
+{% block footer_content %}
+<p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+{% endblock %}

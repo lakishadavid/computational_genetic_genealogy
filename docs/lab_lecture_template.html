@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Computational Genetic Genealogy{% endblock %}</title>
+    <link rel="stylesheet" href="{% block css_path %}styles.css{% endblock %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <!-- Header Section -->
+    {% block header %}
+    <header class="{% block header_class %}hero{% endblock %}">
+        <div class="{% block header_container_class %}hero-content{% endblock %}">
+            <h1>{% block header_title %}ANTH 499: Computational Genetic Genealogy{% endblock %}</h1>
+            <p class="{% block subtitle_class %}hero-subtitle{% endblock %}">{% block header_subtitle %}Beloved African Genetic Genealogy Lab{% endblock %}</p>
+            {% block header_content %}
+            <p class="hero-description">Explore human lineage and kinship through the power of computational genetic genealogy.</p>
+            <div class="hero-attribution">
+                <span>Dr. LaKisha David</span>
+                <span>Assistant Professor</span>
+                <span>Department of Anthropology</span>
+                <span>University of Illinois Urbana-Champaign</span>
+            </div>
+            {% endblock %}
+        </div>
+    </header>
+    {% endblock %}
+
+    <!-- Navigation -->
+    {% block navigation %}
+    <nav class="{% block nav_class %}navbar{% endblock %}">
+        <div class="container">
+            {% block nav_content %}
+            <div class="logo">
+                <a href="https://www.takir.org" target="_blank">TAKiR</a>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#course">Course Info</a></li>
+                <li><a href="#structure">Structure</a></li>
+                <li><a href="#labs">Labs</a></li>
+                <li><a href="https://github.com/lakishadavid/computational_genetic_genealogy" target="_blank">GitHub</a></li>
+                <li><a href="https://anthro.illinois.edu/directory/profile/ltdavid2" target="_blank">Dr. David</a></li>
+            </ul>
+            {% endblock %}
+        </div>
+    </nav>
+    {% endblock %}
+
+    <!-- Main Content -->
+    <main class="container">
+        {% block main_content %}
+        <!-- Main page content blocks -->
+        
+        <!-- 1. Introduction Section -->
+        {% block introduction %}
+        <article class="section lab-content">
+            <h2>{% block lab_title %}Lab Title{% endblock %}</h2>
+            
+            {% block why_this_matters %}
+            <div class="alert alert-info">
+                <p><strong>Why This Matters:</strong> Importance explanation goes here.</p>
+            </div>
+            {% endblock %}
+            
+            {% block learning_objectives %}
+            <!-- Learning objectives content -->
+            {% endblock %}
+        </article>
+        {% endblock %}
+        
+        <!-- 2. Theoretical Foundations Section -->
+        {% block theoretical_foundations %}
+        <section class="section">
+            <h3>Theoretical Foundations</h3>
+            
+            {% block core_concepts %}
+            <h4>Core Concepts</h4>
+            <!-- Core concepts content -->
+            {% endblock %}
+            
+            {% block analytical_frameworks %}
+            <h4>Analytical Frameworks</h4>
+            <!-- Analytical frameworks content -->
+            {% endblock %}
+            
+            {% block probabilistic_models %}
+            <h4>Probabilistic Models</h4>
+            <!-- Probabilistic models content -->
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        <!-- 3. Implementation Details Section -->
+        {% block implementation_details %}
+        <section class="section">
+            <h3>Implementation Details</h3>
+            
+            {% block lab_to_production %}
+            <h4>From Lab to Production</h4>
+            <!-- Lab to production comparison content -->
+            {% endblock %}
+            
+            {% block algorithmic_approaches %}
+            <h4>Algorithmic Approaches</h4>
+            <!-- Algorithmic approaches content -->
+            {% endblock %}
+            
+            {% block data_structures %}
+            <h4>Data Structures</h4>
+            <!-- Data structures content -->
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        <!-- 4. Application to Genetic Genealogy Section -->
+        {% block application %}
+        <section class="section">
+            <h3>Application to Genetic Genealogy</h3>
+            
+            {% block practical_examples %}
+            <h4>Practical Examples</h4>
+            <!-- Practical examples content -->
+            {% endblock %}
+            
+            {% block case_studies %}
+            <h4>Case Studies</h4>
+            <!-- Case studies content -->
+            {% endblock %}
+            
+            {% block performance %}
+            <h4>Performance Considerations</h4>
+            <!-- Performance considerations content -->
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        <!-- 5. Hands-on Practice Section -->
+        {% block hands_on %}
+        <section class="section">
+            <h3>Hands-on Practice</h3>
+            
+            {% block interactive_lab %}
+            <div class="jupyter-integration">
+                <p>Interactive lab description goes here.</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>Instructions for using the notebook.</p>
+                        <ol>
+                            <li>Click the "Open Lab Notebook in JupyterLite" button below</li>
+                            <li>In the file browser that appears, click on the notebook file to open it</li>
+                            <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
+                        </ol>
+                        <p>Your progress is automatically saved in your browser's storage.</p>
+                    </div>
+                    
+                    <a href="{% block jupyterlite_link %}#{% endblock %}"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab Notebook in JupyterLite
+                    </a>
+                </div>
+                
+                <div class="alert alert-info">
+                    <p><strong>Note:</strong> The interactive notebook automatically loads data from previous labs if you completed them. Your work is saved in your browser's storage between lab sessions.</p>
+                </div>
+            </div>
+            {% endblock %}
+            
+            {% block exercises %}
+            <div class="exercises-section">
+                <h4>Exercises</h4>
+                <ol>
+                    <!-- Exercise items go here -->
+                </ol>
+            </div>
+            {% endblock %}
+            
+            {% block code_examples %}
+            <div class="code-examples">
+                <h4>Code Examples</h4>
+                <!-- Code examples content -->
+            </div>
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        <!-- 6. Extension and Context Section -->
+        {% block extension_context %}
+        <section class="section">
+            <h3>Extension and Context</h3>
+            
+            {% block beyond_code %}
+            <h4>Beyond the Code</h4>
+            <!-- Beyond the code content -->
+            {% endblock %}
+            
+            {% block ethical_considerations %}
+            <h4>Ethical Considerations</h4>
+            <!-- Ethical considerations content -->
+            {% endblock %}
+            
+            {% block research_applications %}
+            <h4>Research Applications</h4>
+            <!-- Research applications content -->
+            {% endblock %}
+            
+            {% block tips %}
+            <div class="alert alert-success">
+                <p><strong>Tip:</strong> Helpful advice or best practices go here.</p>
+            </div>
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        <!-- 7. Summary and Next Steps Section -->
+        {% block summary_next_steps %}
+        <section class="section">
+            <h3>Summary and Next Steps</h3>
+            
+            {% block key_takeaways %}
+            <h4>Key Takeaways</h4>
+            <!-- Key takeaways content -->
+            {% endblock %}
+            
+            {% block learning_pathway %}
+            <div class="learning-pathway">
+                <p>This lab is part of the learning pathway:</p>
+                <div class="pathway-steps">
+                    <!-- Pathway steps go here -->
+                </div>
+            </div>
+            {% endblock %}
+            
+            {% block lab_navigation %}
+            <div class="lab-navigation">
+                <a href="{% block prev_lab %}#{% endblock %}" class="prev-lab">Previous Lab</a>
+                <a href="{% block next_lab %}#{% endblock %}" class="next-lab">Next Lab</a>
+            </div>
+            {% endblock %}
+        </section>
+        {% endblock %}
+        
+        {% endblock %}
+    </main>
+
+    <!-- Footer -->
+    {% block footer %}
+    <footer class="{% block footer_class %}{% endblock %}">
+        <div class="container">
+            {% block footer_content %}
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>ANTH 499</h3>
+                    <p>University of Illinois Urbana-Champaign</p>
+                    <p>Department of Anthropology</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="https://anthro.illinois.edu/" target="_blank">Anthropology Department</a></li>
+                        <li><a href="https://anthro.illinois.edu/directory/profile/ltdavid2" target="_blank">Dr. LaKisha David</a></li>
+                        <li><a href="https://www.takir.org/" target="_blank">TAKIR</a></li>
+                        <li><a href="textbook/contents.html">Course Textbook</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact</h4>
+                    <p><i class="fas fa-envelope"></i> Email: <a href="mailto:ltdavid2@illinois.edu">ltdavid2@illinois.edu</a></p>
+                </div>
+            </div>
+            {% endblock %}
+            <div class="footer-bottom">
+                <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+            </div>
+        </div>
+    </footer>
+    {% endblock %}
+
+    <!-- Core JavaScript -->
+    {% block core_scripts %}
+    <script>
+        // Navigation toggle for mobile
+        document.addEventListener('DOMContentLoaded', function() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.querySelector('.nav-menu');
+
+            if (navToggle) {
+                navToggle.addEventListener('click', function() {
+                    navMenu.classList.toggle('show');
+                });
+            }
+        });
+    </script>
+    {% endblock %}
+
+    <!-- Additional JavaScript -->
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

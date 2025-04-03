@@ -1,220 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lab 1: Exploring Genomic Data | Computational Genetic Genealogy</title>
-    <link rel="stylesheet" href="../styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
-</head>
-<body class="textbook-page">
-    <header class="textbook-header">
-        <div class="container">
-            <h1>Computational Genetic Genealogy</h1>
-            <p>Exploring Population Genomic Data</p>
+{% extends "../lab_lecture_template.html" %}
+
+{% block title %}Lab 1: Exploring Genomic Data | Computational Genetic Genealogy{% endblock %}
+
+{% block css_path %}../styles.css{% endblock %}
+
+{% block body_class %}textbook-page{% endblock %}
+
+{% block header_class %}textbook-header{% endblock %}
+{% block header_container_class %}container{% endblock %}
+{% block header_title %}Computational Genetic Genealogy{% endblock %}
+{% block header_subtitle %}Exploring Population Genomic Data{% endblock %}
+{% block header_content %}{% endblock %}
+
+{% block nav_class %}textbook-nav{% endblock %}
+{% block nav_content %}
+<a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+<a href="contents.html">Table of Contents</a>
+<a href="lab1_exploring.html" class="active">Lab 1 exploring</a>
+{% endblock %}
+
+{% block lab_title %}Lab 1: Exploring Population Genomic Data{% endblock %}
+
+{% block why_this_matters %}
+<div class="alert alert-info">
+    <p><strong>Conceptual Foundations:</strong> This lab introduces the fundamental principles of population genomics that form the basis for genetic genealogy. Understanding genetic variation across populations provides the context necessary for interpreting individual genealogical connections.</p>
+</div>
+{% endblock %}
+
+{% block core_concepts %}
+<h4>Human Genetic Variation</h4>
+<p>The human genome contains approximately 3 billion base pairs, but individuals differ at only about 0.1% of these positions. These differences, known as genetic variants, are the basis for both population genetics and genetic genealogy. Key points:</p>
+<ul>
+    <li><strong>SNPs (Single Nucleotide Polymorphisms):</strong> Most common type of genetic variation where a single nucleotide differs between individuals</li>
+    <li><strong>Alleles:</strong> Alternative forms of a genetic variant</li>
+    <li><strong>Genotype:</strong> The specific combination of alleles an individual carries (e.g., AA, AG, or GG at a particular position)</li>
+    <li><strong>Haplotype:</strong> A set of genetic variants that tend to be inherited together</li>
+</ul>
+<p>When you analyze genetic data in the lab exercises, you're examining patterns in these variants across individuals and populations.</p>
+
+<h4>Population Genetic Structure</h4>
+<p>Human populations show genetic structure due to historical migration patterns, geographic isolation, and cultural factors. Understanding this structure is crucial for genetic genealogy because:</p>
+<ul>
+    <li>It provides context for interpreting an individual's genetic ancestry</li>
+    <li>It helps distinguish between genetic similarities due to recent common ancestry versus shared population history</li>
+    <li>It informs the expected patterns of genetic sharing between different populations</li>
+</ul>
+<p>The 1000 Genomes Project data you'll explore in this lab provides a reference framework for global human genetic diversity, with samples categorized into five continental groups (Africa, Europe, East Asia, South Asia, and the Americas).</p>
+
+<h4>Genetic Data Formats</h4>
+<p>Understanding how genetic data is structured is essential for computational analysis:</p>
+<ul>
+    <li><strong>VCF (Variant Call Format):</strong> The standard file format for representing genetic variants. Each row represents a genetic variant (e.g., a SNP), and each column represents an individual's genotype at that position.</li>
+    <li><strong>Sample Metadata:</strong> Information about each sample, including population, family relationships, and quality metrics.</li>
+    <li><strong>Genotype Representation:</strong> Typically coded as 0 (reference allele) and 1 (alternate allele), with diploid organisms having two values (e.g., 0|0, 0|1, or 1|1).</li>
+</ul>
+<p>In the computational exercises, you'll learn to parse these formats and extract meaningful information using specialized libraries like <code>allel</code>.</p>
+{% endblock %}
+
+{% block analytical_frameworks %}
+<h4>Allele Frequency Analysis</h4>
+<p>Allele frequencies—the proportion of a specific allele in a population—are fundamental to understanding genetic variation:</p>
+<ul>
+    <li>They vary across populations due to evolutionary processes (natural selection, genetic drift, migration)</li>
+    <li>Population-specific allele frequencies serve as reference points for ancestry estimation</li>
+    <li>Rare variants (low frequency) are often more recent and may be informative for closer genealogical relationships</li>
+</ul>
+<p>When calculating allele frequencies in the lab, you're quantifying how common different genetic variants are in each population, which provides insights into population history and structure.</p>
+
+<h4>Principal Component Analysis (PCA) in Population Genetics</h4>
+<p>PCA is a powerful dimension reduction technique that transforms complex genetic data into a smaller number of components that capture most of the variation:</p>
+<ul>
+    <li>In population genetics, PCA can visually represent genetic relationships between individuals and populations</li>
+    <li>The first principal component (PC1) typically separates populations with the greatest genetic differentiation</li>
+    <li>Subsequent components (PC2, PC3, etc.) capture additional patterns of variation</li>
+    <li>Individuals from the same population tend to cluster together in PCA plots</li>
+</ul>
+<p>The PCA visualization you'll create in this lab reveals how genetic variation is structured across global populations and provides a framework for understanding an individual's genetic ancestry.</p>
+
+<h4>Fixation Index (FST)</h4>
+<p>FST is a measure of genetic differentiation between populations:</p>
+<ul>
+    <li>Values range from 0 (no differentiation) to 1 (complete differentiation)</li>
+    <li>Higher FST values indicate greater genetic differences between populations</li>
+    <li>FST calculations help quantify the degree of genetic isolation between populations</li>
+</ul>
+<p>By calculating FST between population pairs in the lab exercises, you're measuring the genetic "distance" between populations, which reflects their evolutionary history and the degree of migration between them.</p>
+{% endblock %}
+
+{% block application %}
+<h4>Population References for Genealogical Analysis</h4>
+<p>The population genetic patterns you explore in this lab form the foundation for genetic genealogy applications:</p>
+<ul>
+    <li><strong>Ancestry Estimation:</strong> Population reference panels enable algorithms to estimate an individual's genetic ancestry proportions</li>
+    <li><strong>IBD Detection Context:</strong> Population allele frequencies inform the likelihood that shared segments are identical by descent (IBD) versus identical by state (IBS)</li>
+    <li><strong>Relationship Inference:</strong> Population-specific genetic patterns help calibrate models for inferring genealogical relationships</li>
+</ul>
+<p>Understanding these population patterns is crucial for accurately interpreting genetic connections between individuals, especially those with ancestry from multiple populations.</p>
+
+<h4>Anthropological Significance</h4>
+<p>From an anthropological perspective, population genetic patterns reflect human history and cultural processes:</p>
+<ul>
+    <li><strong>Human Origins:</strong> The greater genetic diversity in African populations supports the "Out of Africa" model of human evolution</li>
+    <li><strong>Migration Patterns:</strong> Genetic similarity between populations often correlates with historical migration routes</li>
+    <li><strong>Social Structures:</strong> Patterns of genetic variation can reflect historical social practices (e.g., marriage patterns, cultural isolation)</li>
+    <li><strong>Admixture Events:</strong> Genetic evidence of population mixing corresponds to historical events like colonization and forced migration</li>
+</ul>
+<p>The 1000 Genomes data you'll analyze captures these historical processes through genetic patterns, connecting biological inheritance to human cultural and social history.</p>
+{% endblock %}
+
+{% block interactive_lab %}
+<div class="jupyter-integration">
+    <p>Click the button below to open the interactive Lab 1 notebook directly in your browser using JupyterLite. No installation required!</p>
+    
+    <div class="jupyterlite-container">
+        <div class="jupyterlite-info">
+            <h4>Browser-Based Analysis</h4>
+            <p>This link will open the <strong>Lab1_Exploring_onekgenomes.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+            <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+            <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
         </div>
-    </header>
+        
+        <!-- This is now a link styled as a button -->
+        <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab1_Exploring_onekgenomes.ipynb"
+           class="open-jupyterlite-link"
+           target="_blank"
+           role="button">
+            Open Lab 1 Notebook in JupyterLite
+        </a>
+    </div>
+</div>
+{% endblock %}
 
-    <nav class="textbook-nav">
-        <div class="container">
-            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
-            <a href="contents.html">Table of Contents</a>
-            <a href="lab1_exploring.html" class="active">Lab 1 exploring</a>
+{% block beyond_code %}
+<p>As you work through the coding exercises in this lab, keep in mind these deeper concepts:</p>
+<ul>
+    <li><strong>Biological vs. Social Identity:</strong> Genetic patterns reflect biological inheritance but don't necessarily align with social or cultural identities</li>
+    <li><strong>Statistical Nature:</strong> Population genetic patterns are statistical generalizations and individual genetic profiles may not perfectly match population averages</li>
+    <li><strong>Temporal Dynamics:</strong> Genetic patterns change over time due to migration, admixture, and other processes</li>
+    <li><strong>Interpretive Context:</strong> Genetic data must be interpreted within historical, social, and cultural contexts</li>
+</ul>
+<p>These conceptual frameworks will help you move beyond simple data manipulation to a deeper understanding of what genetic patterns reveal about human relationships and history.</p>
+{% endblock %}
+
+{% block learning_pathway %}
+<div class="learning-pathway">
+    <p>This lab is part of the sequential learning track:</p>
+    <div class="pathway-steps">
+        <div class="pathway-step">
+            <h5>Step 1</h5>
+            <p>Environment Setup</p>
         </div>
-    </nav>
-
-    <main class="container">
-        <article class="section lab-content">
-            <h2>Lab 1: Exploring Population Genomic Data</h2>
-            
-            <div class="alert alert-info">
-                <p><strong>Conceptual Foundations:</strong> This lab introduces the fundamental principles of population genomics that form the basis for genetic genealogy. Understanding genetic variation across populations provides the context necessary for interpreting individual genealogical connections.</p>
-            </div>
-
-            <h3>Core Concepts</h3>
-            
-            <div class="concept-section">
-                <h4>Human Genetic Variation</h4>
-                <p>The human genome contains approximately 3 billion base pairs, but individuals differ at only about 0.1% of these positions. These differences, known as genetic variants, are the basis for both population genetics and genetic genealogy. Key points:</p>
-                <ul>
-                    <li><strong>SNPs (Single Nucleotide Polymorphisms):</strong> Most common type of genetic variation where a single nucleotide differs between individuals</li>
-                    <li><strong>Alleles:</strong> Alternative forms of a genetic variant</li>
-                    <li><strong>Genotype:</strong> The specific combination of alleles an individual carries (e.g., AA, AG, or GG at a particular position)</li>
-                    <li><strong>Haplotype:</strong> A set of genetic variants that tend to be inherited together</li>
-                </ul>
-                <p>When you analyze genetic data in the lab exercises, you're examining patterns in these variants across individuals and populations.</p>
-            </div>
-
-            <div class="concept-section">
-                <h4>Population Genetic Structure</h4>
-                <p>Human populations show genetic structure due to historical migration patterns, geographic isolation, and cultural factors. Understanding this structure is crucial for genetic genealogy because:</p>
-                <ul>
-                    <li>It provides context for interpreting an individual's genetic ancestry</li>
-                    <li>It helps distinguish between genetic similarities due to recent common ancestry versus shared population history</li>
-                    <li>It informs the expected patterns of genetic sharing between different populations</li>
-                </ul>
-                <p>The 1000 Genomes Project data you'll explore in this lab provides a reference framework for global human genetic diversity, with samples categorized into five continental groups (Africa, Europe, East Asia, South Asia, and the Americas).</p>
-            </div>
-
-            <div class="concept-section">
-                <h4>Genetic Data Formats</h4>
-                <p>Understanding how genetic data is structured is essential for computational analysis:</p>
-                <ul>
-                    <li><strong>VCF (Variant Call Format):</strong> The standard file format for representing genetic variants. Each row represents a genetic variant (e.g., a SNP), and each column represents an individual's genotype at that position.</li>
-                    <li><strong>Sample Metadata:</strong> Information about each sample, including population, family relationships, and quality metrics.</li>
-                    <li><strong>Genotype Representation:</strong> Typically coded as 0 (reference allele) and 1 (alternate allele), with diploid organisms having two values (e.g., 0|0, 0|1, or 1|1).</li>
-                </ul>
-                <p>In the computational exercises, you'll learn to parse these formats and extract meaningful information using specialized libraries like <code>allel</code>.</p>
-            </div>
-
-            <h3>Analytical Frameworks</h3>
-            
-            <div class="concept-section">
-                <h4>Allele Frequency Analysis</h4>
-                <p>Allele frequencies—the proportion of a specific allele in a population—are fundamental to understanding genetic variation:</p>
-                <ul>
-                    <li>They vary across populations due to evolutionary processes (natural selection, genetic drift, migration)</li>
-                    <li>Population-specific allele frequencies serve as reference points for ancestry estimation</li>
-                    <li>Rare variants (low frequency) are often more recent and may be informative for closer genealogical relationships</li>
-                </ul>
-                <p>When calculating allele frequencies in the lab, you're quantifying how common different genetic variants are in each population, which provides insights into population history and structure.</p>
-            </div>
-
-            <div class="concept-section">
-                <h4>Principal Component Analysis (PCA) in Population Genetics</h4>
-                <p>PCA is a powerful dimension reduction technique that transforms complex genetic data into a smaller number of components that capture most of the variation:</p>
-                <ul>
-                    <li>In population genetics, PCA can visually represent genetic relationships between individuals and populations</li>
-                    <li>The first principal component (PC1) typically separates populations with the greatest genetic differentiation</li>
-                    <li>Subsequent components (PC2, PC3, etc.) capture additional patterns of variation</li>
-                    <li>Individuals from the same population tend to cluster together in PCA plots</li>
-                </ul>
-                <p>The PCA visualization you'll create in this lab reveals how genetic variation is structured across global populations and provides a framework for understanding an individual's genetic ancestry.</p>
-            </div>
-
-            <div class="concept-section">
-                <h4>Fixation Index (FST)</h4>
-                <p>FST is a measure of genetic differentiation between populations:</p>
-                <ul>
-                    <li>Values range from 0 (no differentiation) to 1 (complete differentiation)</li>
-                    <li>Higher FST values indicate greater genetic differences between populations</li>
-                    <li>FST calculations help quantify the degree of genetic isolation between populations</li>
-                </ul>
-                <p>By calculating FST between population pairs in the lab exercises, you're measuring the genetic "distance" between populations, which reflects their evolutionary history and the degree of migration between them.</p>
-            </div>
-
-            <h3>Application to Genetic Genealogy</h3>
-            
-            <div class="concept-section">
-                <h4>Population References for Genealogical Analysis</h4>
-                <p>The population genetic patterns you explore in this lab form the foundation for genetic genealogy applications:</p>
-                <ul>
-                    <li><strong>Ancestry Estimation:</strong> Population reference panels enable algorithms to estimate an individual's genetic ancestry proportions</li>
-                    <li><strong>IBD Detection Context:</strong> Population allele frequencies inform the likelihood that shared segments are identical by descent (IBD) versus identical by state (IBS)</li>
-                    <li><strong>Relationship Inference:</strong> Population-specific genetic patterns help calibrate models for inferring genealogical relationships</li>
-                </ul>
-                <p>Understanding these population patterns is crucial for accurately interpreting genetic connections between individuals, especially those with ancestry from multiple populations.</p>
-            </div>
-
-            <div class="concept-section">
-                <h4>Anthropological Significance</h4>
-                <p>From an anthropological perspective, population genetic patterns reflect human history and cultural processes:</p>
-                <ul>
-                    <li><strong>Human Origins:</strong> The greater genetic diversity in African populations supports the "Out of Africa" model of human evolution</li>
-                    <li><strong>Migration Patterns:</strong> Genetic similarity between populations often correlates with historical migration routes</li>
-                    <li><strong>Social Structures:</strong> Patterns of genetic variation can reflect historical social practices (e.g., marriage patterns, cultural isolation)</li>
-                    <li><strong>Admixture Events:</strong> Genetic evidence of population mixing corresponds to historical events like colonization and forced migration</li>
-                </ul>
-                <p>The 1000 Genomes data you'll analyze captures these historical processes through genetic patterns, connecting biological inheritance to human cultural and social history.</p>
-            </div>
-
-            <h3>Interactive Lab Environment</h3>
-            
-            <div class="jupyter-integration">
-                <p>Click the button below to open the interactive Lab 1 notebook directly in your browser using JupyterLite. No installation required!</p>
-
-                <div class="jupyterlite-container">
-
-                    <div class="jupyterlite-info">
-                        <h4>Browser-Based Analysis</h4>
-                        <p>This link will open the <strong>Lab1_Exploring_onekgenomes.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
-                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
-                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
-                    </div>
-
-                    <!-- This is now a link styled as a button -->
-                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab1_Exploring_onekgenomes.ipynb"
-                       class="open-jupyterlite-link"
-                       target="_blank"
-                       role="button">
-                        Open Lab 1 Notebook in JupyterLite
-                    </a>
-
-                </div>
-            </div>
-
-            <h3>Beyond the Code</h3>
-            <p>As you work through the coding exercises in this lab, keep in mind these deeper concepts:</p>
-            <ul>
-                <li><strong>Biological vs. Social Identity:</strong> Genetic patterns reflect biological inheritance but don't necessarily align with social or cultural identities</li>
-                <li><strong>Statistical Nature:</strong> Population genetic patterns are statistical generalizations and individual genetic profiles may not perfectly match population averages</li>
-                <li><strong>Temporal Dynamics:</strong> Genetic patterns change over time due to migration, admixture, and other processes</li>
-                <li><strong>Interpretive Context:</strong> Genetic data must be interpreted within historical, social, and cultural contexts</li>
-            </ul>
-            <p>These conceptual frameworks will help you move beyond simple data manipulation to a deeper understanding of what genetic patterns reveal about human relationships and history.</p>
-            
-            <div class="learning-pathway">
-                <p>This lab is part of the sequential learning track:</p>
-                <div class="pathway-steps">
-                    <div class="pathway-step">
-                        <h5>Step 1</h5>
-                        <p>Environment Setup</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 2</h5>
-                        <p>Data Acquisition</p>
-                    </div>
-                    <div class="pathway-step active">
-                        <h5>Step 3</h5>
-                        <p>Data Exploration</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 4</h5>
-                        <p>Data Processing</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 5</h5>
-                        <p>Quality Control</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 6</h5>
-                        <p>IBD Detection</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 7</h5>
-                        <p>Simulation</p>
-                    </div>
-                    <div class="pathway-step">
-                        <h5>Step 8</h5>
-                        <p>Pedigrees</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lab-navigation">
-                <a href="lab0_data.html" class="prev-lab">Getting Data</a>
-                <a href="lab2_process.html" class="next-lab">Processing Raw DNA</a>
-            </div>
-        </article>
-    </main>
-
-    <footer class="textbook-footer">
-        <div class="container">
-            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        <div class="pathway-step">
+            <h5>Step 2</h5>
+            <p>Data Acquisition</p>
         </div>
-    </footer>
-</body>
-</html>
+        <div class="pathway-step active">
+            <h5>Step 3</h5>
+            <p>Data Exploration</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 4</h5>
+            <p>Data Processing</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 5</h5>
+            <p>Quality Control</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 6</h5>
+            <p>IBD Detection</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 7</h5>
+            <p>Simulation</p>
+        </div>
+        <div class="pathway-step">
+            <h5>Step 8</h5>
+            <p>Pedigrees</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block lab_navigation %}
+<div class="lab-navigation">
+    <a href="lab0_data.html" class="prev-lab">Getting Data</a>
+    <a href="lab2_process.html" class="next-lab">Processing Raw DNA</a>
+</div>
+{% endblock %}
+
+{% block footer_class %}textbook-footer{% endblock %}
+{% block footer_content %}
+<p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+{% endblock %}

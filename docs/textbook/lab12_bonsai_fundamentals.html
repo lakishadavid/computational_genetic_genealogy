@@ -188,6 +188,47 @@
                 <p><strong>Tip:</strong> Remember that biological relatedness represents only one dimension of human kinship. While IBD segments provide powerful evidence of genetic connections, these connections exist within complex cultural frameworks that define their meaning and significance in human lives.</p>
             </div>
             
+            <h3>From Lab to Production: Understanding the Real Bonsai Implementation</h3>
+            
+            <p>The laboratory exercises in this course introduce the fundamental concepts of IBD analysis and pedigree reconstruction using simplified versions of the algorithms. By examining the actual Bonsai codebase (located in <code>utils/bonsaitree/bonsaitree/v3/</code>), we can observe how these concepts are implemented in a production-grade tool.</p>
+            
+            <h4>IBD Segment Models</h4>
+            <p>Lab 12 introduces the exponential model for IBD segment lengths, which is directly implemented in the actual Bonsai codebase:</p>
+            <ul>
+                <li>The <code>get_lam_a_m()</code> function in <code>likelihoods.py</code> precisely calculates the lambda parameter (inverse mean length) for segment length distributions based on meiotic distance</li>
+                <li>The lab's segment length distributions closely mirror those used in the production code, though with adjusted parameters for specific relationship types</li>
+                <li>The core exponential distribution model introduced in the lab cells matches the mathematical foundation used in Bonsai's actual likelihood calculations</li>
+            </ul>
+            
+            <h4>Relationship Statistics</h4>
+            <p>The lab explores how segment counts and total lengths vary by relationship type, which directly corresponds to Bonsai's internal models:</p>
+            <ul>
+                <li>The lab's calculations of expected segment counts align with the <code>get_eta()</code> function in the real codebase, which computes expected segment counts for different relationship types</li>
+                <li>The relationship between IBD1 and IBD2 sharing illustrated in the lab directly informs the likelihood models in <code>get_log_seg_pdf()</code> function</li>
+                <li>The real code extends these concepts with additional statistical rigor and empirically-derived parameters</li>
+            </ul>
+            
+            <h4>Pedigree Building Logic</h4>
+            <p>Cell 33 in the lab shows how to use Bonsai's pedigree building functions, which connect directly to the core algorithm:</p>
+            <ul>
+                <li>The <code>build_pedigree()</code> function demonstrated in the lab is the actual entry point to Bonsai's pedigree reconstruction algorithm</li>
+                <li>The real implementation uses the same up-node dictionary structure explored in the lab exercises</li>
+                <li>The pedigree building process follows the incremental construction approach described in the lab</li>
+            </ul>
+            
+            <h4>Key Differences</h4>
+            <p>While the lab effectively introduces the fundamental concepts, the production code includes several advanced features:</p>
+            <ul>
+                <li><strong>Statistical Models:</strong> The actual implementation uses more sophisticated probability models, including Poisson distributions for segment counts and modified exponential distributions for segment lengths</li>
+                <li><strong>Model Fitting:</strong> The real code incorporates empirically-derived parameters from large-scale analyses of known relationships</li>
+                <li><strong>Special Cases:</strong> Bonsai includes specialized handling for cases like parent-child and full sibling relationships, which have distinctive IBD patterns</li>
+                <li><strong>Edge Case Handling:</strong> The production code includes extensive error handling and adjustments for factors like coverage and data quality</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <p><strong>Practical Application:</strong> The real Bonsai implementation demonstrates how theoretical models must be augmented with empirical adjustments and special case handling to work reliably with real-world genetic data. While the mathematical foundations remain the same, production code must account for the messiness and complexity of actual human relationships and technical limitations in IBD detection.</p>
+            </div>
+            
             <h3>Interactive Lab Environment</h3>
             
             <div class="jupyter-integration">

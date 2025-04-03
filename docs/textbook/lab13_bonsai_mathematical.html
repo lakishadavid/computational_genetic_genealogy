@@ -198,6 +198,54 @@
                 <p><strong>Tip:</strong> When working with mathematical models of human relationships, remember that these models are simplifications of complex biological and social realities. Their value lies not in perfect representation but in providing useful frameworks for inference that acknowledge uncertainty and incorporate diverse forms of evidence.</p>
             </div>
             
+            <h3>From Lab to Production: Understanding the Real Bonsai Implementation</h3>
+            
+            <p>The laboratory exercises in this course present educational simplifications of the actual Bonsai algorithm implementation. By comparing the lab code with the production codebase (located in the <code>utils/bonsaitree/bonsaitree/v3/</code> directory), we can gain valuable insights into how academic concepts translate to real-world applications.</p>
+            
+            <h4>Core Likelihood Functions</h4>
+            <p>Cell 7's <code>calculate_pedigree_likelihood</code> function closely parallels the actual implementation's approach in <code>get_ped_like()</code> found in <code>likelihoods.py</code>. Both follow the same fundamental pattern:</p>
+            <ul>
+                <li>They sum pairwise log-likelihoods across all pairs of individuals in the pedigree</li>
+                <li>They split likelihood calculations into genetic and age-based components</li>
+                <li>They use helper functions to determine relationships and calculate respective likelihoods</li>
+            </ul>
+            
+            <p>However, the production implementation includes sophisticated statistical models and optimizations:</p>
+            <ul>
+                <li>Specialized likelihood functions using Bessel functions and complex probability distributions</li>
+                <li>Adjustment factors for different DNA coverage levels and technical noise</li>
+                <li>Empirically-derived parameters based on large datasets rather than simplified theoretical values</li>
+            </ul>
+            
+            <h4>The Mathematical Models</h4>
+            <p>The simulation code in Cell 8 accurately represents the core mathematical concepts behind Bonsai's parametric models:</p>
+            <ul>
+                <li>The <code>RELATIONSHIP_PARAMS</code> dictionary mirrors the expected IBD statistics for different relationship types, though the production code uses more rigorous distributions</li>
+                <li>The relationship identification functions reflect the actual computation of meiotic distances in pedigrees, but with simplified graph traversal</li>
+                <li>The likelihood calculation correctly demonstrates composite scoring from multiple evidence sources</li>
+            </ul>
+            
+            <h4>Up-Node Dictionary Implementation</h4>
+            <p>Cells 22-27 provide a faithful representation of the up-node dictionary structure that's core to Bonsai's pedigree representation:</p>
+            <ul>
+                <li>The data structure for encoding parent-child relationships matches the production implementation</li>
+                <li>Functions for calculating relationship coefficients follow the same mathematical approach</li>
+                <li>The relationship identification follows the same graph-theoretical concepts, though with less comprehensive traversal algorithms</li>
+            </ul>
+            
+            <h4>Key Differences</h4>
+            <p>While conceptually aligned, several important differences exist between the lab and production implementations:</p>
+            <ul>
+                <li><strong>Statistical Sophistication:</strong> The production code uses more rigorous statistical models based on population genetics theory</li>
+                <li><strong>Edge Case Handling:</strong> The real implementation includes extensive handling of special cases (endogamy, missing data, population structure)</li>
+                <li><strong>Algorithm Complexity:</strong> The optimization approaches in production use more sophisticated search heuristics and stopping criteria</li>
+                <li><strong>Computational Efficiency:</strong> The real code includes numerous optimizations for handling large datasets efficiently</li>
+            </ul>
+            
+            <div class="alert alert-info">
+                <p><strong>Teaching vs. Production Code:</strong> The lab implementations prioritize clarity and educational value, making conceptual simplifications to highlight core principles. The production code prioritizes accuracy, efficiency, and robustness for real-world applications. Both serve important but different purposes in understanding computational genetic genealogy.</p>
+            </div>
+            
             <h3>Interactive Lab Environment</h3>
             
             <div class="jupyter-integration">

@@ -217,6 +217,144 @@
             </ul>
             <p>These considerations highlight how the technical choices in data representation are never neutral but always embed particular perspectives on what matters in human relationships.</p>
             
+            <h3>From Lab to Production: Understanding the Real Bonsai Implementation</h3>
+            
+            <p>While the lab implementation demonstrates the core concepts of Bonsai's data structures, the production implementation incorporates additional optimizations and features for handling real-world scenarios. Let's explore how the lab code connects to the actual Bonsai implementation.</p>
+            
+            <h4>The Up-Node Dictionary</h4>
+            
+            <p>The up-node dictionary in the lab (Cell 12) closely resembles the real implementation's core structure:</p>
+            
+            <pre><code># Lab implementation
+up_node_dict = {
+    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
+    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents
+    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
+    -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
+}</code></pre>
+            
+            <p>The production code extends this concept with several key enhancements:</p>
+            <ul>
+                <li><strong>Systematic ID management</strong>: The production code includes sophisticated ID tracking systems to ensure inferred ancestors receive unique negative IDs that don't conflict when pedigrees are merged</li>
+                <li><strong>Extended relation attributes</strong>: While our lab implementation uses a simple value of 1 as a placeholder, the production code can store additional metadata about each relationship</li>
+                <li><strong>Optimized traversal algorithms</strong>: The production code implements highly optimized breadth-first and depth-first traversal algorithms that can efficiently navigate even complex multi-generational pedigrees</li>
+            </ul>
+            
+            <h4>Relationship Representation</h4>
+            
+            <p>The lab introduces relationship calculations through the RelationshipCalculator class (Cell 40), which computes coefficients between individuals. The production implementation uses a compact 3-tuple encoding:</p>
+            
+            <pre><code># Production implementation
+# Relationship tuple: (up, down, num_ancs)
+# - up: Steps up from first person to common ancestor
+# - down: Steps down from common ancestor to second person
+# - num_ancs: Number of common ancestors (1 or 2)
+
+def get_tuples_set_for_deg(deg, dir1, dir2):
+    """Get relationship tuples compatible with a given degree."""
+    rel_tuple_set = set()
+    # Calculate possible relationship configurations
+    # for a specific degree of relatedness
+    # ...
+    return rel_tuple_set</code></pre>
+            
+            <p>This compact representation allows Bonsai to efficiently:</p>
+            <ul>
+                <li>Enumerate all possible relationships between individuals</li>
+                <li>Calculate genetic expectations for each relationship type</li>
+                <li>Compare observed IBD patterns to theoretical expectations</li>
+                <li>Determine the most likely relationship between any two individuals</li>
+            </ul>
+            
+            <h4>IBD Data Organization</h4>
+            
+            <p>Our lab implementation organizes IBD segments by pair (Cells 7-9) and calculates summary statistics (Cell 19). The production implementation extends this concept with hierarchical indexing strategies:</p>
+            
+            <ul>
+                <li><strong>Multi-level indexing</strong>: IBD data is organized by individual, by pair, by chromosome, and by segment length range for optimal access patterns</li>
+                <li><strong>Selective loading</strong>: The production code can selectively load only the IBD segments relevant to current calculations, reducing memory usage</li>
+                <li><strong>Statistical aggregation</strong>: While our lab calculates basic moments (count, length, squared length), the production code includes additional statistics to better handle edge cases and outliers</li>
+            </ul>
+            
+            <h4>Graph Operations</h4>
+            
+            <p>The lab implements basic graph operations like cycle detection (Cell 26) and community partitioning (Cell 28). The production implementation includes more sophisticated algorithms:</p>
+            
+            <pre><code># Production implementation for connecting pedigrees
+def connect_pedigrees_through_points(id1, id2, pid1, pid2, up_dct1, up_dct2, 
+                                    deg1, deg2, num_ancs, simple=True):
+    """Connect two pedigrees through specific connection points."""
+    # 1. Extend lineages upward if needed
+    if deg1 > 0:
+        up_dct1, _, id1, pid1 = extend_up(iid=id1, deg=deg1, 
+                                         num_ancs=num_ancs, up_dct=up_dct1)
+    
+    # 2. Shift IDs to avoid overlap
+    min_id = get_min_id(up_dct1) - 1
+    up_dct2, id_map = shift_ids(ped=up_dct2, shift=min_id)
+    
+    # 3. Connect the pedigrees
+    # ...
+    
+    return connect_dct_list</code></pre>
+            
+            <p>The production implementation's graph operations include:</p>
+            <ul>
+                <li><strong>Optimized merging</strong>: Algorithms that consider all valid ways to connect separate pedigrees</li>
+                <li><strong>Constraint-based validation</strong>: Checks to ensure biological plausibility (age relationships, generation consistency)</li>
+                <li><strong>Incremental updates</strong>: Efficient methods to update only the affected portions of the pedigree when new information is added</li>
+            </ul>
+            
+            <h4>Caching and Performance Optimization</h4>
+            
+            <p>Our lab introduces the concept of caching with the RelationshipCalculator (Cell 40). The production implementation deploys sophisticated caching throughout:</p>
+            
+            <pre><code># Production implementation for caching likelihoods
+class PwLogLike:
+    def __init__(self, bio_info, unphased_ibd_seg_list, condition_pair_set=None, 
+                mean_bgd_num=0.01, mean_bgd_len=15.0):
+        # ...initialization...
+        self.pairwise_ll_cache = {}  # Cache for pairwise log likelihoods
+        
+    def get_pw_ll(self, node1, node2, rel_tuple):
+        """Get pairwise log likelihood, using cache when possible."""
+        # Create a hashable key for the cache
+        cache_key = (node1, node2, rel_tuple)
+        
+        # Check if result is already cached
+        if cache_key in self.pairwise_ll_cache:
+            return self.pairwise_ll_cache[cache_key]
+        
+        # Calculate the log likelihood
+        ll = self._calculate_pw_ll(node1, node2, rel_tuple)
+        
+        # Cache the result
+        self.pairwise_ll_cache[cache_key] = ll
+        
+        return ll</code></pre>
+            
+            <p>Key performance optimizations in the production code include:</p>
+            <ul>
+                <li><strong>Strategic memoization</strong>: Caching results at multiple levels of computation</li>
+                <li><strong>Cache invalidation protocols</strong>: Sophisticated systems to determine when cached values need recalculation</li>
+                <li><strong>Parallel processing</strong>: Decomposition of problems into independently processable units for multi-core execution</li>
+                <li><strong>Memory management</strong>: Careful control of memory usage to handle large datasets</li>
+            </ul>
+            
+            <h4>Key Differences</h4>
+            
+            <p>While the lab implementations capture the core concepts, the production code includes several important enhancements:</p>
+            
+            <ol>
+                <li><strong>Error handling</strong>: Comprehensive error detection and recovery mechanisms</li>
+                <li><strong>Edge cases</strong>: Special handling for unusual pedigree structures and relationship patterns</li>
+                <li><strong>Scale optimization</strong>: Algorithms designed to scale to thousands of individuals and millions of IBD segments</li>
+                <li><strong>Data validation</strong>: Extensive validation to detect inconsistencies in input data</li>
+                <li><strong>Configurability</strong>: Parameters and thresholds that can be tuned for different datasets and objectives</li>
+            </ol>
+            
+            <p>Understanding these differences helps bridge the gap between educational implementations and production-ready code, illustrating how the core concepts taught in this lab are adapted for real-world applications.</p>
+            
             <div class="learning-pathway">
                 <p>This lab is part of the Bonsai specialization track:</p>
                 <div class="pathway-steps">

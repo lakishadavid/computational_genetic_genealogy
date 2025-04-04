@@ -28,11 +28,12 @@ fi
 echo "Creating staging directory structure in $STAGING_DIR..."
 mkdir -p "$STAGING_DIR/class_data"
 
-# 3. Copy content to staging area
-echo "Copying Lab notebooks ($LAB_SRC_DIR/Lab*.ipynb) to $STAGING_DIR..."
-# Ensure only .ipynb files are copied if that's desired
-# If you have other 'Lab*' files/dirs you want, change back to Lab*
-cp "$LAB_SRC_DIR"/Lab*.ipynb "$STAGING_DIR/"
+# 3. Process and copy lab notebooks to staging area
+echo "Processing and copying Lab notebooks ($LAB_SRC_DIR/Lab*.ipynb) to $STAGING_DIR..."
+
+# Run the preprocessing script from scripts_support
+echo "Preprocessing notebooks to remove environment setup code..."
+poetry run python -m scripts_support.preprocess_notebooks "$LAB_SRC_DIR" "$STAGING_DIR"
 
 # 4. Run the JupyterLite build command directly into DEPLOY_DIR
 echo "Running JupyterLite build directly into $DEPLOY_DIR using $ROOT_CONFIG_FILE..."

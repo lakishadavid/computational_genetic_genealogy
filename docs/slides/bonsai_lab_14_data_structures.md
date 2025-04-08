@@ -34,7 +34,42 @@ def get_unphased_to_phased(unphased_ibd_seg_list):
     # ...
 ```
 
-## Slide 4: Segment Organization and Indexing
+## Slide 4: From IBD Detection Output to Bonsai Format
+- IBD detection tools (IBIS, hap-IBD, refined-IBD) output segments in tool-specific formats
+- IBIS output format: 
+  ```
+  sample1 sample2 chrom phys_start_pos phys_end_pos IBD_type genetic_start_pos genetic_end_pos genetic_seg_length marker_count error_count error_density
+  ```
+- Transformation pipeline:
+  1. Parse tool-specific output format
+  2. Convert to Bonsai unphased format: `[id1, id2, chromosome, start_bp, end_bp, is_full_ibd, seg_cm]`
+     - Map IBD_type (1 or 2) to is_full_ibd (False or True)
+     - Extract genetic_seg_length for seg_cm
+  3. Create efficient IBDIndex for fast access patterns
+  4. Compute IBD statistics with get_ibd_stats_unphased()
+
+```python
+# Simplified example of IBIS output processing
+def process_ibis_output(ibis_output_file):
+    segments = []
+    with open(ibis_output_file, 'r') as f:
+        for line in f:
+            if line.startswith('#'): continue
+            fields = line.strip().split()
+            id1, id2 = int(fields[0]), int(fields[1])
+            chrom = int(fields[2])
+            start_bp, end_bp = int(fields[3]), int(fields[4])
+            ibd_type = int(fields[5])  # 1 for IBD1, 2 for IBD2
+            seg_cm = float(fields[8])
+            
+            # Convert to Bonsai unphased format
+            is_full_ibd = True if ibd_type == 2 else False
+            segments.append([id1, id2, chrom, start_bp, end_bp, is_full_ibd, seg_cm])
+    
+    return segments
+```
+
+## Slide 5: Segment Organization and Indexing
 - Efficient indexing for fast access patterns
 - Primary indexing by pairs: `pair_index = {frozenset({id1, id2}): [segment_list]}`
 - Multiple indexing dimensions:
@@ -53,11 +88,61 @@ class IBDIndex:
         self.haplotype_index = {}      # {(id, hap): [segment_list]}
 ```
 
-## Slide 5: Pairwise Likelihood Calculation (PwLogLike)
+## Slide 6: Computing IBD Statistics
+- IBD statistics transform raw segments into relationship evidence
+- Key function: `get_ibd_stats_unphased(unphased_ibd_seg_list)`
+- Calculates key metrics for each pair:
+  - Total IBD1 segments count and centiMorgan length
+  - Total IBD2 segments count and centiMorgan length
+  - Longest segment (a strong indicator of relationship degree)
+  - Number of segments in different length bins (short/medium/long)
+
+```python
+def get_ibd_stats_unphased(unphased_ibd_seg_list):
+    """Compute IBD statistics from unphased segments."""
+    ibd_stat_dict = {}
+    
+    for seg in unphased_ibd_seg_list:
+        id1, id2 = seg[0], seg[1]
+        is_full_ibd = seg[5]  # IBD2 (True) or IBD1 (False)
+        seg_cm = seg[6]       # Segment length in centiMorgans
+        
+        # Get or initialize statistics for this pair
+        pair_key = frozenset({id1, id2})
+        if pair_key not in ibd_stat_dict:
+            # Initialize with zeros: [ibd1_count, ibd1_cm, ibd2_count, ibd2_cm, longest_seg, ...]
+            ibd_stat_dict[pair_key] = [0, 0.0, 0, 0.0, 0.0, 0, 0, 0]
+        
+        stats = ibd_stat_dict[pair_key]
+        
+        # Update statistics based on segment type (IBD1 or IBD2)
+        if is_full_ibd:  # IBD2
+            stats[2] += 1        # Increment IBD2 count
+            stats[3] += seg_cm    # Add to IBD2 total cM
+        else:            # IBD1
+            stats[0] += 1        # Increment IBD1 count
+            stats[1] += seg_cm    # Add to IBD1 total cM
+        
+        # Update longest segment if current is longer
+        stats[4] = max(stats[4], seg_cm)
+        
+        # Update segment bins (short/medium/long)
+        if seg_cm >= 15.0:      # Long segment
+            stats[7] += 1
+        elif seg_cm >= 7.0:     # Medium segment
+            stats[6] += 1
+        else:                   # Short segment
+            stats[5] += 1
+    
+    return ibd_stat_dict
+```
+
+## Slide 7: Pairwise Likelihood Calculation (PwLogLike)
 - New v3 class for computing relationship likelihoods
 - Encapsulates all likelihood computation logic in one place
 - Supports conditional/unconditional probability calculations
 - Handles background IBD modeling
+- Uses IBD statistics to compute likelihoods for different relationships
 
 ```python
 class PwLogLike:
@@ -68,13 +153,14 @@ class PwLogLike:
         """Initialize with biological info and IBD segments."""
         self.bio_info = bio_info
         self.id_to_info = {info['genotype_id']: info for info in bio_info}
+        # Convert segments to IBD statistics
         self.ibd_stat_dict = get_ibd_stats_unphased(unphased_ibd_seg_list)
         self.condition_pair_set = condition_pair_set or set()
         self.mean_bgd_num = mean_bgd_num
         self.mean_bgd_len = mean_bgd_len
 ```
 
-## Slide 6: Connection Point Architecture
+## Slide 8: Connection Point Architecture
 - Modular approach to finding connection points between pedigrees
 - Configuration parameters control connection behavior
 - Returns ranked list of potential connections with likelihoods
@@ -90,7 +176,7 @@ def get_connecting_points_degs_and_log_likes(
     # ...
 ```
 
-## Slide 7: Graph-Theoretical Pedigree Operations
+## Slide 9: Graph-Theoretical Pedigree Operations
 - Pedigree validation using cycle detection
 - Temporal consistency checking
 - Generation assignment for visualization
@@ -109,7 +195,7 @@ def would_create_cycle(up_node_dict, child_id, proposed_parent_id):
         # ...
 ```
 
-## Slide 8: Community Detection and Graph Partitioning
+## Slide 10: Community Detection and Graph Partitioning
 - Divides large problems into manageable components
 - Uses weighted IBD sharing graph
 - Applies Louvain community detection algorithm
@@ -127,7 +213,7 @@ def partition_with_community_detection(segments):
         # ...
 ```
 
-## Slide 9: Extended Metadata Handling
+## Slide 11: Extended Metadata Handling
 - Biological metadata integration through BioInfo
 - Demographic constrained relationship inference
 - Extended up-node dictionary for rich relationship metadata
@@ -146,7 +232,7 @@ class ExtendedUpNodeDict:
         # ...
 ```
 
-## Slide 10: Pedigree Building Algorithms
+## Slide 12: Pedigree Building Algorithms
 - Step-by-step modular approach in v3
 - Prioritization based on IBD sharing confidence
 - Integration of multiple evidence sources
@@ -165,7 +251,7 @@ def build_pedigree_step_by_step(unphased_ibd_segs, bio_info):
     # ...
 ```
 
-## Slide 11: Memory-Efficient Computation Strategies
+## Slide 13: Memory-Efficient Computation Strategies
 - Sparse matrix representations for large pedigrees
 - Strategic caching and memoization
 - On-demand computation for relationship coefficients
@@ -184,7 +270,7 @@ class SparseRelationshipCalculator:
         # ...
 ```
 
-## Slide 12: Visualization Techniques
+## Slide 14: Visualization Techniques
 - Enhanced visualization for complex pedigrees
 - Support for different relationship types
 - Generational layout algorithms
@@ -207,7 +293,7 @@ class PedigreeVisualizer:
         # ...
 ```
 
-## Slide 13: Time and Space Complexity Analysis
+## Slide 15: Time and Space Complexity Analysis
 - Key operations performance characteristics:
   
   | Operation | Time Complexity | Space Complexity |
@@ -220,7 +306,7 @@ class PedigreeVisualizer:
   
 - Optimizations enable handling thousands of individuals and millions of segments
 
-## Slide 14: Validation and Quality Control
+## Slide 16: Validation and Quality Control
 - Comprehensive validation framework
 - Checks for biological consistency:
   - Temporal consistency (parent older than child)
@@ -241,7 +327,7 @@ def validate(pedigree, bio_info, verbose=True):
     # ...
 ```
 
-## Slide 15: Practical Applications and Extensions
+## Slide 17: Practical Applications and Extensions
 - Real-world performance on thousands of individuals
 - Extensions for different relationship types:
   - Half-siblings, complex cousin relationships

@@ -28,10 +28,10 @@
 
     <main class="container">
         <article class="section lab-content">
-            <h2>Lab 14: Data Structures and Algorithmic Design in Bonsai</h2>
+            <h2>Lab 14: Data Structures and Algorithmic Design in Bonsai v3</h2>
             
             <div class="alert alert-info">
-                <p><strong>Why This Matters:</strong> Data structures are more than technical implementations—they are conceptual frameworks that shape how we organize, access, and interpret information about human relationships. In Bonsai, the chosen data structures embody particular understandings of kinship, encode specific cultural assumptions about family structure, and determine which relationship patterns are easy or difficult to represent. Understanding these structures illuminates how computational approaches both enable and constrain our understanding of human connectedness.</p>
+                <p><strong>Why This Matters:</strong> Data structures are more than technical implementations—they are conceptual frameworks that shape how we organize, access, and interpret information about human relationships. In Bonsai v3, the chosen data structures embody particular understandings of kinship, encode specific cultural assumptions about family structure, and determine which relationship patterns are easy or difficult to represent. Understanding these structures illuminates how computational approaches both enable and constrain our understanding of human connectedness.</p>
             </div>
 
             <h3>Core Concepts</h3>
@@ -163,13 +163,13 @@
             <div class="exercises-section">
                 <h3>Exercises</h3>
             <ol>
-                <li>Analyze how different cultural kinship systems might be encoded using graph-theoretical structures, identifying which aspects are easily represented and which might require adaptation of the standard up-node dictionary</li>
-                <li>Design a modified version of the up-node dictionary that could better represent non-biological kinship relationships, such as adoption, godparenthood, or other culturally-recognized connections</li>
-                <li>Consider how the indexing and prioritization of relationships in Bonsai might advantage or disadvantage different types of family structures, and how these biases might be mitigated</li>
-                <li>Explore how uncertainty about relationships might be represented within the data structure to better communicate the probabilistic nature of genetic inferences to end users</li>
-                <li>Design a visualization approach that would translate Bonsai's computational representation into a format that respects and reflects a specific cultural understanding of kinship</li>
-                <li>Discuss how privacy considerations might be built into the data structure itself, rather than just managed through access controls</li>
+                <li>Implement an efficient IBD segment indexing structure for v3 that handles both phased and unphased genetic data with benchmarking capabilities</li>
+                <li>Extend the up-node dictionary implementation to handle additional relationship metadata for v3, including support for relationship types, confidence scores, and temporal information</li>
+                <li>Implement and test a cycle detection algorithm for pedigree validation with comprehensive biological consistency checks</li>
+                <li>Create a visualization function that renders a pedigree from an up-node dictionary, highlighting different generations and relationship types</li>
+                <li>Implement a memory-efficient version of the relationship coefficient calculator using sparse matrix representations for large pedigrees</li>
             </ol>
+            <p>All five exercises are provided with full implementations in the Jupyter notebook, demonstrating practical extensions to the Bonsai v3 algorithm.</p>
             </div>
 
             <div class="alert alert-success">
@@ -179,22 +179,22 @@
             <h3>Interactive Lab Environment</h3>
             
             <div class="jupyter-integration">
-                <p>In this lab, you'll explore the data structures used in Bonsai to represent complex family relationships and organize genetic sharing information.</p>
+                <p>In this lab, you'll explore the data structures used in Bonsai v3 to represent complex family relationships and organize genetic sharing information, with enhanced features for handling both phased and unphased genetic data.</p>
                 
                 <div class="jupyterlite-container">
                     
                     <div class="jupyterlite-info">
                         <h4>Browser-Based Analysis</h4>
-                        <p>The notebook demonstrates how Bonsai encodes relationship information in efficient data structures, from the up-node dictionary to specialized graph representations.</p>
+                        <p>The notebook demonstrates how Bonsai v3 encodes relationship information in efficient data structures, from the up-node dictionary to specialized graph representations. You'll work with the latest version of the Bonsai algorithm which includes enhanced features for both phased and unphased genetic data.</p>
                         <ol>
                             <li>Click the "Open Lab 14 Notebook in JupyterLite" button below</li>
-                            <li>In the file browser that appears, click on "<strong>Lab14_Bonsai_Data_Structures.ipynb</strong>" to open this lab's notebook</li>
+                            <li>In the file browser that appears, click on "<strong>Lab14_Bonsai_Data_Structures_v3.ipynb</strong>" to open this lab's notebook</li>
                             <li>You can now run the code cells by clicking on them and pressing Shift+Enter</li>
                         </ol>
                         <p>Your progress is automatically saved in your browser's storage.</p>
                     </div>
                     
-                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab14_Bonsai_Data_Structures.ipynb"
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab14_Bonsai_Data_Structures_v3.ipynb"
                        class="open-jupyterlite-link"
                        target="_blank"
                        role="button">
@@ -203,7 +203,7 @@
                 </div>
                 
                 <div class="alert alert-info">
-                    <p><strong>Note:</strong> The interactive notebook automatically loads data from previous labs if you completed them. Your work is saved in your browser's storage between lab sessions.</p>
+                    <p><strong>Note:</strong> This updated lab uses the latest Bonsai v3 implementation with improved data structures and algorithms. The interactive notebook automatically loads data from previous labs if you completed them. Your work is saved in your browser's storage between lab sessions.</p>
                 </div>
             </div>
 
@@ -217,15 +217,15 @@
             </ul>
             <p>These considerations highlight how the technical choices in data representation are never neutral but always embed particular perspectives on what matters in human relationships.</p>
             
-            <h3>From Lab to Production: Understanding the Real Bonsai Implementation</h3>
+            <h3>From Lab to Production: Understanding the Real Bonsai v3 Implementation</h3>
             
-            <p>While the lab implementation demonstrates the core concepts of Bonsai's data structures, the production implementation incorporates additional optimizations and features for handling real-world scenarios. Let's explore how the lab code connects to the actual Bonsai implementation.</p>
+            <p>This lab's notebook has been updated to align with the latest Bonsai v3 implementation, but the production code includes additional optimizations and features for handling real-world scenarios. Let's explore how our lab code connects to the actual Bonsai v3 implementation.</p>
             
             <h4>The Up-Node Dictionary</h4>
             
-            <p>The up-node dictionary in the lab (Cell 12) closely resembles the real implementation's core structure:</p>
+            <p>The up-node dictionary in our lab (Cell 12) closely resembles the v3 implementation's core structure:</p>
             
-            <pre><code># Lab implementation
+            <pre><code># Lab implementation (v3-aligned)
 up_node_dict = {
     1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
     1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents
@@ -233,127 +233,102 @@ up_node_dict = {
     -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
 }</code></pre>
             
-            <p>The production code extends this concept with several key enhancements:</p>
+            <p>The production v3 code extends this concept with several key enhancements:</p>
             <ul>
-                <li><strong>Systematic ID management</strong>: The production code includes sophisticated ID tracking systems to ensure inferred ancestors receive unique negative IDs that don't conflict when pedigrees are merged</li>
-                <li><strong>Extended relation attributes</strong>: While our lab implementation uses a simple value of 1 as a placeholder, the production code can store additional metadata about each relationship</li>
-                <li><strong>Optimized traversal algorithms</strong>: The production code implements highly optimized breadth-first and depth-first traversal algorithms that can efficiently navigate even complex multi-generational pedigrees</li>
+                <li><strong>Systematic ID management</strong>: The v3 code includes sophisticated ID tracking systems to ensure inferred ancestors receive unique negative IDs that don't conflict when pedigrees are merged</li>
+                <li><strong>Extended relation attributes</strong>: Similar to our Exercise 2 solution, the production code can store additional metadata about each relationship</li>
+                <li><strong>Optimized traversal algorithms</strong>: The production v3 code implements highly optimized breadth-first and depth-first traversal algorithms, similar to our cycle detection implementation in Exercise 3</li>
             </ul>
             
-            <h4>Relationship Representation</h4>
+            <h4>The PwLogLike Class</h4>
             
-            <p>The lab introduces relationship calculations through the RelationshipCalculator class (Cell 40), which computes coefficients between individuals. The production implementation uses a compact 3-tuple encoding:</p>
+            <p>Our lab's implementation of the PwLogLike class (Cell 19) closely mirrors the v3 implementation, with the same core functionality for calculating pairwise log likelihoods:</p>
             
-            <pre><code># Production implementation
-# Relationship tuple: (up, down, num_ancs)
-# - up: Steps up from first person to common ancestor
-# - down: Steps down from common ancestor to second person
-# - num_ancs: Number of common ancestors (1 or 2)
-
-def get_tuples_set_for_deg(deg, dir1, dir2):
-    """Get relationship tuples compatible with a given degree."""
-    rel_tuple_set = set()
-    # Calculate possible relationship configurations
-    # for a specific degree of relatedness
-    # ...
-    return rel_tuple_set</code></pre>
-            
-            <p>This compact representation allows Bonsai to efficiently:</p>
-            <ul>
-                <li>Enumerate all possible relationships between individuals</li>
-                <li>Calculate genetic expectations for each relationship type</li>
-                <li>Compare observed IBD patterns to theoretical expectations</li>
-                <li>Determine the most likely relationship between any two individuals</li>
-            </ul>
-            
-            <h4>IBD Data Organization</h4>
-            
-            <p>Our lab implementation organizes IBD segments by pair (Cells 7-9) and calculates summary statistics (Cell 19). The production implementation extends this concept with hierarchical indexing strategies:</p>
-            
-            <ul>
-                <li><strong>Multi-level indexing</strong>: IBD data is organized by individual, by pair, by chromosome, and by segment length range for optimal access patterns</li>
-                <li><strong>Selective loading</strong>: The production code can selectively load only the IBD segments relevant to current calculations, reducing memory usage</li>
-                <li><strong>Statistical aggregation</strong>: While our lab calculates basic moments (count, length, squared length), the production code includes additional statistics to better handle edge cases and outliers</li>
-            </ul>
-            
-            <h4>Graph Operations</h4>
-            
-            <p>The lab implements basic graph operations like cycle detection (Cell 26) and community partitioning (Cell 28). The production implementation includes more sophisticated algorithms:</p>
-            
-            <pre><code># Production implementation for connecting pedigrees
-def connect_pedigrees_through_points(id1, id2, pid1, pid2, up_dct1, up_dct2, 
-                                    deg1, deg2, num_ancs, simple=True):
-    """Connect two pedigrees through specific connection points."""
-    # 1. Extend lineages upward if needed
-    if deg1 > 0:
-        up_dct1, _, id1, pid1 = extend_up(iid=id1, deg=deg1, 
-                                         num_ancs=num_ancs, up_dct=up_dct1)
-    
-    # 2. Shift IDs to avoid overlap
-    min_id = get_min_id(up_dct1) - 1
-    up_dct2, id_map = shift_ids(ped=up_dct2, shift=min_id)
-    
-    # 3. Connect the pedigrees
-    # ...
-    
-    return connect_dct_list</code></pre>
-            
-            <p>The production implementation's graph operations include:</p>
-            <ul>
-                <li><strong>Optimized merging</strong>: Algorithms that consider all valid ways to connect separate pedigrees</li>
-                <li><strong>Constraint-based validation</strong>: Checks to ensure biological plausibility (age relationships, generation consistency)</li>
-                <li><strong>Incremental updates</strong>: Efficient methods to update only the affected portions of the pedigree when new information is added</li>
-            </ul>
-            
-            <h4>Caching and Performance Optimization</h4>
-            
-            <p>Our lab introduces the concept of caching with the RelationshipCalculator (Cell 40). The production implementation deploys sophisticated caching throughout:</p>
-            
-            <pre><code># Production implementation for caching likelihoods
+            <pre><code># Lab v3 implementation
 class PwLogLike:
-    def __init__(self, bio_info, unphased_ibd_seg_list, condition_pair_set=None, 
-                mean_bgd_num=0.01, mean_bgd_len=15.0):
-        # ...initialization...
-        self.pairwise_ll_cache = {}  # Cache for pairwise log likelihoods
-        
-    def get_pw_ll(self, node1, node2, rel_tuple):
-        """Get pairwise log likelihood, using cache when possible."""
-        # Create a hashable key for the cache
-        cache_key = (node1, node2, rel_tuple)
-        
-        # Check if result is already cached
-        if cache_key in self.pairwise_ll_cache:
-            return self.pairwise_ll_cache[cache_key]
-        
-        # Calculate the log likelihood
-        ll = self._calculate_pw_ll(node1, node2, rel_tuple)
-        
-        # Cache the result
-        self.pairwise_ll_cache[cache_key] = ll
-        
-        return ll</code></pre>
+    """Class for computing pairwise likelihoods between individuals."""
+    
+    def __init__(self, bio_info, unphased_ibd_seg_list, condition_pair_set=None,
+                 mean_bgd_num=MEAN_BGD_NUM, mean_bgd_len=MEAN_BGD_LEN):
+        """Initialize with biological info and IBD segments."""
+        self.bio_info = bio_info
+        self.id_to_info = {info['genotype_id']: info for info in bio_info}
+        self.ibd_stat_dict = get_ibd_stats_unphased(unphased_ibd_seg_list)
+        self.condition_pair_set = condition_pair_set or set()
+        self.mean_bgd_num = mean_bgd_num
+        self.mean_bgd_len = mean_bgd_len</code></pre>
             
-            <p>Key performance optimizations in the production code include:</p>
+            <p>The production v3 class includes these additional features:</p>
             <ul>
-                <li><strong>Strategic memoization</strong>: Caching results at multiple levels of computation</li>
-                <li><strong>Cache invalidation protocols</strong>: Sophisticated systems to determine when cached values need recalculation</li>
-                <li><strong>Parallel processing</strong>: Decomposition of problems into independently processable units for multi-core execution</li>
-                <li><strong>Memory management</strong>: Careful control of memory usage to handle large datasets</li>
+                <li><strong>Improved statistical models</strong>: More sophisticated likelihood calculations based on extensive empirical validation</li>
+                <li><strong>Additional conditioning options</strong>: Support for conditional and unconditional likelihood calculations with more options</li>
+                <li><strong>Performance optimizations</strong>: Strategic caching and memoization strategies similar to our Exercise 5 solution</li>
             </ul>
             
-            <h4>Key Differences</h4>
+            <h4>Phased and Unphased IBD Data</h4>
             
-            <p>While the lab implementations capture the core concepts, the production code includes several important enhancements:</p>
+            <p>Our lab implementation now includes v3's support for both phased and unphased IBD segments (Cell 7), with the ability to convert between formats:</p>
+            
+            <pre><code># Lab v3 implementation for phased/unphased conversion
+def get_unphased_to_phased(unphased_ibd_seg_list):
+    """
+    Convert unphased IBD segments to phased IBD segments.
+    
+    Args:
+        unphased_ibd_seg_list: List of the form 
+            [[id1, id2, chromosome, start_bp, end_bp, is_full_ibd, seg_len_cm],...]
+            
+    Returns:
+        phased_ibd_seg_list: List of the form 
+            [[id1, id2, hap1, hap2, chromosome, start_cm, end_cm, cm],...]
+    """</code></pre>
+            
+            <p>This dual-format support enables Bonsai v3 to:</p>
+            <ul>
+                <li>Work with diverse IBD detection algorithms that produce either phased or unphased output</li>
+                <li>Leverage phase information when available for more precise relationship inference</li>
+                <li>Handle mixed datasets where some segments have phase information and others don't</li>
+                <li>Maintain backward compatibility with tools and datasets from previous versions</li>
+            </ul>
+            
+            <h4>Connection Point Finding in v3</h4>
+            
+            <p>Our lab now implements v3's more modular approach to finding connection points between pedigrees (Cell 21):</p>
+            
+            <pre><code># v3 connection point implementation
+def get_connecting_points_degs_and_log_likes(
+    up_dct1, 
+    up_dct2, 
+    pw_ll_cls,
+    ibd_seg_list,
+    condition=False, 
+    min_seg_len=MIN_SEG_LEN,
+    max_con_pts=MAX_CON_PTS, 
+    restrict_connection_points=RESTRICT_CON_PTS,
+    connect_up_only=CONNECT_UP_ONLY,
+):
+    """Find potential connection points between two pedigrees."""</code></pre>
+            
+            <p>The production v3 code extends this with:</p>
+            <ul>
+                <li><strong>Optimized search strategies</strong>: More efficient algorithms for finding the best connection points</li>
+                <li><strong>Constraint propagation</strong>: Advanced techniques to reduce the search space based on biological constraints</li>
+                <li><strong>Pedigree transformation</strong>: Sophisticated methods to restructure pedigrees for optimal connection</li>
+            </ul>
+            
+            <h4>Advanced Data Structures</h4>
+            
+            <p>Our lab explores several advanced data structures through the exercises that reflect modern Bonsai v3 capabilities:</p>
             
             <ol>
-                <li><strong>Error handling</strong>: Comprehensive error detection and recovery mechanisms</li>
-                <li><strong>Edge cases</strong>: Special handling for unusual pedigree structures and relationship patterns</li>
-                <li><strong>Scale optimization</strong>: Algorithms designed to scale to thousands of individuals and millions of IBD segments</li>
-                <li><strong>Data validation</strong>: Extensive validation to detect inconsistencies in input data</li>
-                <li><strong>Configurability</strong>: Parameters and thresholds that can be tuned for different datasets and objectives</li>
+                <li><strong>Exercise 1: IBD Indexing</strong>: Our IBDIndex class mirrors v3's efficient segment indexing structure with support for phased and unphased data</li>
+                <li><strong>Exercise 2: Extended Up-Node Dictionary</strong>: Our implementation with relationship metadata reflects v3's enhanced relationship representation</li>
+                <li><strong>Exercise 3: Pedigree Validation</strong>: The PedigreeValidator class implements v3-style consistency checking</li>
+                <li><strong>Exercise 4: Visualization</strong>: Our visualizer with support for different relationship types mirrors v3's visualization capabilities</li>
+                <li><strong>Exercise 5: Sparse Matrix Representation</strong>: Our sparse relationship calculator reflects v3's memory-efficient computation strategies</li>
             </ol>
             
-            <p>Understanding these differences helps bridge the gap between educational implementations and production-ready code, illustrating how the core concepts taught in this lab are adapted for real-world applications.</p>
+            <p>These exercise implementations provide a comprehensive understanding of the data structures and algorithms that power Bonsai v3's ability to reconstruct pedigrees from genetic data.</p>
             
             <div class="learning-pathway">
                 <p>This lab is part of the Bonsai specialization track:</p>

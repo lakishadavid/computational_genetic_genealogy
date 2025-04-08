@@ -1,28 +1,30 @@
 # Bonsai v3 Workflow: From IBD Segments to Pedigrees
 
-This document provides a comprehensive workflow of the actual Bonsai v3 implementation, tracing the path from raw IBD segments to reconstructed pedigrees.
+This document outlines the Bonsai v3 workflow, following the implementation path from raw IBD segments to reconstructed pedigrees.
 
-## 1. Main Entry Point: `bonsai.build_pedigree()`
+## Workflow Overview
 
-The primary function that orchestrates the Bonsai v3 pedigree reconstruction process is `build_pedigree()` in `bonsai.py`. It takes the following key inputs:
+The complete Bonsai v3 workflow follows these steps:
 
-- `bio_info`: Biological metadata for individuals (age, sex, etc.)
-- `unphased_ibd_seg_list`: Unphased IBD segments from detectors like IBIS
-- `phased_ibd_seg_list` (optional): Phased IBD segments if available
+1. Process raw IBD segments from detectors like IBIS
+2. Extract IBD statistics (counts, lengths) for all individual pairs
+3. Compute pairwise relationship likelihoods using genetic and age data
+4. Build small, highly confident pedigrees for closely related individuals
+5. Iteratively combine smaller pedigrees into larger ones
+6. Add individuals incrementally when building large pedigrees
+7. Return the final pedigree with log-likelihood scores
 
-### Key Steps:
+## 1. Main Entry Point: `build_pedigree()`
 
-```
-build_pedigree()
-├── Initialize IBD data (convert between phased/unphased as needed)
-├── Create PwLogLike instance for likelihood calculations
-├── Initialize pedigree tracking data structures
-└── Call combine_up_dicts() for the main pedigree building algorithm
-```
+The primary function orchestrating the Bonsai v3 process is `build_pedigree()` in `bonsai.py`. It takes these key inputs:
 
-## 2. Data Structures and Preprocessing
+- `bio_info`: Biological metadata (age, sex, coverage)
+- `unphased_ibd_seg_list`: Unphased IBD segments (from detectors like IBIS)
+- `phased_ibd_seg_list`: Phased IBD segments (optional)
 
-### 2.1 IBD Segment Formats
+## 2. IBD Data Management and Processing
+
+### 2.1 IBD Data Formats
 
 Bonsai v3 works with two IBD segment formats:
 
@@ -36,28 +38,41 @@ Bonsai v3 works with two IBD segment formats:
 [id1, id2, hap1, hap2, chromosome, start_cm, end_cm, seg_cm]
 ```
 
-### 2.2 IBD Data Processing Functions
+### 2.2 IBD Conversion Functions
 
 - `get_phased_to_unphased()`: Converts phased segments to unphased format
 - `get_unphased_to_phased()`: Creates pseudo-phased segments from unphased data
-- `get_ibd_stats_unphased()`: Extracts statistics for each pair of individuals:
-  - `total_half`: Total IBD1 sharing in cM
-  - `total_full`: Total IBD2 sharing in cM
-  - `num_half`: Number of IBD1 segments
-  - `num_full`: Number of IBD2 segments
-  - `max_seg_cm`: Length of largest segment
 
-### 2.3 Pedigree Tracking Structures
+### 2.3 IBD Statistics Extraction
 
-The `initialize_input_dicts()` function creates three key data structures:
+`get_ibd_stats_unphased()` extracts key statistics:
+- `total_half`: Total IBD1 sharing (cM)
+- `total_full`: Total IBD2 sharing (cM)
+- `num_half`: Number of IBD1 segments
+- `num_full`: Number of IBD2 segments
+- `max_seg_cm`: Length of largest segment
 
-1. `idx_to_up_dict_ll_list`: Maps pedigree indices to lists of (pedigree, log-likelihood) pairs
-2. `id_to_idx`: Maps individual IDs to their pedigree indices
-3. `idx_to_id_set`: Maps pedigree indices to sets of contained individual IDs
+### 2.4 The Up-Node Dictionary Structure
 
-## 3. Likelihood Calculation: The `PwLogLike` Class
+The central data structure in Bonsai v3 is the up-node dictionary:
 
-The `PwLogLike` class from `likelihoods.py` is central to Bonsai's operation, computing relationship likelihoods between individuals.
+```python
+up_node_dict = {
+    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
+    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents (siblings)
+    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
+    -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
+    # ... additional relationships
+}
+```
+
+- Positive IDs represent observed individuals
+- Negative IDs represent inferred (latent) ancestors
+- Empty dictionaries represent individuals with no recorded parents
+
+## 3. Pairwise Relatedness Analysis: The `PwLogLike` Class
+
+The `PwLogLike` class (in `likelihoods.py`) computes relationship likelihoods between individuals.
 
 ### 3.1 Initialization
 
@@ -83,21 +98,74 @@ pw_ll_cls = PwLogLike(
 - `get_pw_age_ll()`: Calculates age-based component of likelihood
 - `get_pw_ll()`: Combines genetic and age components for total likelihood
 
-### 3.4 Statistical Model
+### 3.4 Statistical IBD Models
 
-Unlike the simplified teaching version in the notebook, the real implementation:
+The implementation uses sophisticated statistical models:
 
-1. Uses pre-calculated IBD moment distributions for different relationship types
-2. Incorporates sophisticated background IBD modeling
-3. Accounts for coverage effects on segment detection
-4. Includes both IBD1 and IBD2 segments in likelihood calculations
-5. Uses `get_log_seg_pdf()` to compute likelihoods from segment data
+- `get_lam_a_m()`: Computes expected segment lengths by meiotic distance
+- `get_eta()`: Calculates expected segment counts by relationship
+- `get_log_seg_pdf()`: Computes likelihoods from segment data
+- Coverage adjustments for segment detection and length
 
-## 4. Pedigree Building: `combine_up_dicts()`
+### 3.5 Age-Based Modeling
 
-The core algorithm that iteratively builds pedigrees by connecting smaller pedigrees.
+Bonsai v3 includes sophisticated age-based relationship modeling:
 
-### 4.1 Main Flow
+- `get_age_mean_std_for_rel_tuple()`: Returns expected age difference and std dev for relationships
+- `get_age_log_like()`: Computes likelihood based on age differences
+- Calibrated using empirical data for different relationship types
+
+## 4. Building Small Pedigrees
+
+### 4.1 Pedigree Tracking Structures
+
+The `initialize_input_dicts()` function creates three key data structures:
+
+1. `idx_to_up_dict_ll_list`: Maps pedigree indices to lists of (pedigree, log-likelihood) pairs
+2. `id_to_idx`: Maps individual IDs to their pedigree indices
+3. `idx_to_id_set`: Maps pedigree indices to sets of contained individual IDs
+
+### 4.2 Finding Closest Individuals
+
+Bonsai begins by identifying individuals who share the most IBD:
+
+```python
+# From combine_up_dicts() in connections.py
+# Get the closest pair of IDs that are not already in the same pedigree
+c1, c2 = get_closest_pair(ibd_stats)
+```
+
+### 4.3 Finding Connection Points
+
+`get_connecting_points_degs_and_log_likes()` in `connections.py` finds optimal ways to connect individuals:
+
+1. Gets potential connection points for each individual
+2. Filters connection points based on various criteria
+3. For each connection point pair:
+   - Calculates connection likelihoods 
+   - Ranks connection points by likelihood
+4. Returns ordered list of connection points and likelihoods
+
+### 4.4 Advanced Filtering Strategies
+
+- `get_up_only_con_pt_set()`: Restricts connections to common ancestors
+- `get_restricted_connection_point_sets()`: Limits connection points to subtrees with IBD sharing
+- `get_max_con_pt_sets()`: Uses IBD correlation to identify most likely connection points
+
+### 4.5 Connecting Small Pedigrees
+
+`connect_pedigrees_through_points()` function handles:
+
+1. Taking connection points and relationship specification
+2. Handling the actual creation of connections between individuals
+3. Creating latent (inferred) ancestors as needed
+4. Returning the connected small pedigree
+
+## 5. Building Large Pedigrees: `combine_up_dicts()`
+
+The core algorithm iteratively builds larger pedigrees by connecting smaller ones.
+
+### 5.1 Main Flow
 
 ```
 combine_up_dicts()
@@ -108,41 +176,31 @@ combine_up_dicts()
 └── Repeat until all pedigrees are connected or no more connections possible
 ```
 
-### 4.2 Finding Connection Points
+### 5.2 Finding Closest Pedigrees
 
-The `get_connecting_points_degs_and_log_likes()` function in `connections.py` finds optimal ways to connect pedigrees:
+The algorithm identifies which pedigrees share the most IBD with each other:
 
-1. Gets potential connection points in each pedigree
-2. Filters connection points based on various criteria
-3. For each connection point pair:
-   - Calculates connection likelihoods using `get_connection_degs_and_log_likes()`
-   - Ranks connection points by likelihood
-4. Returns ordered list of connection points and likelihoods
+```python
+# Find the two pedigrees that share the most IBD
+idx1, idx2 = find_closest_pedigrees(idx_to_id_set, ibd_seg_list)
+```
 
-### 4.3 Advanced Filtering Strategies
+### 5.3 Merging Pedigrees
 
-Unlike the teaching version, the real implementation employs several sophisticated filtering strategies:
+For each pair of candidate pedigrees, Bonsai:
 
-- `get_up_only_con_pt_set()`: Restricts connections to common ancestors
-- `get_restricted_connection_point_sets()`: Limits connection points to subtrees with IBD sharing
-- `get_max_con_pt_sets()`: Uses IBD correlation to identify most likely connection points
+1. Identifies optimal connection points
+2. Connects them using specific relationship configurations
+3. Evaluates likelihood of the combined pedigree
+4. Keeps the most likely configurations
 
-### 4.4 Connecting Pedigrees
+## 6. Adding Individuals Incrementally
 
-The `connect_pedigrees_through_points()` function:
+For incremental pedigree building, Bonsai provides an alternative flow:
 
-1. Takes connection points and relationship specification
-2. Handles the actual creation of connections between pedigrees
-3. Creates latent (inferred) ancestors as needed
-4. Returns the connected pedigree
+### 6.1 Finding Next Individual
 
-## 5. Adding Individuals Incrementally
-
-For incremental pedigree building, Bonsai uses a different workflow:
-
-### 5.1 Finding Next Individual
-
-The `get_next_node()` function determines which unplaced individual to add next:
+`get_next_node()` selects the unplaced individual who shares the most IBD with any placed individual:
 
 ```python
 def get_next_node(
@@ -152,11 +210,9 @@ def get_next_node(
 ):
 ```
 
-It selects the unplaced individual sharing the most IBD with any placed individual.
+### 6.2 Finding Connection Points
 
-### 5.2 Finding Connection Points
-
-`get_new_node_connections()` finds optimal ways to connect a new individual:
+`get_new_node_connections()` finds optimal ways to connect a new individual to the existing pedigree:
 
 ```python
 def get_new_node_connections(
@@ -168,9 +224,9 @@ def get_new_node_connections(
 ):
 ```
 
-### 5.3 Making the Connection
+### 6.3 Making the Connection
 
-Finally, `connect_new_node()` adds the individual to the pedigree:
+`connect_new_node()` adds the individual to the pedigree:
 
 ```python
 def connect_new_node(
@@ -181,50 +237,9 @@ def connect_new_node(
 ):
 ```
 
-## 6. Mathematical Models
+## 7. Optimization and Performance Enhancements
 
-Unlike the teaching version, the real Bonsai v3 uses sophisticated statistical models:
-
-### 6.1 IBD Length Distributions
-
-- Models IBD segments using a two-component mixture model:
-  - Foreground (relationship-based) segments
-  - Background (population-based) segments
-- Uses functions like `get_L_log_pdf_approx()` and `get_n_L_log_pdf_approx()` for calculation
-
-### 6.2 Segment Length and Count Models
-
-- Uses `get_lam_a_m()` to compute expected segment lengths by meiotic distance
-- Uses `get_eta()` to calculate expected segment counts by relationship
-- Adjusts for coverage effects on segment detection and length
-
-### 6.3 Age-Based Modeling
-
-- `get_age_mean_std_for_rel_tuple()`: Returns expected age difference and std dev for relationships
-- `get_age_log_like()`: Computes likelihood based on age differences
-- Calibrated using empirical data for different relationship types
-
-## 7. Up-Node Dictionary Structure
-
-The central data structure in Bonsai v3 is the up-node dictionary:
-
-```python
-up_node_dict = {
-    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
-    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents (siblings)
-    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
-    -1: {1005: 1, 1006: 1},    # Inferred individual -1 has parents 1005 and 1006
-    # ... additional relationships
-}
-```
-
-- Positive IDs represent observed individuals
-- Negative IDs represent inferred (latent) ancestors
-- Empty dictionaries represent individuals with no recorded parents
-
-## 8. Optimization and Performance Enhancements
-
-The real Bonsai v3 includes several optimizations:
+Bonsai v3 includes several optimizations:
 
 - Caching for repeated likelihood calculations
 - Sparse representation of pedigrees for memory efficiency
@@ -232,26 +247,32 @@ The real Bonsai v3 includes several optimizations:
 - Priority-based processing of relationships by IBD amount
 - Cycle detection to prevent invalid pedigree structures
 
-## 9. Full Pedigree Construction Example
+## 8. Complete Pedigree Construction Example
 
-A complete workflow example:
+A complete workflow example from IBD detector output to final pedigree:
 
 ```
 1. Parse IBD data from IBIS or other detector
-2. Convert to Bonsai format using ibd.py functions
-3. Initialize pedigree structures with initialize_input_dicts()
-4. Create PwLogLike instance for likelihood calculations
-5. Find closest pairs of individuals using IBD statistics
-6. Build initial small pedigrees for these closely related pairs
-7. Iteratively combine pedigrees through optimal connection points
-8. Return the final pedigree with log-likelihood score
+   • Load unphased IBD segments
+   • Convert to phased format if needed (get_unphased_to_phased)
+   • Extract IBD statistics (get_ibd_stats_unphased)
+
+2. Initialize relationship likelihood computation
+   • Create PwLogLike instance with IBD data and bio info
+   • Set up background IBD model parameters
+
+3. Initialize pedigree data structures
+   • Create empty pedigrees for each individual (initialize_input_dicts)
+   • Set up tracking dictionaries for individuals and pedigrees
+
+4. Build pedigrees iteratively
+   • Find closest pairs of individuals or pedigrees using IBD
+   • Identify optimal connection points for merging
+   • Connect using most likely relationship configurations
+   • Repeat until all connected or no more valid connections
+
+5. Evaluate final pedigree
+   • Calculate composite log-likelihood
+   • Remove dangling founders if needed
+   • Return the final pedigree structure
 ```
-
-## 10. Key Differences from Teaching Implementation
-
-- Uses pre-computed moment-based statistical distributions rather than simple normal distributions
-- Employs sophisticated filtering to prioritize the most promising connection points
-- Includes advanced handling of background IBD and coverage effects
-- Integrates both genetic and age-based likelihood components
-- Handles both IBD1 and IBD2 segments, with proper modeling of their distributions
-- Implements caching and optimization strategies for performance

@@ -50,8 +50,9 @@ Follow these steps in your **Ubuntu terminal**:
 
     echo "Using project base directory for paths: ${PROJECT_BASE_DIR}"
 
-    # Create or overwrite the .env file in your home directory
-    cat > ~/.env << EOF
+    # Create or overwrite the .env file in your ${PROJECT_BASE_DIR} directory
+    cd ${PROJECT_BASE_DIR}
+    cat > .env << EOF
     PROJECT_WORKING_DIR=${PROJECT_BASE_DIR}
     PROJECT_DATA_DIR=${PROJECT_BASE_DIR}/data
     PROJECT_REFERENCES_DIR=${PROJECT_BASE_DIR}/references
@@ -60,7 +61,7 @@ Follow these steps in your **Ubuntu terminal**:
     USER_HOME=${HOME}
     EOF
 
-    echo "✅ Created ~/.env file in your home directory (~/.env)."
+    echo "✅ Created ${PROJECT_BASE_DIR}/.env file."
 
     # Verify the contents (optional, run this command separately after the block above)
     # cat ~/.env
@@ -75,8 +76,7 @@ Follow these steps in your **Ubuntu terminal**:
     sudo apt-add-repository -y universe && sudo apt-add-repository -y multiverse && sudo apt-add-repository -y ppa:deadsnakes/ppa
     sudo apt update -y
 
-    # Install main dependencies (excluding samtools/bcftools/tabix via apt)
-    # Added openjdk-21-jdk, libncurses-dev
+    # Install main dependencies
     sudo apt install -y --no-install-recommends \
         build-essential \
         g++ \

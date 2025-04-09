@@ -297,4 +297,4 @@ WORKDIR ${PROJECT_DIR}
 USER ${USERNAME}
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["bash"] # Default command if none provided to entrypoint
+CMD ["bash"]

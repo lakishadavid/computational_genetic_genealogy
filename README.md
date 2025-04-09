@@ -19,6 +19,8 @@ Follow these steps in your **Ubuntu terminal**:
 
     ```bash
     # Clone into your home directory or another location of your choice
+    sudo apt update
+    sudo apt install -y git
     git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
     # Example: This creates ~/computational_genetic_genealogy if run in home dir
     # Define the path to the cloned repository for subsequent steps

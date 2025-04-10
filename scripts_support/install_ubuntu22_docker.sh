@@ -2,6 +2,7 @@
 #
 # Computational Genetic Genealogy Environment Setup Script for Docker
 # This script automatically sets up the environment without using sudo
+# Version: 1.0.0 (Improved Directory Handling)
 
 set -e # Exit on error
 
@@ -9,24 +10,16 @@ echo "==========================================================================
 echo "Computational Genetic Genealogy Environment Setup for Docker"
 echo "============================================================================="
 
-# Get the current directory where the script is run from
-CURRENT_DIR=$(pwd)
+# IMPORTANT: Use a single, consistent project directory
+# The script will ALWAYS install to /computational_genetic_genealogy
+PROJECT_BASE_DIR="/computational_genetic_genealogy"
 
-# Define the project directory based on current directory
-if [[ $CURRENT_DIR == */computational_genetic_genealogy* ]]; then
-    # Already in the project directory or a subdirectory
-    PROJECT_BASE_DIR=$(echo "$CURRENT_DIR" | sed 's|\(.*computational_genetic_genealogy\).*|\1|')
-    echo "✅ Found project directory: $PROJECT_BASE_DIR"
-else
-    # Not in a project directory, use /app directory by default for Docker
-    PROJECT_BASE_DIR="/app"
-    echo "⚠️ Not in project directory. Using: $PROJECT_BASE_DIR"
-    
-    # Create directory if it doesn't exist
-    if [ ! -d "$PROJECT_BASE_DIR" ]; then
-        mkdir -p "$PROJECT_BASE_DIR"
-        echo "✅ Created directory: $PROJECT_BASE_DIR"
-    fi
+echo "✅ Using project directory: $PROJECT_BASE_DIR"
+
+# Create directory if it doesn't exist
+if [ ! -d "$PROJECT_BASE_DIR" ]; then
+    mkdir -p "$PROJECT_BASE_DIR"
+    echo "✅ Created directory: $PROJECT_BASE_DIR"
 fi
 
 echo "============================================================================="
@@ -54,8 +47,8 @@ PROJECT_UTILS_DIR=${PROJECT_BASE_DIR}/utils
 USER_HOME=${HOME}
 EOF
 
-# Also create .env in home directory for compatibility
-cat > ~/.env << EOF
+# Also create .env in the project directory for compatibility
+cat > ${PROJECT_BASE_DIR}/.env << EOF
 PROJECT_WORKING_DIR=${PROJECT_BASE_DIR}
 PROJECT_DATA_DIR=${PROJECT_BASE_DIR}/data
 PROJECT_REFERENCES_DIR=${PROJECT_BASE_DIR}/references
@@ -120,6 +113,8 @@ apt install -y --no-install-recommends \
     texlive-xetex \
     texlive-fonts-recommended \
     texlive-plain-generic \
+    texlive-latex-extra \
+    texlive-fonts-extra \
     pandoc \
     r-base \
     libgsl-dev \
@@ -128,6 +123,12 @@ apt install -y --no-install-recommends \
     libblas-dev \
     liblapack-dev \
     libatlas-base-dev
+
+# Configure R Library Path for user-specific packages
+mkdir -p ~/R/library/
+touch ~/.Rprofile
+grep -qxF '.libPaths(c("~/R/library/", .libPaths()))' ~/.Rprofile || echo '.libPaths(c("~/R/library/", .libPaths()))' >> ~/.Rprofile
+echo "✅ Configured R library path in ~/.Rprofile"
 
 # Clean up
 apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -205,20 +206,46 @@ echo "==========================================================================
 echo "5. Installing Poetry (Python Dependency Manager)"
 echo "============================================================================="
 
+# Install Poetry using pipx
 pipx ensurepath
 pipx install poetry
 
-# Add pipx path to system environment
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> /etc/environment
-# Also set for current shell
+# Make Poetry available in PATH immediately and permanently
 export PATH="$HOME/.local/bin:$PATH"
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> /etc/environment
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 
 # Verify installation
 poetry --version
 echo "✅ Poetry installed"
 
 echo "============================================================================="
-echo "6. Installing Python Project Dependencies"
+echo "6. Setting up Git Repository"
+echo "============================================================================="
+
+# Change to the project directory
+cd "$PROJECT_BASE_DIR"
+
+# Clone the repository if it doesn't already exist
+if [ ! -f "$PROJECT_BASE_DIR/pyproject.toml" ]; then
+    # Move to a temporary location
+    cd /tmp
+    # Clone the repository
+    git clone https://github.com/lakishadavid/computational_genetic_genealogy.git temp_repo
+    # Move all files from the cloned repo to the project directory
+    cp -r temp_repo/* $PROJECT_BASE_DIR/
+    cp -r temp_repo/.* $PROJECT_BASE_DIR/ 2>/dev/null || true
+    # Clean up
+    rm -rf temp_repo
+    # Return to project directory
+    cd "$PROJECT_BASE_DIR"
+    echo "✅ Repository cloned to $PROJECT_BASE_DIR"
+else
+    echo "✅ Repository already exists in $PROJECT_BASE_DIR"
+fi
+
+echo "============================================================================="
+echo "7. Installing Python Project Dependencies"
 echo "============================================================================="
 
 cd "$PROJECT_BASE_DIR"
@@ -228,7 +255,7 @@ poetry install --no-root
 echo "✅ Python dependencies installed"
 
 echo "============================================================================="
-echo "7. Updating PATH for Utility Scripts"
+echo "8. Updating PATH for Utility Scripts"
 echo "============================================================================="
 
 UTILS_DIR="${PROJECT_BASE_DIR}/utils"
@@ -236,12 +263,13 @@ EXPORT_LINE="export PATH=\"\$PATH:${UTILS_DIR}\"" # Add utils dir to PATH
 
 # Add to environment
 echo ${EXPORT_LINE} >> /etc/environment
+echo ${EXPORT_LINE} >> ~/.bashrc
 # Also set for current shell
 export PATH="$PATH:${UTILS_DIR}"
 echo "✅ Added utils directory (${UTILS_DIR}) to PATH"
 
 echo "============================================================================="
-echo "8. Installing JAR Files (Beagle, HapIBD, RefinedIBD)"
+echo "9. Installing JAR Files (Beagle, HapIBD, RefinedIBD)"
 echo "============================================================================="
 
 # Download Java tools
@@ -271,7 +299,7 @@ java -Xmx1g -jar "${UTILS_DIR}/${BEAGLE_JAR}" || echo "Beagle test command finis
 echo "✅ JAR files installed"
 
 echo "============================================================================="
-echo "9. Installing LiftOver"
+echo "10. Installing LiftOver"
 echo "============================================================================="
 
 # Download LiftOver binary and make executable
@@ -285,7 +313,7 @@ wget -nv http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over
 [ -x "${UTILS_DIR}/liftOver" ] && echo "✅ LiftOver installed successfully."
 
 echo "============================================================================="
-echo "10. Installing BonsaiTree"
+echo "11. Installing BonsaiTree"
 echo "============================================================================="
 
 BONSAI_DIR="${UTILS_DIR}/bonsaitree"
@@ -310,7 +338,7 @@ poetry run python -c "from bonsaitree.v3.bonsai import build_pedigree; print('�
 cd "${PROJECT_BASE_DIR}"
 
 echo "============================================================================="
-echo "11. Installing IBIS, Ped-Sim, RFMix2 (Source Build)"
+echo "12. Installing IBIS, Ped-Sim, RFMix2 (Source Build)"
 echo "============================================================================="
 
 # Define repositories and directories
@@ -356,7 +384,7 @@ fi
 cd "${PROJECT_BASE_DIR}"
 
 echo "============================================================================="
-echo "12. Installing PLINK2 Binary"
+echo "13. Installing PLINK2 Binary"
 echo "============================================================================="
 
 # Download and install PLINK2
@@ -378,14 +406,69 @@ if [ -f "$PLINK2_BINARY" ] && [ -x "$PLINK2_BINARY" ]; then
 fi
 
 echo "============================================================================="
-echo "13. Final Setup"
+echo "14. Installing Jupyter for Notebook Support"
+echo "============================================================================="
+
+# Install Jupyter in the system Python
+pip3 install jupyter notebook nbconvert ipywidgets matplotlib ipympl
+
+# Also install in the Poetry environment
+cd "${PROJECT_BASE_DIR}"
+poetry add jupyter notebook nbconvert ipywidgets matplotlib ipympl python-dotenv
+
+# Create Jupyter configuration
+mkdir -p ~/.jupyter
+jupyter notebook --generate-config
+
+# Configure Jupyter to allow remote connections
+jupyter_config=~/.jupyter/jupyter_notebook_config.py
+if [ -f "$jupyter_config" ]; then
+    # Set up configurations for remote access
+    sed -i "s/# c.NotebookApp.ip = 'localhost'/c.NotebookApp.ip = '0.0.0.0'/g" "$jupyter_config"
+    sed -i "s/# c.NotebookApp.allow_origin = ''/c.NotebookApp.allow_origin = '*'/g" "$jupyter_config"
+    sed -i "s/# c.NotebookApp.open_browser = True/c.NotebookApp.open_browser = False/g" "$jupyter_config"
+    
+    echo "✅ Configured Jupyter for remote access"
+fi
+
+# Copy initial class data if it exists
+CLASS_DATA_SOURCE="${PROJECT_BASE_DIR}/data/class_data"
+if [ -d "$CLASS_DATA_SOURCE" ]; then
+    echo "Copying initial class data..."
+    mkdir -p "${PROJECT_BASE_DIR}/data"
+    cp -r "$CLASS_DATA_SOURCE" "${PROJECT_BASE_DIR}/data/"
+    echo "✅ Initial class data copied"
+fi
+
+echo "✅ Jupyter installed and configured for notebook support"
+
+echo "============================================================================="
+echo "15. Final Setup and Environment Verification"
 echo "============================================================================="
 
 # Add activation script to a standard location
 echo '#!/bin/bash
+# Add Poetry binary directory to PATH
+export PATH="/root/.local/bin:$PATH"
+
+# Add utils directory to PATH
+export PATH="$PATH:'"${PROJECT_BASE_DIR}"'/utils"
+
+# Activate Python virtual environment
 source '"${PROJECT_BASE_DIR}"'/.venv/bin/activate
+
+# Change to project directory
 cd '"${PROJECT_BASE_DIR}"'
+
 echo "Computational Genetic Genealogy environment activated"
+
+# Check environment quickly
+echo -e "\nEnvironment paths:"
+echo "PROJECT_WORKING_DIR=$PROJECT_WORKING_DIR"
+echo "PROJECT_DATA_DIR=$PROJECT_DATA_DIR"
+echo "PROJECT_REFERENCES_DIR=$PROJECT_REFERENCES_DIR"
+echo "PROJECT_RESULTS_DIR=$PROJECT_RESULTS_DIR"
+echo "PROJECT_UTILS_DIR=$PROJECT_UTILS_DIR"
 ' > /usr/local/bin/activate_cgg
 chmod +x /usr/local/bin/activate_cgg
 
@@ -394,6 +477,107 @@ if [ -d "${PROJECT_BASE_DIR}/scripts_env" ]; then
     chmod -R +x "${PROJECT_BASE_DIR}/scripts_env/"
     echo "✅ Made scripts executable"
 fi
+
+# Create a verification script to check tool installation
+echo '#!/bin/bash
+# Environment verification script
+set -e
+
+echo "============================================================================="
+echo "Computational Genetic Genealogy Environment Verification"
+echo "============================================================================="
+
+# Check Python and Poetry
+echo -e "\n--- Python and Poetry ---"
+python3.12 --version
+poetry --version
+
+# Check Java
+echo -e "\n--- Java Installation ---"
+java -version
+echo "JAVA_HOME=$JAVA_HOME"
+
+# Check Samtools/BCFtools/Tabix
+echo -e "\n--- Genomics Tools ---"
+echo "Samtools: $(samtools --version | head -n 1)"
+echo "BCFtools: $(bcftools --version | head -n 1)"
+echo "Tabix: $(tabix --version | head -n 1)"
+
+# Check R
+echo -e "\n--- R Installation ---"
+R --version | head -n 1
+
+# Check JAR Files
+echo -e "\n--- JAR Files ---"
+UTILS_DIR="$PROJECT_UTILS_DIR"
+JARS=("beagle.27Feb25.75f.jar" "hap-ibd.jar" "refined-ibd.17Jan20.102.jar" "merge-ibd-segments.17Jan20.102.jar")
+for jar in "${JARS[@]}"; do
+    if [ -f "$UTILS_DIR/$jar" ]; then
+        echo "✅ Found $jar"
+    else
+        echo "❌ Missing $jar"
+    fi
+done
+
+# Check Other Tools
+echo -e "\n--- Other Tools ---"
+if [ -x "$UTILS_DIR/liftOver" ]; then
+    echo "✅ Found LiftOver executable"
+else
+    echo "❌ Missing LiftOver"
+fi
+
+if [ -x "$UTILS_DIR/plink2" ]; then
+    echo "✅ Found PLINK2 executable"
+    "$UTILS_DIR/plink2" --version | head -n 1
+else
+    echo "❌ Missing PLINK2"
+fi
+
+# Check Source-Built Tools
+echo -e "\n--- Source-Built Tools ---"
+if [ -x "$UTILS_DIR/ibis/ibis" ]; then
+    echo "✅ Found IBIS executable"
+else
+    echo "❌ Missing IBIS"
+fi
+
+if [ -x "$UTILS_DIR/ped-sim/ped-sim" ]; then
+    echo "✅ Found Ped-Sim executable"
+else
+    echo "❌ Missing Ped-Sim"
+fi
+
+if [ -f "$UTILS_DIR/rfmix2/rfmix" ]; then
+    echo "✅ Found RFMix2 executable"
+else
+    echo "❌ Missing RFMix2"
+fi
+
+if [ -d "$UTILS_DIR/bonsaitree" ]; then
+    echo "✅ Found BonsaiTree directory"
+else
+    echo "❌ Missing BonsaiTree"
+fi
+
+# Check Jupyter
+echo -e "\n--- Jupyter ---"
+jupyter --version | head -n 1
+
+echo -e "\nVerification complete! If any tools are missing, run the installation script again."
+echo "============================================================================="
+' > /usr/local/bin/verify_cgg_env
+chmod +x /usr/local/bin/verify_cgg_env
+
+# Create a script for running Jupyter
+echo '#!/bin/bash
+# Start Jupyter Notebook server with proper configuration
+source /usr/local/bin/activate_cgg
+cd '"${PROJECT_BASE_DIR}"'
+echo "Starting Jupyter Notebook server..."
+jupyter notebook --ip=0.0.0.0 --no-browser --allow-root
+' > /usr/local/bin/start_jupyter
+chmod +x /usr/local/bin/start_jupyter
 
 # Create a log of installed tools and versions
 LOG_FILE="${PROJECT_BASE_DIR}/environment_setup_log.txt"
@@ -408,6 +592,7 @@ LOG_FILE="${PROJECT_BASE_DIR}/environment_setup_log.txt"
     echo "Poetry: $(poetry --version 2>&1)"
     echo "Java: $(java -version 2>&1 | head -n 1)"
     echo "R: $(R --version | head -n 1)"
+    echo "Jupyter: $(jupyter --version 2>&1 | head -n 1)"
     echo ""
     echo "--- Bioinformatics Tools ---"
     echo "Samtools: $(samtools --version | head -n 1)"
@@ -429,7 +614,7 @@ LOG_FILE="${PROJECT_BASE_DIR}/environment_setup_log.txt"
     echo ""
     echo "--- Environment ---"
     echo "Project Directory: ${PROJECT_BASE_DIR}"
-    echo "Environment File: /etc/environment and ~/.env"
+    echo "Environment Files: /etc/environment and ${PROJECT_BASE_DIR}/.env"
     echo "Python Virtual Environment: ${PROJECT_BASE_DIR}/.venv"
 } > "$LOG_FILE"
 
@@ -438,8 +623,40 @@ echo "✅ Environment setup log created at: $LOG_FILE"
 echo "============================================================================="
 echo "✅ Installation Complete!"
 echo "============================================================================="
-echo "To activate the environment, use: activate_cgg"
-echo "Or manually: source ${PROJECT_BASE_DIR}/.venv/bin/activate"
+echo "Your Computational Genetic Genealogy Environment is fully set up:"
+echo ""
+echo "🖥️  OS: Ubuntu 22.04"
+echo "🐍  Python: 3.12 managed by Poetry in .venv"
+echo "☕  Java: OpenJDK 17"
+echo "🧬  Genomics Tools: Samtools/BCFtools/Tabix v1.18, Beagle, PLINK2, and more"
+echo "📓  Jupyter: Installed with PDF export capability"
+echo ""
+echo "📋  Available Commands:"
+echo "    • activate_cgg       - Activate the Python environment and set paths"
+echo "    • verify_cgg_env     - Verify all tools are properly installed"
+echo "    • start_jupyter      - Launch Jupyter Notebook server"
+echo ""
+echo "📂  Directory Structure:"
+echo "    • ${PROJECT_BASE_DIR}           - Main project directory"
+echo "    • ${PROJECT_BASE_DIR}/data      - Data files"
+echo "    • ${PROJECT_BASE_DIR}/results   - Analysis results"
+echo "    • ${PROJECT_BASE_DIR}/references - Reference files"
+echo "    • ${PROJECT_BASE_DIR}/utils     - Utility scripts and tools"
+echo ""
+echo "🔧  VS Code Tips:"
+echo "    • When opening notebooks in VS Code, select the Python interpreter:"
+echo "      .venv (Poetry) from the computational_genetic_genealogy directory"
+echo "    • To export notebooks to PDF: Use the Jupyter extension or run:"
+echo "      poetry run jupyter nbconvert --to pdf path/to/notebook.ipynb"
+echo ""
+echo "🚀  To get started right now:"
+echo "    1. Run: activate_cgg"
+echo "    2. Run: verify_cgg_env    (to verify all tools)"
+echo "    3. Run: start_jupyter     (to launch Jupyter)"
 echo ""
 echo "All tools are installed and ready to use."
 echo "============================================================================="
+
+# Run verification to confirm all tools are installed correctly
+echo -e "\nRunning environment verification..."
+/usr/local/bin/verify_cgg_env

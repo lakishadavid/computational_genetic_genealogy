@@ -40,6 +40,7 @@ jupyterlab = "^4.3.6"
 jupyterlite = "^0.5.1"
 jupyterlite-pyodide-kernel = "^0.5.2"
 numba = "^0.61.0"
+jupyter = "^1.1.1"
 
 
 [tool.poetry.group.dev.dependencies]

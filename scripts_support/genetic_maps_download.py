@@ -14,9 +14,12 @@ from urllib3.util import Retry
 import time
 import subprocess
 from dotenv import load_dotenv
-notebook_dir = os.getcwd()
-project_root = os.path.dirname(notebook_dir)
+
+# Get script directory and find .env file in project root
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)  # Parent of scripts_support is project root
 env_path = os.path.join(project_root, '.env')
+print(f"Looking for .env at: {env_path}")
 load_dotenv(env_path, override=True)
 
 def configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO"):
@@ -325,16 +328,16 @@ if __name__ == "__main__":
 
         if not all([working_directory, data_directory, references_directory, 
                    results_directory, utils_directory]):
-            raise ValueError("Not all required directories were configured")
+            raise ValueError("Not all required directories were configured in .env file")
             
     except Exception as e:
         print(f"Error verifying directories: {e}")
         sys.exit(1)
 
-    log_filename = os.path.join(results_directory, "log.txt")
+    log_filename = os.path.join(results_directory, "genetic_maps_download.log")
     configure_logging(log_filename, log_file_debug_level="INFO", console_debug_level="INFO")
 
-    # logging.info directories
+    # Log directories
     logging.info(f"Results Directory: {results_directory}")
     logging.info(f"Data Directory: {data_directory}")
     logging.info(f"References Directory: {references_directory}")

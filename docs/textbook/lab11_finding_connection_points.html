@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 11: Finding Connection Points | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Finding Connection Points Between Individuals</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab11_finding_connection_points.html" class="active">Lab 11: Finding Connection Points</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 11: Finding Connection Points Between Individuals</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores Bonsai v3's algorithms for identifying potential connection points between individuals or pedigrees. Finding optimal ways to connect individuals based on genetic evidence is a central challenge in computational genetic genealogy, and understanding these algorithms is essential for comprehending how Bonsai reconstructs complex family trees.</p>
+            </div>
+
+            <h3>The Connection Point Problem</h3>
+            
+            <div class="concept-section">
+                <h4>Defining Connection Points</h4>
+                <p>In genetic genealogy, we often encounter situations where we have evidence that two individuals or pedigrees are related, but we need to determine precisely how they connect. This is the "connection point problem," and it's central to Bonsai v3's pedigree construction algorithm.</p>
+                
+                <p>A connection point in Bonsai v3 is represented as a tuple of the form <code>(id1, id2, dir)</code>, where:</p>
+                
+                <ul>
+                    <li><strong>id1:</strong> The primary individual through which the connection is made</li>
+                    <li><strong>id2:</strong> An optional secondary individual (usually a partner of id1)</li>
+                    <li><strong>dir:</strong> The direction of the connection
+                        <ul>
+                            <li><code>0</code>: Connect downward from the node (add as child)</li>
+                            <li><code>1</code>: Connect upward from the node (add as parent)</li>
+                            <li><code>None</code>: Replace the node or connect laterally</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <p>This tuple representation encapsulates three key aspects of a potential connection:</p>
+                
+                <ol>
+                    <li><strong>Who</strong> is being connected (the individuals involved)</li>
+                    <li><strong>How</strong> they're being connected (the direction of the connection)</li>
+                    <li><strong>What</strong> type of relationship is being created (implicitly through the direction)</li>
+                </ol>
+                
+                <p>The connection point approach is powerful because it allows Bonsai to systematically evaluate all possible ways that two pedigree fragments might be connected, and to prioritize the most likely connections based on genetic evidence.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Types of Connection Points</h4>
+                <p>There are three primary types of connection points in Bonsai v3, each representing a different way to connect individuals or pedigrees:</p>
+                
+                <div class="connection-types">
+                    <div class="connection-type">
+                        <h5>Upward Connections (<code>dir=1</code>)</h5>
+                        <p>An upward connection adds a parent to an individual. This is appropriate when genetic evidence suggests that an individual from one pedigree is descended from someone in the other pedigree.</p>
+                        <p><strong>Example:</strong> Adding a previously unknown parent to an individual who was thought to be a founder.</p>
+                        <pre><code>// Upward connection (id, None, 1)
+// Before:     After:
+//   1           1
+//  / \         / \
+// 2   3       2   3
+//               \
+//                4</code></pre>
+                    </div>
+                    
+                    <div class="connection-type">
+                        <h5>Downward Connections (<code>dir=0</code>)</h5>
+                        <p>A downward connection adds a child to an individual or couple. This is appropriate when the evidence suggests that someone in one pedigree is an ancestor of someone in the other pedigree.</p>
+                        <p><strong>Example:</strong> Identifying that a couple had an additional child who's the ancestor of individuals in another pedigree.</p>
+                        <pre><code>// Downward connection (id1, id2, 0)
+// Before:        After:
+//    1   2         1   2
+//     \ /           \ /
+//      3             3
+//                    |
+//                    4</code></pre>
+                    </div>
+                    
+                    <div class="connection-type">
+                        <h5>Lateral/Replace Connections (<code>dir=None</code>)</h5>
+                        <p>A lateral connection either replaces an individual or connects individuals at the same generation level. This is appropriate when the evidence suggests that individuals previously thought to be unrelated are actually the same person or are related laterally (e.g., as siblings).</p>
+                        <p><strong>Example:</strong> Discovering that an individual appears in two different pedigrees under different identities.</p>
+                        <pre><code>// Replace connection (id, None, None)
+// Before:     After:
+//   1           1
+//  / \         / \
+// 2   3       X   3
+//                 |
+//                 4</code></pre>
+                    </div>
+                </div>
+                
+                <p>In the actual implementation, Bonsai v3 uses sophisticated algorithms to identify all possible connection points of these types in a pedigree. The core function for this purpose is <code>get_possible_connection_point_set()</code>:</p>
+                
+                <pre><code>def get_possible_connection_point_set(ped):
+    """Find all possible points through which a pedigree can be connected to another pedigree.
+    
+    Args:
+        ped: Up-node dictionary representing a pedigree
+        
+    Returns:
+        Set of connection point tuples (id1, id2, dir)
+    """
+    point_set = set()
+    
+    # Get all IDs in the pedigree
+    all_ids = set()
+    for node, parents in ped.items():
+        all_ids.add(node)
+        all_ids.update(parents.keys())
+    
+    # Evaluate each ID as a potential connection point
+    for a in all_ids:
+        # Check if this node can be connected upward (has fewer than 2 parents)
+        parent_to_deg = ped.get(a, {})
+        if len(parent_to_deg) < 2:
+            point_set.add((a, None, 1))  # Can add a parent
+        
+        # Get partners of this individual
+        partners = get_partner_id_set(a, ped)
+        
+        # Add downward connection possibilities
+        point_set.add((a, None, 0))  # Can add a child to this individual alone
+        for partner in partners:
+            if (partner, a, 0) not in point_set:  # Avoid duplicates
+                point_set.add((a, partner, 0))  # Can add a child to this couple
+                
+        # Add lateral/replace connection possibilities
+        point_set.add((a, None, None))  # Can replace this individual
+        for partner in partners:
+            point_set.add((a, partner, None))  # Can connect laterally to this couple
+    
+    return point_set</code></pre>
+                
+                <p>This function systematically evaluates every individual in the pedigree, considering:</p>
+                <ul>
+                    <li>Whether they can have additional parents added (upward connection)</li>
+                    <li>Whether they can have children added, either alone or with a partner (downward connection)</li>
+                    <li>Whether they can be replaced or connected laterally (replace/lateral connection)</li>
+                </ul>
+                
+                <p>The result is a comprehensive set of all possible ways the pedigree could be connected to another pedigree, which forms the foundation for the next step: prioritizing the most likely connections based on genetic evidence.</p>
+            </div>
+
+            <h3>Identifying and Prioritizing Connection Points</h3>
+            
+            <div class="concept-section">
+                <h4>Finding Partners for Connection Points</h4>
+                <p>Many connection points involve couples rather than single individuals, so Bonsai v3 needs to identify the partners of each individual in the pedigree. This is accomplished through the <code>get_partner_id_set()</code> function:</p>
+                
+                <pre><code>def get_partner_id_set(node, up_dct):
+    """Find the set of partners of node in pedigree up_dct.
+    
+    Args:
+        node: Individual ID
+        up_dct: Up-node dictionary representing the pedigree
+        
+    Returns:
+        Set of partner IDs
+    """
+    # Convert to down-node dictionary to find children
+    down_dct = reverse_node_dict(up_dct)
+    
+    # Get children of the node (direct descendants only)
+    child_id_set = {c for c, d in down_dct.get(node, {}).items() if d == 1}
+    
+    # For each child, find the other parent(s)
+    partner_id_set = set()
+    for cid in child_id_set:
+        # Get all direct parents of this child
+        parent_ids = {p for p, d in up_dct.get(cid, {}).items() if d == 1}
+        # Add them to the partner set
+        partner_id_set.update(parent_ids)
+    
+    # Remove the node itself from the partner set
+    partner_id_set.discard(node)
+    
+    return partner_id_set</code></pre>
+                
+                <p>This function works by first finding all children of the individual, then for each child, identifying all parents. Any parent other than the individual themselves is considered a partner. This approach handles complex scenarios like:</p>
+                
+                <ul>
+                    <li>Multiple marriages/partnerships</li>
+                    <li>Blended families</li>
+                    <li>Cases where an individual has children with multiple partners</li>
+                </ul>
+                
+                <p>By accurately identifying partners, Bonsai can generate connection points that respect the full complexity of human family structures.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Restricting Connection Points Based on IBD</h4>
+                <p>When we have genetic evidence like IBD (Identity by Descent) sharing, we can often restrict the set of possible connection points to those that could explain the observed patterns. Bonsai v3 implements this through the <code>restrict_connection_point_set()</code> function:</p>
+                
+                <pre><code>def restrict_connection_point_set(up_dct, con_pt_set, id_set):
+    """Restrict connection points to those that could connect to individuals in id_set.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        con_pt_set: Set of all possible connection points
+        id_set: Set of individual IDs that share IBD with another pedigree
+        
+    Returns:
+        Restricted set of connection points
+    """
+    # If id_set is empty, there's nothing to restrict
+    if not id_set:
+        return con_pt_set
+    
+    # Get the subtree connecting all IDs in id_set
+    sub_dct = get_sub_up_node_dict(up_dct, id_set)
+    
+    # Get all IDs in the subtree
+    sub_id_set = set(sub_dct.keys())
+    for parents in sub_dct.values():
+        sub_id_set.update(parents.keys())
+    
+    # Restrict connection points to those involving IDs in the subtree
+    restricted_con_pt_set = set()
+    for a, b, d in con_pt_set:
+        if a in sub_id_set or (b is not None and b in sub_id_set):
+            restricted_con_pt_set.add((a, b, d))
+    
+    return restricted_con_pt_set</code></pre>
+                
+                <p>This function works by:</p>
+                <ol>
+                    <li>Finding the minimal subtree containing all individuals that share IBD</li>
+                    <li>Restricting connection points to those involving individuals in this subtree</li>
+                </ol>
+                
+                <p>The key insight is that if two pedigrees share IBD, the connection between them must involve the ancestors of the individuals showing the IBD sharing. By focusing on this subtree, Bonsai dramatically reduces the search space while ensuring no valid connection points are overlooked.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Ranking Connection Points by Likelihood</h4>
+                <p>After identifying possible connection points and restricting them based on IBD sharing, Bonsai v3 ranks the remaining options based on how well they would explain the observed genetic data. This is implemented in the <code>get_likely_con_pt_set()</code> function:</p>
+                
+                <pre><code>def get_likely_con_pt_set(up_dct, id_to_shared_ibd, rel_dict, con_pt_set, max_con_pts=5):
+    """Find the most likely connection points based on IBD sharing.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        id_to_shared_ibd: Dict mapping IDs to their amount of IBD sharing
+        rel_dict: Dict mapping ID pairs to their relationship tuples
+        con_pt_set: Set of possible connection points
+        max_con_pts: Maximum number of connection points to return
+        
+    Returns:
+        Set of the most likely connection points
+    """
+    # For each connection point, compute a score based on IBD sharing patterns
+    scored_con_pts = []
+    
+    for a, b, d in con_pt_set:
+        # Calculate how well this connection would explain the observed IBD sharing
+        score = _score_connection_point(a, b, d, up_dct, id_to_shared_ibd, rel_dict)
+        scored_con_pts.append((score, (a, b, d)))
+    
+    # Sort connection points by score (highest first)
+    scored_con_pts.sort(reverse=True)
+    
+    # Return the top connection points
+    return {cp for _, cp in scored_con_pts[:max_con_pts]}</code></pre>
+                
+                <p>The scoring function <code>_score_connection_point()</code> evaluates each connection point based on how consistent it is with the observed IBD sharing. The algorithm considers factors like:</p>
+                
+                <ul>
+                    <li><strong>Genetic Distance:</strong> How many meioses separate the individuals sharing IBD when connected through this point</li>
+                    <li><strong>IBD Amounts:</strong> Whether the observed amounts of IBD are consistent with the proposed relationship</li>
+                    <li><strong>Distribution Across Relatives:</strong> Whether the pattern of IBD sharing across multiple relatives makes sense</li>
+                    <li><strong>Age Constraints:</strong> Whether the connection respects biological constraints on parent-child age differences</li>
+                </ul>
+                
+                <p>The result is a ranked list of the most promising connection points, which can then be evaluated in more detail or implemented in the pedigree.</p>
+            </div>
+
+            <h3>Implementing and Evaluating Connections</h3>
+            
+            <div class="concept-section">
+                <h4>Modifying Pedigrees with Connection Points</h4>
+                <p>Once a promising connection point has been identified, Bonsai v3 needs to implement it by modifying the pedigree structure. This involves adding new individuals, creating new relationships, and potentially merging pedigree fragments.</p>
+                
+                <p>The implementation depends on the connection type:</p>
+                
+                <ol>
+                    <li><strong>Upward Connections (<code>dir=1</code>):</strong> 
+                    <pre><code>def implement_upward_connection(pedigree, id1, id2, other_pedigree):
+    """Implement an upward connection from individual id1."""
+    # Get founders from other_pedigree to connect as ancestors
+    founders = [node for node, parents in other_pedigree.items() 
+               if not parents]
+    
+    # Create modified pedigree
+    modified_pedigree = copy.deepcopy(pedigree)
+    
+    # If there's only one founder, connect directly
+    if len(founders) == 1:
+        modified_pedigree[id1][founders[0]] = 1
+    else:
+        # Create a connector individual
+        connector_id = get_min_id(modified_pedigree) - 1
+        
+        # Add connector as parent of id1
+        modified_pedigree[id1][connector_id] = 1
+        modified_pedigree[connector_id] = {}
+        
+        # Make founders parents of connector
+        for founder in founders:
+            modified_pedigree[connector_id][founder] = 1
+    
+    # Merge in the rest of other_pedigree
+    for node, parents in other_pedigree.items():
+        if node not in modified_pedigree:
+            modified_pedigree[node] = parents
+    
+    return modified_pedigree</code></pre>
+                    </li>
+                    
+                    <li><strong>Downward Connections (<code>dir=0</code>):</strong>
+                    <pre><code>def implement_downward_connection(pedigree, id1, id2, other_pedigree):
+    """Implement a downward connection from individual id1 (and id2 if provided)."""
+    # Create modified pedigree
+    modified_pedigree = copy.deepcopy(pedigree)
+    
+    # Create a connector individual
+    connector_id = get_min_id(modified_pedigree) - 1
+    
+    # Add connector as child of id1 (and id2 if provided)
+    modified_pedigree[connector_id] = {id1: 1}
+    if id2 is not None:
+        modified_pedigree[connector_id][id2] = 1
+    
+    # Make connector parent of founders in other_pedigree
+    founders = [node for node, parents in other_pedigree.items() 
+               if not parents]
+    
+    for founder in founders:
+        if founder not in modified_pedigree:
+            modified_pedigree[founder] = {}
+        modified_pedigree[founder][connector_id] = 1
+    
+    # Merge in the rest of other_pedigree
+    for node, parents in other_pedigree.items():
+        if node not in modified_pedigree:
+            modified_pedigree[node] = parents
+        elif node not in founders:
+            # For non-founders, merge parents
+            modified_pedigree[node].update(parents)
+    
+    return modified_pedigree</code></pre>
+                    </li>
+                    
+                    <li><strong>Lateral/Replace Connections (<code>dir=None</code>):</strong>
+                    <pre><code>def implement_lateral_connection(pedigree, id1, id2, other_pedigree):
+    """Implement a lateral connection by replacing id1 with a founder from other_pedigree."""
+    # Create modified pedigree
+    modified_pedigree = copy.deepcopy(pedigree)
+    
+    # Get a founder from other_pedigree to use as replacement
+    founders = [node for node, parents in other_pedigree.items() 
+               if not parents]
+    
+    if not founders:
+        return modified_pedigree  # Can't implement without a founder
+    
+    replacement_id = founders[0]
+    
+    # Replace all occurrences of id1 with replacement_id
+    for node, parents in modified_pedigree.items():
+        if id1 in parents:
+            degree = parents.pop(id1)
+            parents[replacement_id] = degree
+    
+    # Transfer the parents of id1 to replacement_id
+    if id1 in modified_pedigree:
+        if replacement_id not in modified_pedigree:
+            modified_pedigree[replacement_id] = {}
+        
+        modified_pedigree[replacement_id].update(modified_pedigree[id1])
+        del modified_pedigree[id1]  # Remove id1
+    
+    # Merge in the rest of other_pedigree
+    for node, parents in other_pedigree.items():
+        if node != replacement_id:  # Skip the replacement node (already handled)
+            if node not in modified_pedigree:
+                modified_pedigree[node] = parents
+            else:
+                # Merge parents
+                modified_pedigree[node].update(parents)
+    
+    return modified_pedigree</code></pre>
+                    </li>
+                </ol>
+                
+                <p>These implementations handle the complexities of merging pedigrees while maintaining the integrity of the pedigree structure. They ensure that all relationships in both pedigrees are preserved, and that the new connections are created in a way that's consistent with the genetic evidence.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Evaluating Connection Quality</h4>
+                <p>After implementing a connection, Bonsai v3 needs to evaluate how well it explains the observed genetic data. This evaluation is based on a comprehensive model of genetic inheritance, taking into account factors like:</p>
+                
+                <ul>
+                    <li><strong>IBD Sharing Consistency:</strong> Whether the observed IBD sharing matches what would be expected given the relationship</li>
+                    <li><strong>Genetic Recombination:</strong> Whether the observed patterns of recombination are consistent with the proposed relationship</li>
+                    <li><strong>Age Consistency:</strong> Whether the proposed connections respect biological constraints on parent-child age differences</li>
+                    <li><strong>Demographic Plausibility:</strong> Whether the proposed connections are demographically plausible given historical context</li>
+                </ul>
+                
+                <p>In the production implementation, this evaluation uses sophisticated statistical models based on Mendelian inheritance and population genetics. A simplified version of the evaluation function looks like this:</p>
+                
+                <pre><code>def evaluate_connection(combined_pedigree, id_to_shared_ibd):
+    """Evaluate a connected pedigree based on how well it explains IBD sharing.
+    
+    Args:
+        combined_pedigree: Up-node dictionary of the combined pedigree
+        id_to_shared_ibd: Dict mapping individual IDs to the amount of IBD they share
+        
+    Returns:
+        score: A score indicating how well the pedigree explains the IBD sharing
+    """
+    # Calculate relationships in the combined pedigree
+    rel_dict = get_rel_dict(combined_pedigree)
+    
+    # Compute correlation between relationship degrees and IBD sharing
+    individuals = sorted(id_to_shared_ibd.keys())
+    
+    # For each individual, calculate expected IBD sharing
+    expected_ibd = {}
+    for i in individuals:
+        expected_ibd[i] = 0.0
+        
+        for j, rel_tuple in rel_dict.get(i, {}).items():
+            if j not in id_to_shared_ibd or rel_tuple is None:
+                continue
+                
+            # Calculate expected sharing based on relationship
+            up, down, num_ancs = rel_tuple
+            degree = up + down
+            expected_coef = num_ancs * (0.5 ** degree) if degree > 0 else 1.0
+                
+            # Add to expected IBD
+            expected_ibd[i] += expected_coef * id_to_shared_ibd[j]
+    
+    # Calculate correlation between expected and observed IBD
+    observed = [id_to_shared_ibd[i] for i in individuals]
+    expected = [expected_ibd[i] for i in individuals]
+    
+    # Return correlation coefficient
+    return np.corrcoef(observed, expected)[0, 1]</code></pre>
+                
+                <p>This function evaluates a connection by comparing the observed IBD sharing with what would be expected given the relationships in the combined pedigree. Higher correlation scores indicate better consistency between the genetic evidence and the proposed connections.</p>
+                
+                <p>In practice, Bonsai will evaluate multiple potential connections and select the one with the highest score, or in some cases, present multiple high-scoring alternatives for human review.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Finding connection points is a foundational operation in Bonsai v3's pedigree construction algorithm. By systematically identifying, evaluating, and implementing connection points, Bonsai can construct complex pedigrees that accurately explain patterns of IBD sharing across multiple individuals.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab11 notebook provides a simplified exploration of connection point algorithms, while the production implementation in Bonsai v3 includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Performance Optimizations:</strong> The production code includes sophisticated caching and pruning strategies to handle large pedigrees efficiently</li>
+                <li><strong>Probabilistic Models:</strong> More advanced statistical models for scoring connection points that account for IBD length distributions and population-specific parameters</li>
+                <li><strong>Cycle Detection:</strong> Robust handling of potential cycles in pedigrees that could arise from certain connection patterns</li>
+                <li><strong>Multi-way Connections:</strong> Support for connecting more than two pedigrees simultaneously in complex scenarios</li>
+                <li><strong>Identity Resolution:</strong> Sophisticated algorithms for determining when individuals in different pedigrees might actually be the same person</li>
+                <li><strong>User Interaction:</strong> Support for incorporating user feedback and constraints on connection points</li>
+            </ul>
+            
+            <p>The notebook provides a valuable introduction to the key concepts, but the production implementation represents years of refinement to handle the complexities of real-world genetic data and pedigree structures.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 11 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab11_Finding_Connection_Points.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab11_Finding_Connection_Points.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 11 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore connection point algorithms, consider these broader implications:</p>
+            <ul>
+                <li><strong>Genealogical Research:</strong> How computational methods are transforming traditional genealogical research by identifying connections that might be missed through documentary evidence alone</li>
+                <li><strong>Ethical Considerations:</strong> The implications of discovering unexpected connections between families, and how to handle sensitive information</li>
+                <li><strong>Historical Applications:</strong> How these algorithms can help reconstruct historical population structures from fragmentary genetic and documentary evidence</li>
+                <li><strong>Privacy and Consent:</strong> The importance of informed consent when inferring connections between individuals, especially for living people</li>
+            </ul>
+            <p>These considerations highlight how connection point algorithms are not just technical solutions but tools with significant implications for understanding human history, identity, and relatedness.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab10_up_node_dictionary.html" class="prev-lab">Up-Node Dictionary</a>
+                <a href="lab12_relationship_assessment.html" class="next-lab">Relationship Assessment</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

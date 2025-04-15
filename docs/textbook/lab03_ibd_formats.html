@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 03: IBD Data Formats | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>IBD Data Formats and Preprocessing</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab03_ibd_formats.html" class="active">Lab 03: IBD Data Formats</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 03: IBD Data Formats and Preprocessing</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Data Engineering:</strong> This lab explores the various IBD data formats used in genetic genealogy and how Bonsai v3 processes them. Understanding these formats and preprocessing steps is essential for effectively working with IBD detection tools and integrating them with Bonsai.</p>
+            </div>
+
+            <h3>IBD Data Format Fundamentals</h3>
+            
+            <div class="concept-section">
+                <h4>Unphased IBD Format</h4>
+                <p>The unphased IBD format is the primary input format for Bonsai v3, typically produced by IBD detection tools like IBIS, RefinedIBD, and HapIBD. In this format, segments are represented without haplotype-specific information:</p>
+                
+                <pre><code>[id1, id2, chromosome, start_bp, end_bp, is_full_ibd, seg_cm]</code></pre>
+                
+                <p>The fields in this format have specific meanings:</p>
+                <ul>
+                    <li><strong>id1, id2</strong>: Identifiers for the two individuals sharing the IBD segment (usually ordered so that id1 &lt; id2)</li>
+                    <li><strong>chromosome</strong>: The chromosome number (1-22) where the segment is located</li>
+                    <li><strong>start_bp, end_bp</strong>: The starting and ending positions in base pairs</li>
+                    <li><strong>is_full_ibd</strong>: A boolean flag indicating whether the segment is IBD1 (0) or IBD2 (1)</li>
+                    <li><strong>seg_cm</strong>: The genetic length of the segment in centiMorgans</li>
+                </ul>
+                
+                <p>In Bonsai v3's implementation, the <code>ibd.py</code> module contains functions for working with this format, including <code>get_ibd_stats_unphased()</code> which extracts statistical summaries from unphased IBD data. This is the most common format for IBD data in practice, as most IBD detectors produce unphased output.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Phased IBD Format</h4>
+                <p>The phased IBD format contains haplotype-specific information, indicating which exact copies of the chromosome contain the shared segment:</p>
+                
+                <pre><code>[id1, id2, hap1, hap2, chromosome, start_cm, end_cm, seg_cm]</code></pre>
+                
+                <p>The fields in this format provide more detailed information:</p>
+                <ul>
+                    <li><strong>id1, id2</strong>: Identifiers for the two individuals sharing the IBD segment</li>
+                    <li><strong>hap1, hap2</strong>: Indicators (0 or 1) specifying which haplotype from each individual contains the shared segment</li>
+                    <li><strong>chromosome</strong>: The chromosome number (1-22) where the segment is located</li>
+                    <li><strong>start_cm, end_cm</strong>: The starting and ending positions in centiMorgans (genetic distance)</li>
+                    <li><strong>seg_cm</strong>: The genetic length of the segment in centiMorgans</li>
+                </ul>
+                
+                <p>Phased IBD data provides richer information by specifying exactly which haplotype copies match between individuals. This can be valuable for distinguishing complex relationships, as the pattern of haplotype sharing offers additional clues about genealogical connections. In the real Bonsai v3 implementation, phased data enables more precise relationship inference and can improve pedigree reconstruction accuracy.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Format Variations in IBD Detectors</h4>
+                <p>Different IBD detection tools produce slightly different output formats that Bonsai v3 must handle:</p>
+                
+                <ul>
+                    <li><strong>IBIS</strong>: Produces unphased output with segment coordinates in both base pairs and centiMorgans</li>
+                    <li><strong>Refined IBD</strong>: Produces phased output with specific haplotype indicators</li>
+                    <li><strong>HapIBD</strong>: Produces phased output with detailed quality scores</li>
+                    <li><strong>GERMLINE</strong>: An older tool that produces unphased output in its own format</li>
+                </ul>
+                
+                <p>Bonsai v3's <code>ibd.py</code> module includes functions to normalize these different formats into a standard representation for consistent processing. This normalization is a critical preprocessing step that enables Bonsai to work with output from any IBD detector.</p>
+            </div>
+
+            <h3>IBD Data Processing in Bonsai v3</h3>
+            
+            <div class="concept-section">
+                <h4>The ibd.py Module</h4>
+                <p>The <code>ibd.py</code> module in Bonsai v3 is responsible for all aspects of IBD data processing and serves as the interface between raw IBD detector output and Bonsai's pedigree reconstruction algorithms. This module implements numerous functions for working with IBD data:</p>
+                
+                <ul>
+                    <li><strong><code>get_phased_to_unphased()</code></strong>: Converts phased IBD segments to unphased format by combining segments that overlap on different haplotypes</li>
+                    <li><strong><code>get_unphased_to_phased()</code></strong>: Creates pseudo-phased segments from unphased IBD data by assigning segments to random or inferred haplotypes</li>
+                    <li><strong><code>get_ibd_stats_unphased()</code></strong>: Extracts statistical summaries from unphased IBD data, including total sharing, segment counts, and length distributions</li>
+                    <li><strong><code>filter_ibd_segments()</code></strong>: Applies quality filters to remove unreliable segments based on length or other criteria</li>
+                    <li><strong><code>normalize_ibd_segments()</code></strong>: Standardizes IBD segment representations from different detectors</li>
+                    <li><strong><code>get_id_to_shared_ibd()</code></strong>: Creates a mapping from individual pairs to their shared IBD segments</li>
+                    <li><strong><code>get_closest_pair()</code></strong>: Identifies the most closely related pairs based on IBD sharing</li>
+                </ul>
+                
+                <p>These functions collectively transform raw IBD detector output into the structured data that Bonsai's relationship inference algorithms require. The module handles all the complexities of different IBD formats, coordinate systems, and data quality issues.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Format Conversion Implementation</h4>
+                <p>The conversion between phased and unphased formats involves sophisticated algorithms implemented in the <code>ibd.py</code> module:</p>
+                
+                <h5>Phased to Unphased Conversion</h5>
+                <p>The <code>get_phased_to_unphased()</code> function implements a multi-step process:</p>
+                <ol>
+                    <li>Group segments by individual pair and chromosome</li>
+                    <li>Identify segments that overlap on different haplotypes</li>
+                    <li>Determine if overlapping segments indicate IBD2 regions</li>
+                    <li>Create unphased segments that represent the combined information</li>
+                    <li>Apply appropriate coordinate conversions (cM to bp when necessary)</li>
+                </ol>
+                
+                <p>This process is particularly important for integrating phased IBD detection results from tools like Refined IBD into Bonsai's framework. The function handles complexities such as partial overlaps, multiple overlapping segments, and consistent pair ordering.</p>
+                
+                <h5>Unphased to Phased Conversion</h5>
+                <p>The <code>get_unphased_to_phased()</code> function performs the more challenging inverse operation:</p>
+                <ol>
+                    <li>For IBD2 segments, create pairs of phased segments (one for each haplotype pair)</li>
+                    <li>For IBD1 segments, apply heuristics to assign them to specific haplotypes</li>
+                    <li>When possible, use other segments from the same individuals to infer likely haplotype assignments</li>
+                    <li>Apply coordinate conversions (bp to cM when necessary)</li>
+                </ol>
+                
+                <p>This conversion is inherently lossy since unphased data lacks haplotype specificity, but Bonsai implements sophisticated inference techniques to make the best possible assignments. The algorithm uses observed patterns of IBD sharing across the genome to infer the most likely haplotype configurations.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>IBD Statistics Calculation</h4>
+                <p>One of the most critical functions in <code>ibd.py</code> is <code>get_ibd_stats_unphased()</code>, which extracts statistical summaries that serve as the foundation for relationship inference:</p>
+                
+                <h5>Key Statistics Computed</h5>
+                <ul>
+                    <li><strong>total_half</strong>: Total length (in cM) of IBD1 sharing</li>
+                    <li><strong>total_full</strong>: Total length (in cM) of IBD2 sharing</li>
+                    <li><strong>num_half</strong>: Number of IBD1 segments</li>
+                    <li><strong>num_full</strong>: Number of IBD2 segments</li>
+                    <li><strong>max_seg_cm</strong>: Length of the largest segment</li>
+                    <li><strong>half_seg_lengths</strong>: List of all IBD1 segment lengths</li>
+                    <li><strong>full_seg_lengths</strong>: List of all IBD2 segment lengths</li>
+                </ul>
+                
+                <p>These statistics capture the key dimensions of IBD sharing that differentiate relationship types. For example:</p>
+                <ul>
+                    <li>Parent-child relationships show ~3400 cM of IBD1 sharing with no IBD2</li>
+                    <li>Full siblings show ~2550 cM total sharing with substantial IBD2 segments</li>
+                    <li>First cousins show ~850 cM of IBD1 sharing with smaller segment sizes</li>
+                </ul>
+                
+                <p>The function handles numerous edge cases and corrections, including overlapping segments, chromosome-specific effects, and detector-specific biases. It implements the statistical foundation upon which all higher-level relationship inference in Bonsai is built.</p>
+            </div>
+
+            <h3>Advanced IBD Processing Topics</h3>
+            
+            <div class="concept-section">
+                <h4>Genetic Map Integration</h4>
+                <p>Bonsai v3's IBD processing includes sophisticated integration with genetic maps to convert between physical coordinates (base pairs) and genetic coordinates (centiMorgans):</p>
+                
+                <ul>
+                    <li><strong>Position Conversion</strong>: Functions like <code>convert_bp_to_cm()</code> and <code>convert_cm_to_bp()</code> implement nonlinear transformations based on empirical recombination rates</li>
+                    <li><strong>Map Selection</strong>: The system supports multiple genetic maps (HapMap, deCODE, etc.) with different characteristics</li>
+                    <li><strong>Interpolation</strong>: For positions between known map points, the system uses linear interpolation to estimate genetic distances</li>
+                    <li><strong>Edge Handling</strong>: Special logic handles chromosome edges and regions with sparse map data</li>
+                </ul>
+                
+                <p>Accurate coordinate conversion is essential because genetic distance (cM) is more relevant for relationship inference than physical distance (bp). One centiMorgan represents approximately a 1% chance of recombination in a single generation, making it directly relevant to biological relatedness.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>IBD Quality Filtering</h4>
+                <p>The <code>filter_ibd_segments()</code> function in <code>ibd.py</code> implements sophisticated quality control to remove unreliable segments:</p>
+                
+                <ul>
+                    <li><strong>Length Filtering</strong>: Removes segments below a minimum cM threshold (typically 4-7 cM)</li>
+                    <li><strong>LOD Score Filtering</strong>: Uses statistical confidence scores when available from detectors</li>
+                    <li><strong>Segment Density Checks</strong>: Identifies and filters out regions with suspiciously high segment density</li>
+                    <li><strong>Population-Specific Filtering</strong>: Applies different thresholds based on population background</li>
+                    <li><strong>Detector-Specific Adjustments</strong>: Customizes filtering based on known characteristics of different IBD detectors</li>
+                </ul>
+                
+                <p>Effective filtering is critical because false positive IBD segments can lead to incorrect relationship inferences. Bonsai v3 implements empirically calibrated filtering strategies based on analysis of confirmed relationships.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>IBD Segment Merging and Splitting</h4>
+                <p>Bonsai v3 includes sophisticated algorithms for merging nearby segments and splitting problematic segments:</p>
+                
+                <h5>Segment Merging</h5>
+                <p>The <code>merge_nearby_segments()</code> function identifies and combines segments that likely represent the same IBD region but were detected as separate due to technical limitations:</p>
+                <ul>
+                    <li>Identifies segments separated by small gaps (below a configurable threshold)</li>
+                    <li>Applies heuristics to determine if they should be merged (considering haplotype consistency)</li>
+                    <li>Creates new merged segments with appropriate boundaries and attributes</li>
+                </ul>
+                
+                <h5>Segment Splitting</h5>
+                <p>Conversely, <code>split_large_segments()</code> identifies suspiciously large segments that may represent detector errors or complex IBD patterns:</p>
+                <ul>
+                    <li>Identifies segments above size thresholds based on relationship context</li>
+                    <li>Analyzes internal patterns to identify potential split points</li>
+                    <li>Creates multiple smaller segments when evidence supports splitting</li>
+                </ul>
+                
+                <p>These operations help correct for technical artifacts in IBD detection, improving the accuracy of downstream relationship inference. The algorithms implement sophisticated statistical models of expected segment characteristics.</p>
+            </div>
+
+            <h3>From IBD Statistics to Relationship Inference</h3>
+            
+            <div class="concept-section">
+                <h4>The Statistical Foundation</h4>
+                <p>The IBD statistics extracted by <code>get_ibd_stats_unphased()</code> form the foundation for Bonsai v3's relationship inference. Different relationship types exhibit distinctive patterns across multiple IBD statistics:</p>
+                
+                <table class="relationship-table">
+                    <tr>
+                        <th>Relationship</th>
+                        <th>Expected Total IBD (cM)</th>
+                        <th>Expected Segments</th>
+                        <th>IBD2 Presence</th>
+                        <th>Typical Max Segment (cM)</th>
+                    </tr>
+                    <tr>
+                        <td>Parent-Child</td>
+                        <td>3400</td>
+                        <td>23</td>
+                        <td>No</td>
+                        <td>~280</td>
+                    </tr>
+                    <tr>
+                        <td>Full Siblings</td>
+                        <td>2550</td>
+                        <td>50</td>
+                        <td>Yes (25%)</td>
+                        <td>~160</td>
+                    </tr>
+                    <tr>
+                        <td>Half-siblings</td>
+                        <td>1700</td>
+                        <td>28</td>
+                        <td>No</td>
+                        <td>~160</td>
+                    </tr>
+                    <tr>
+                        <td>First Cousins</td>
+                        <td>850</td>
+                        <td>15</td>
+                        <td>No</td>
+                        <td>~123</td>
+                    </tr>
+                    <tr>
+                        <td>Second Cousins</td>
+                        <td>212.5</td>
+                        <td>4</td>
+                        <td>No</td>
+                        <td>~78</td>
+                    </tr>
+                </table>
+                
+                <p>The actual implementation in Bonsai v3 goes beyond these simple averages to model the complete statistical distributions of these values for each relationship type. This allows for probabilistic inference that accounts for the natural variance in genetic inheritance.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>From Statistics to Likelihoods</h4>
+                <p>The <code>ibd.py</code> module connects to the <code>likelihoods.py</code> module through the IBD statistics it produces. The workflow follows these steps:</p>
+                
+                <ol>
+                    <li><code>get_ibd_stats_unphased()</code> in <code>ibd.py</code> extracts statistical summaries from IBD segments</li>
+                    <li>These statistics are passed to the <code>PwLogLike</code> class in <code>likelihoods.py</code></li>
+                    <li>The <code>PwLogLike</code> class computes likelihood scores for different relationship hypotheses</li>
+                    <li>These likelihood scores guide the pedigree reconstruction process</li>
+                </ol>
+                
+                <p>This connection between IBD processing and relationship inference is at the core of Bonsai v3's approach. The system transforms raw genetic data into statistical summaries and then into probabilistic relationship assessments, creating a seamless pathway from detector output to pedigree structures.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Engineering Insight:</strong> Bonsai v3's IBD processing module demonstrates an important principle in bioinformatics: successful algorithms must bridge the gap between theoretical models and messy real-world data. The <code>ibd.py</code> module's sophisticated handling of different formats, coordinate systems, and data quality issues enables Bonsai to work robustly with actual IBD detection results rather than just idealized data.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab03 notebook provides simplified implementations of IBD processing functions, while the actual Bonsai v3 implementation includes numerous additional capabilities and optimizations:</p>
+            
+            <ul>
+                <li><strong>Performance Optimization:</strong> The production code includes efficient data structures and algorithms optimized for large-scale IBD datasets</li>
+                <li><strong>Robust Error Handling:</strong> Comprehensive validation and error handling for various edge cases in IBD data</li>
+                <li><strong>Detector-Specific Logic:</strong> Specialized handling for artifacts and biases from different IBD detection tools</li>
+                <li><strong>Genetic Map Integration:</strong> Sophisticated integration with genetic maps for accurate coordinate conversion</li>
+                <li><strong>Population Background Modeling:</strong> Adjustments for population-specific patterns of IBD sharing</li>
+                <li><strong>Caching:</strong> Memory of previous calculations to avoid redundant computation</li>
+            </ul>
+            
+            <p>Despite these differences, the core concepts and data structures demonstrated in the notebook directly correspond to those used in the production system, providing an accurate conceptual foundation for understanding Bonsai's IBD processing approach.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 03 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab03_IBD_Formats.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab03_IBD_Formats.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 03 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore IBD data formats and processing in Bonsai v3, consider these broader implications:</p>
+            <ul>
+                <li><strong>Data Quality Impacts:</strong> How the quality of IBD detection directly affects the accuracy of relationship inference</li>
+                <li><strong>Format Standardization:</strong> The importance of standardized data formats in scientific computing</li>
+                <li><strong>Error Propagation:</strong> How errors in early processing stages can cascade through complex pipelines</li>
+                <li><strong>Statistical Robustness:</strong> The value of statistical approaches that account for variance and uncertainty</li>
+            </ul>
+            <p>These considerations highlight how data preprocessing in Bonsai v3 is not merely a technical necessity but a critical component that directly impacts the system's overall performance and accuracy.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab02_bonsai_architecture.html" class="prev-lab">Bonsai Architecture</a>
+                <a href="lab04_ibd_statistics.html" class="next-lab">IBD Statistics</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

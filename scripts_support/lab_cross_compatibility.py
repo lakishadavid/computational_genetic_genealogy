@@ -177,7 +177,13 @@ def process_notebook_for_jupyterlite(notebook_path, output_path):
     import json
     
     with open(notebook_path, 'r', encoding='utf-8') as f:
-        notebook = json.load(f)
+        notebook_content = f.read()
+        # Replace unescaped backslashes with double backslashes to fix JSON syntax
+        notebook_content = notebook_content.replace('\\', '\\\\')
+        # But don't double-escape already properly escaped sequences
+        for seq in ['\\"', '\\n', '\\t', '\\r', '\\b', '\\f']:
+            notebook_content = notebook_content.replace('\\\\' + seq[1:], seq)
+        notebook = json.loads(notebook_content)
     
     # Identify cells that need modification
     for cell in notebook['cells']:

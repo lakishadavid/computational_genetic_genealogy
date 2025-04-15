@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 09: Pedigree Data Structures | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Pedigree Data Structures Implementation</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab09_pedigree_data_structures.html" class="active">Lab 09: Pedigree Data Structures</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 09: Pedigree Data Structures</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the fundamental data structures used in Bonsai v3 to represent and manipulate pedigrees. Understanding these structures is essential because they form the foundation for all pedigree operations, from building and querying to optimization and rendering.</p>
+            </div>
+
+            <h3>Fundamental Pedigree Representations</h3>
+            
+            <div class="concept-section">
+                <h4>The Node Dictionary Approach</h4>
+                <p>At the heart of Bonsai v3's pedigree representation is a dictionary-based approach that efficiently encodes genealogical relationships. The system uses two complementary dictionary structures:</p>
+                
+                <ol>
+                    <li><strong>up_node_dict:</strong> Maps individuals to their ancestors with degrees of relationship</li>
+                    <li><strong>down_node_dict:</strong> Maps individuals to their descendants with degrees of relationship</li>
+                </ol>
+                
+                <p>These dictionaries offer several advantages over alternative representations:</p>
+                <ul>
+                    <li>Efficient lookup of relatives in O(1) time</li>
+                    <li>Memory-efficient representation of sparse pedigrees</li>
+                    <li>Natural handling of missing data and complex pedigree structures</li>
+                    <li>Support for both genotyped and ungenotyped (inferred) individuals</li>
+                </ul>
+                
+                <p>Let's examine the structure of the <code>up_node_dict</code>, the primary representation used in Bonsai v3:</p>
+                
+                <pre><code>up_node_dict = {
+    3: {1: 1, 2: 1},  # Individual 3 has parents 1 and 2, with degree 1
+    4: {1: 1, 2: 1},  # Individual 4 has parents 1 and 2, with degree 1
+    1: {},            # Individual 1 has no parents in this pedigree
+    2: {}             # Individual 2 has no parents in this pedigree
+}</code></pre>
+                
+                <p>In this dictionary:</p>
+                <ul>
+                    <li>Each key is an individual's ID (positive for genotyped, negative for ungenotyped)</li>
+                    <li>Each value is a dictionary mapping parent IDs to relationship degrees</li>
+                    <li>The relationship degree is typically 1 for direct parents</li>
+                </ul>
+                
+                <p>Bonsai v3 also maintains a parallel <code>down_node_dict</code> that provides the reverse mapping, from parents to children. These dictionaries can be converted between each other using the <code>reverse_node_dict()</code> function:</p>
+                
+                <pre><code>def reverse_node_dict(node_dict):
+    """Convert between up_node_dict and down_node_dict.
+    
+    Args:
+        node_dict: Dictionary mapping nodes to their relatives
+        
+    Returns:
+        Dictionary with the reverse mapping
+    """
+    reverse_dict = {}
+    
+    # Initialize empty dictionaries for all nodes
+    all_nodes = set(node_dict.keys()).union(
+        *[set(relatives.keys()) for relatives in node_dict.values()])
+    
+    for node in all_nodes:
+        reverse_dict[node] = {}
+    
+    # Populate reverse mappings
+    for node, relatives in node_dict.items():
+        for relative, degree in relatives.items():
+            reverse_dict[relative][node] = degree
+    
+    return reverse_dict</code></pre>
+                
+                <p>This dual representation allows efficient navigation in both directions through the pedigree, facilitating operations like finding all descendants of an individual or tracing ancestry paths.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Representing Relationships</h4>
+                <p>Beyond the node dictionaries, Bonsai v3 uses a compact tuple representation for relationships between individuals: <code>(up, down, num_ancs)</code></p>
+                
+                <ul>
+                    <li><strong>up:</strong> Number of meioses up from individual 1 to common ancestor</li>
+                    <li><strong>down:</strong> Number of meioses down from common ancestor to individual 2</li>
+                    <li><strong>num_ancs:</strong> Number of common ancestors (1 for half relationships, 2 for full relationships)</li>
+                </ul>
+                
+                <p>This representation has several advantages:</p>
+                <ul>
+                    <li>Compact encoding of relationship types</li>
+                    <li>Direct mapping to genetic inheritance patterns</li>
+                    <li>Clear distinction between full and half relationships</li>
+                    <li>Support for arbitrary relationship distances</li>
+                </ul>
+                
+                <p>Common relationship tuples include:</p>
+                <pre><code>"identical/self": (0, 0, 2)
+"parent-child": (0, 1, 1)
+"child-parent": (1, 0, 1)
+"full sibling": (1, 1, 2)
+"half sibling": (1, 1, 1)
+"grandparent-grandchild": (0, 2, 1)
+"aunt/uncle-niece/nephew": (1, 2, 1)
+"first cousin": (2, 2, 1)
+"second cousin": (3, 3, 1)</code></pre>
+                
+                <p>The Bonsai codebase includes functions to convert between relationship tuples and relationship names, facilitating user-friendly output:</p>
+                
+                <pre><code>def get_relationship_name(relationship_tuple):
+    """Convert a relationship tuple to a human-readable name.
+    
+    Args:
+        relationship_tuple: (up, down, num_ancs) tuple
+        
+    Returns:
+        Human-readable relationship name
+    """
+    up, down, num_ancs = relationship_tuple
+    
+    # Self relationship
+    if up == 0 and down == 0 and num_ancs == 2:
+        return "Self"
+    
+    # Direct lineage
+    if up == 0 and down == 1:
+        return "Parent"
+    if up == 1 and down == 0:
+        return "Child"
+    if up == 0 and down == 2:
+        return "Grandparent"
+    if up == 2 and down == 0:
+        return "Grandchild"
+    
+    # Siblings
+    if up == 1 and down == 1:
+        if num_ancs == 2:
+            return "Full Sibling"
+        else:
+            return "Half Sibling"
+    
+    # Aunts/Uncles and Nieces/Nephews
+    if up == 1 and down == 2:
+        return "Aunt/Uncle"
+    if up == 2 and down == 1:
+        return "Niece/Nephew"
+    
+    # Cousins
+    if up >= 2 and down >= 2:
+        degree = min(up, down) - 1  # First cousin = 1, Second cousin = 2, etc.
+        removal = abs(up - down)    # 0 = same generation, 1 = once removed, etc.
+        
+        cousin_type = "Full" if num_ancs == 2 else "Half"
+        
+        if removal == 0:
+            return f"{cousin_type} {degree_to_ordinal(degree)} Cousin"
+        else:
+            return f"{cousin_type} {degree_to_ordinal(degree)} Cousin {removal} time{'s' if removal > 1 else ''} removed"
+    
+    # Other complex relationships
+    return f"Relationship ({up}, {down}, {num_ancs})"</code></pre>
+                
+                <p>This bidirectional mapping between compact tuples and human-readable names is crucial for both internal computation and user interface elements.</p>
+            </div>
+
+            <h3>Navigating and Querying Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Finding Relatives and Paths</h4>
+                <p>Bonsai v3 includes a suite of functions for navigating and querying pedigrees. These functions build upon the foundation of the node dictionaries to provide higher-level operations.</p>
+                
+                <p>The <code>get_rel_set()</code> function finds all relatives of a specific type (ancestors or descendants):</p>
+                
+                <pre><code>def get_rel_set(node_dict, i):
+    """Find all relatives of i in node_dict.
+    
+    If node_dict is an up_dict, finds all ancestors.
+    If node_dict is a down_dict, finds all descendants.
+    
+    Args:
+        node_dict: Dictionary mapping nodes to their relatives
+        i: Individual ID
+        
+    Returns:
+        Set of all relatives (including i)
+    """
+    # Start with the individual themself
+    rel_set = {i}
+    
+    # If not in dictionary, return just the individual
+    if i not in node_dict:
+        return rel_set
+    
+    # Process each direct relative
+    for j in node_dict[i]:
+        # Add the direct relative
+        rel_set.add(j)
+        
+        # Recursively add their relatives
+        j_relatives = get_rel_set(node_dict, j)
+        rel_set.update(j_relatives)
+    
+    return rel_set</code></pre>
+                
+                <p>This recursive approach efficiently traces all paths through the pedigree in a specific direction. For example, when applied to an <code>up_node_dict</code>, it finds all ancestors of an individual, and when applied to a <code>down_node_dict</code>, it finds all descendants.</p>
+                
+                <p>To find paths between individuals, Bonsai v3 uses the <code>get_all_paths()</code> function:</p>
+                
+                <pre><code>def get_all_paths(up_node_dict, i, j):
+    """Find all paths between individuals i and j.
+    
+    Args:
+        up_node_dict: Dictionary mapping individuals to their ancestors
+        i, j: Individual IDs
+        
+    Returns:
+        Tuple of (paths, common_ancestors)
+    """
+    # Special case for self
+    if i == j:
+        return {(i,)}, {i}
+    
+    # Find all ancestors of i and j
+    i_ancs = get_rel_set(up_node_dict, i)
+    j_ancs = get_rel_set(up_node_dict, j)
+    
+    # Find common ancestors
+    common_ancs = i_ancs.intersection(j_ancs)
+    
+    # No relationship if no common ancestors
+    if not common_ancs:
+        return set(), set()
+    
+    # Find all paths through common ancestors
+    paths = set()
+    for anc in common_ancs:
+        i_paths = get_path_to_anc(up_node_dict, i, anc)
+        j_paths = get_path_to_anc(up_node_dict, j, anc)
+        
+        # Combine paths through this ancestor
+        for i_path in i_paths:
+            i_path_rev = i_path[::-1]  # Reverse i's path (child → ancestor)
+            for j_path in j_paths:
+                # Join paths (i → ancestor → j)
+                # Remove duplicate ancestor in the middle
+                full_path = i_path_rev + j_path[1:]
+                paths.add(tuple(full_path))
+    
+    return paths, common_ancs</code></pre>
+                
+                <p>This function is central to relationship inference, as it finds all possible paths connecting two individuals through common ancestors. The resulting paths can then be analyzed to determine the genetic relationship between the individuals.</p>
+                
+                <p>Building on these path-finding capabilities, Bonsai v3 includes the <code>get_simple_rel_tuple()</code> function, which computes the standard relationship tuple between two individuals:</p>
+                
+                <pre><code>def get_simple_rel_tuple(up_node_dict, i, j):
+    """Get relationship tuple (up, down, num_ancs) between individuals i and j.
+    
+    Args:
+        up_node_dict: Dictionary mapping individuals to their ancestors
+        i, j: Individual IDs
+        
+    Returns:
+        Relationship tuple (up, down, num_ancs) or None if unrelated
+    """
+    # Handle self relationship
+    if i == j:
+        return (0, 0, 2)
+    
+    # Get paths between individuals
+    paths, common_ancs = get_all_paths(up_node_dict, i, j)
+    
+    if not paths:
+        return None  # No relationship
+    
+    # Analyze paths to determine relationship
+    shortest_up = float('inf')
+    shortest_down = float('inf')
+    
+    for path in paths:
+        # Find position of common ancestor in path
+        for k, node in enumerate(path):
+            if node in common_ancs:
+                up_steps = k
+                down_steps = len(path) - k - 1
+                
+                shortest_up = min(shortest_up, up_steps)
+                shortest_down = min(shortest_down, down_steps)
+                break
+    
+    # Count distinct common ancestors that provide shortest paths
+    num_ancs = sum(1 for anc in common_ancs 
+                  if any(anc in path and 
+                         path.index(anc) == shortest_up for path in paths))
+    
+    # Cap at 2 for full relationships
+    num_ancs = min(num_ancs, 2)
+    
+    return (shortest_up, shortest_down, num_ancs)</code></pre>
+                
+                <p>This relationship computation is a core operation in Bonsai, used throughout the system for tasks ranging from relationship inference to pedigree validation and visualization.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Working with Pedigree Subsets</h4>
+                <p>Many pedigree operations require working with subsets of the full pedigree. Bonsai v3 includes functions for extracting and manipulating pedigree subsets:</p>
+                
+                <p>The <code>get_subdict()</code> function extracts the "cone" above or below a specific individual:</p>
+                
+                <pre><code>def get_subdict(dct, node):
+    """Get the cone above/below node in a node dict.
+    
+    If dct is an up_dict, returns the subdict containing the node and all its ancestors.
+    If dct is a down_dict, returns the subdict containing the node and all its descendants.
+    
+    Args:
+        dct: Dictionary mapping nodes to their relatives
+        node: Root node for the subdict
+        
+    Returns:
+        Dictionary representing the subpedigree
+    """
+    import copy
+    
+    if node not in dct:
+        return {}
+        
+    # Start with the node itself
+    sub_dct = {}
+    sub_dct[node] = copy.deepcopy(dct[node])
+    
+    # Add subdicts for all relatives of the node
+    for n in dct[node]:
+        n_dct = get_subdict(dct, n)
+        if n_dct:
+            sub_dct.update(n_dct)
+            
+    return sub_dct</code></pre>
+                
+                <p>This function is useful for extracting ancestral or descendant subpedigrees, which are common operations in pedigree exploration and analysis.</p>
+                
+                <p>For more complex subset operations, Bonsai v3 provides the <code>get_sub_up_node_dict()</code> function, which extracts the minimal subpedigree connecting a set of individuals:</p>
+                
+                <pre><code>def get_sub_up_node_dict(up_dct, id_set):
+    """Get subtree connecting all IDs in id_set.
+    
+    Args:
+        up_dct: Dictionary mapping individuals to their ancestors
+        id_set: Set of individual IDs to connect
+        
+    Returns:
+        Dictionary representing the minimal connecting subpedigree
+    """
+    # Find all nodes needed in the minimal connecting subpedigree
+    required_nodes = set()
+    
+    # First, include all IDs in the set
+    required_nodes.update(id_set)
+    
+    # Find common ancestors between all pairs
+    for i in id_set:
+        for j in id_set:
+            if i >= j:  # Avoid duplicate pairs
+                continue
+                
+            # Get paths between i and j
+            paths, common_ancs = get_all_paths(up_dct, i, j)
+            
+            # Add all nodes in these paths
+            for path in paths:
+                required_nodes.update(path)
+    
+    # Create the subpedigree
+    sub_dict = {}
+    for node in required_nodes:
+        if node in up_dct:
+            # Only include parents that are in the required nodes
+            sub_dict[node] = {p: d for p, d in up_dct[node].items() 
+                             if p in required_nodes}
+        else:
+            sub_dict[node] = {}
+    
+    return sub_dict</code></pre>
+                
+                <p>This function is particularly useful for visualizing the relationships between specific individuals without the clutter of the full pedigree. It's also used in pedigree merging operations to identify connection points between separate pedigree fragments.</p>
+                
+                <p>Finally, Bonsai v3 includes the <code>get_gt_id_set()</code> function to identify all genotyped individuals in a pedigree:</p>
+                
+                <pre><code>def get_gt_id_set(ped):
+    """Get all genotyped IDs (positive) from the pedigree.
+    
+    Args:
+        ped: Dictionary representing a pedigree
+        
+    Returns:
+        Set of genotyped individual IDs
+    """
+    all_ids = set(ped.keys()).union(*[set(parents.keys()) for parents in ped.values()])
+    return {i for i in all_ids if i > 0}</code></pre>
+                
+                <p>This distinction between genotyped (observed) and ungenotyped (inferred) individuals is crucial in genetic genealogy, where many individuals in a pedigree may not have genetic data available.</p>
+            </div>
+
+            <h3>Building and Modifying Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Adding and Deleting Nodes</h4>
+                <p>Bonsai v3 includes a comprehensive set of functions for building and modifying pedigrees. These functions enable the iterative construction and refinement of pedigree structures based on genetic and demographic evidence.</p>
+                
+                <p>The <code>add_parent()</code> function adds an ungenotyped parent to an individual:</p>
+                
+                <pre><code>def add_parent(node, up_dct, min_id=None):
+    """Add an ungenotyped parent to node in up_dct.
+    
+    Args:
+        node: Individual ID
+        up_dct: Dictionary mapping individuals to their ancestors
+        min_id: Minimum ID to use for new parent (optional)
+        
+    Returns:
+        Tuple of (updated_dict, new_parent_id)
+    """
+    import copy
+    up_dct = copy.deepcopy(up_dct)
+    
+    if node not in up_dct:
+        raise ValueError(f"Node {node} is not in up dct.")
+        
+    pid_dict = up_dct[node]
+    if len(pid_dict) >= 2:
+        return up_dct, None  # Already has two parents, can't add more
+        
+    # Generate a new negative ID for the ungenotyped parent
+    if min_id is None:
+        min_id = get_min_id(up_dct)
+        
+    new_pid = min_id - 1
+    up_dct[node][new_pid] = 1  # Add parent with degree 1
+    up_dct[new_pid] = {}       # Initialize empty parents dict for new parent
+    
+    return up_dct, new_pid</code></pre>
+                
+                <p>This function is essential for building out pedigrees, allowing the addition of inferred individuals to complete family structures based on genetic evidence.</p>
+                
+                <p>The <code>delete_node()</code> function removes an individual from a pedigree:</p>
+                
+                <pre><code>def delete_node(dct, node):
+    """Delete node from a node dict.
+    
+    Args:
+        dct: Dictionary mapping nodes to their relatives
+        node: Node to delete
+        
+    Returns:
+        Updated dictionary
+    """
+    import copy
+    new_dct = {}
+    
+    # Copy all entries except the deleted node
+    for k, v in dct.items():
+        if k != node:
+            # Also remove references to the deleted node in relatives
+            new_dct[k] = {r: d for r, d in v.items() if r != node}
+    
+    return new_dct</code></pre>
+                
+                <p>This function is used for pedigree pruning, error correction, and testing alternative pedigree hypotheses by removing specific individuals.</p>
+                
+                <p>The <code>replace_ids()</code> function allows for the remapping of individual IDs throughout a pedigree:</p>
+                
+                <pre><code>def replace_ids(rep_dct, dct):
+    """Replace IDs in dct according to mapping in rep_dct.
+    
+    Args:
+        rep_dct: Dictionary mapping old IDs to new IDs
+        dct: Dictionary to update
+        
+    Returns:
+        Updated dictionary with new IDs
+    """
+    if not isinstance(dct, dict):
+        return dct
+        
+    new_dct = {}
+    for k, v in dct.items():
+        new_k = rep_dct.get(k, k)  # Replace key if in mapping, otherwise keep
+        
+        if isinstance(v, dict):
+            new_v = {}
+            for k2, v2 in v.items():
+                new_k2 = rep_dct.get(k2, k2)  # Replace nested key
+                new_v[new_k2] = v2
+        else:
+            new_v = v
+            
+        new_dct[new_k] = new_v
+    
+    return new_dct</code></pre>
+                
+                <p>This function is valuable for aligning IDs between different data sources, merging pedigrees, and standardizing ID schemes in complex pedigree operations.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Higher-Level Pedigree Operations</h4>
+                <p>Beyond basic node operations, Bonsai v3 includes functions for higher-level pedigree analysis and manipulation:</p>
+                
+                <p>The <code>get_rel_dict()</code> function computes all pairwise relationships in a pedigree:</p>
+                
+                <pre><code>def get_rel_dict(up_dct):
+    """Get dict mapping each ID pair to their relationship tuple.
+    
+    Args:
+        up_dct: Dictionary mapping individuals to their ancestors
+        
+    Returns:
+        Dictionary mapping (id1, id2) to relationship tuples
+    """
+    # Get all IDs in the pedigree
+    all_ids = set(up_dct.keys()).union(*[set(parents.keys()) for parents in up_dct.values()])
+    all_ids = sorted(all_ids)  # Sort for deterministic ordering
+    
+    # Initialize the relationship dictionary
+    rel_dict = {}
+    for i in all_ids:
+        rel_dict[i] = {}
+    
+    # Compute relationships for all pairs
+    for i in range(len(all_ids)):
+        id1 = all_ids[i]
+        
+        # Self relationship
+        rel_dict[id1][id1] = (0, 0, 2)
+        
+        for j in range(i+1, len(all_ids)):
+            id2 = all_ids[j]
+            
+            # Get relationship tuple
+            rel_tuple = get_simple_rel_tuple(up_dct, id1, id2)
+            
+            # Store in both directions
+            if rel_tuple:
+                rel_dict[id1][id2] = rel_tuple
+                
+                # Reverse for the opposite direction
+                up, down, num_ancs = rel_tuple
+                rel_dict[id2][id1] = (down, up, num_ancs)
+    
+    return rel_dict</code></pre>
+                
+                <p>This function is used for comprehensive pedigree analysis, validation, and visualization. It efficiently computes all relationships in a single pass, avoiding redundant computation.</p>
+                
+                <p>The <code>get_mrca_set()</code> function finds the most recent common ancestors of a set of individuals:</p>
+                
+                <pre><code>def get_mrca_set(up_dct, id_set):
+    """Get the set of most recent common ancestors of id_set.
+    
+    Args:
+        up_dct: Dictionary mapping individuals to their ancestors
+        id_set: Set of individual IDs
+        
+    Returns:
+        Set of most recent common ancestors
+    """
+    if len(id_set) == 0:
+        return set()
+    if len(id_set) == 1:
+        return id_set  # Individual is own ancestor
+    
+    # Find all common ancestors
+    anc_sets = [get_rel_set(up_dct, i) for i in id_set]
+    common_ancs = set.intersection(*anc_sets)
+    
+    if not common_ancs:
+        return set()  # No common ancestors
+    
+    # For each common ancestor, check if any of its descendants
+    # is also a common ancestor
+    mrca_set = set(common_ancs)
+    
+    for anc in common_ancs:
+        if anc not in mrca_set:
+            continue  # Already removed
+            
+        # Get ancestors of this ancestor
+        higher_ancs = get_rel_set(up_dct, anc) - {anc}
+        
+        # Remove higher ancestors from MRCA set
+        mrca_set -= higher_ancs
+    
+    return mrca_set</code></pre>
+                
+                <p>This function is crucial for relationship analysis, particularly for identifying the connecting points between different branches of a family tree.</p>
+                
+                <p>Finally, the <code>get_sib_set()</code> function finds all siblings of an individual:</p>
+                
+                <pre><code>def get_sib_set(up_dct, down_dct, node):
+    """Get all siblings of node.
+    
+    Args:
+        up_dct: Dictionary mapping individuals to their ancestors
+        down_dct: Dictionary mapping individuals to their descendants
+        node: Individual ID
+        
+    Returns:
+        Set of sibling IDs
+    """
+    if node not in up_dct:
+        return set()
+        
+    # Get parents of the node
+    parents = set(up_dct[node].keys())
+    
+    # Get all children of these parents
+    sibling_set = set()
+    for parent in parents:
+        if parent in down_dct:
+            sibling_set.update(down_dct[parent].keys())
+                
+    # Remove the node itself
+    sibling_set.discard(node)
+    
+    return sibling_set</code></pre>
+                
+                <p>This function is used for identifying siblings, which is a common operation in pedigree analysis and reconstruction. By combining the <code>up_dct</code> and <code>down_dct</code> representations, it efficiently finds all siblings without traversing the entire pedigree.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Bonsai v3's pedigree data structures provide a flexible, efficient, and powerful foundation for representing and manipulating genealogical relationships. The node dictionary approach, combined with a rich set of navigation and manipulation functions, enables both simple operations like finding relatives and complex tasks like pedigree merging and optimization.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab09 notebook provides a simplified exploration of pedigree data structures, while the production implementation in Bonsai v3 includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Performance Optimizations:</strong> The production code includes optimized implementations for large pedigrees</li>
+                <li><strong>Caching Mechanisms:</strong> Strategic caching to avoid redundant computation in frequently accessed operations</li>
+                <li><strong>Error Handling:</strong> Comprehensive error checking and validation for robust operation</li>
+                <li><strong>Memory Efficiency:</strong> Careful attention to memory usage in large-scale pedigree operations</li>
+                <li><strong>Graph Algorithms:</strong> Sophisticated graph-theoretic algorithms for complex pedigree analysis</li>
+                <li><strong>Serialization:</strong> Functions for saving and loading pedigrees in various formats</li>
+            </ul>
+            
+            <p>The notebook provides a valuable introduction to the key concepts, but the production implementation represents years of refinement to handle the complexities of real-world pedigrees, including large family structures, missing data, and complex relationship patterns.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 09 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab09_Pedigree_Data_Structures.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab09_Pedigree_Data_Structures.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 09 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore pedigree data structures, consider these broader implications:</p>
+            <ul>
+                <li><strong>Data Structure Design:</strong> How the choice of representation impacts the efficiency and expressiveness of operations</li>
+                <li><strong>Graph Theory:</strong> How pedigrees represent a specialized form of directed graph with biological constraints</li>
+                <li><strong>Computational Genetics:</strong> The interplay between genetic inheritance patterns and computational representations</li>
+                <li><strong>Scalability Challenges:</strong> The technical challenges of representing complex family structures across many generations</li>
+            </ul>
+            <p>These considerations highlight how pedigree data structures represent not just a technical implementation but a computational model of biological inheritance and family relationships, bridging the gap between genetics, genealogy, and computer science.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab08_age_based_relationship_modeling.html" class="prev-lab">Age Modeling</a>
+                <a href="lab10_up_node_dictionary.html" class="next-lab">Up-Node Dictionary</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

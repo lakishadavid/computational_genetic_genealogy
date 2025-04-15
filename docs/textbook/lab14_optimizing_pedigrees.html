@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 14: Optimizing Pedigrees | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Optimizing Small Pedigree Configurations</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab14_optimizing_pedigrees.html" class="active">Lab 14: Optimizing Pedigrees</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 14: Optimizing Small Pedigree Configurations</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 optimizes small pedigree configurations to identify the most likely structure that explains observed genetic data. This optimization process is a critical step in pedigree reconstruction, as it determines which configurations best match biological reality among many possible alternatives.</p>
+            </div>
+
+            <h3>The Challenge of Finding Optimal Configurations</h3>
+            
+            <div class="concept-section">
+                <h4>The Optimization Problem</h4>
+                <p>In genetic genealogy, determining the optimal pedigree configuration presents several challenges:</p>
+                
+                <ol>
+                    <li><strong>Combinatorial Explosion:</strong> The number of possible pedigree configurations grows exponentially with the number of individuals</li>
+                    <li><strong>Ambiguous Evidence:</strong> Different relationship types can produce similar genetic sharing patterns</li>
+                    <li><strong>Incomplete Data:</strong> Missing genotype data or limited IBD detection can create uncertainty</li>
+                    <li><strong>Multiple Plausible Solutions:</strong> Various pedigree structures may explain the observed data equally well</li>
+                </ol>
+                
+                <p>Bonsai v3 addresses these challenges through sophisticated optimization techniques implemented in its <code>connections.py</code> and <code>pedigrees.py</code> modules. The central optimization function is <code>combine_up_dicts</code>:</p>
+                
+                <pre><code>def combine_up_dicts(
+    id_to_up_dct: dict[int, dict[int, dict[int, int]]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    n_keep: int = 5,
+    id_set_to_exclude: set[int] = None,
+):
+    """
+    Combine all pedigrees in id_to_up_dct incrementally.
+    
+    Args:
+        id_to_up_dct: Dictionary mapping IDs to their up-node dictionaries
+        id_to_shared_ibd: Dictionary mapping pairs of IDs to their IBD segments
+        id_to_info: Dictionary with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        n_keep: Number of top pedigrees to keep at each step
+        id_set_to_exclude: Set of IDs to exclude from combination
+        
+    Returns:
+        List of optimized pedigrees with their likelihoods
+    """
+    # Identify individuals with IBD sharing
+    id_set = get_ids_with_sharing(id_to_shared_ibd)
+    
+    # Filter out excluded IDs
+    if id_set_to_exclude is not None:
+        id_set = id_set - id_set_to_exclude
+    
+    # If no relevant IDs, return empty result
+    if not id_set:
+        return []
+    
+    # Get individual pedigrees to combine
+    id_list = sorted(id_set)
+    
+    # Sort pairs by amount of IBD sharing (most to least)
+    pair_list = sort_pairs_by_ibd(id_to_shared_ibd, id_list)
+    
+    # Initialize with the first individual's pedigree
+    up_dct_list = [(id_to_up_dct[id_list[0]], 0.0)]
+    
+    # Incrementally build the pedigree by combining with additional individuals
+    for i in range(1, len(id_list)):
+        new_id = id_list[i]
+        new_up_dct = id_to_up_dct[new_id]
+        
+        # Combine existing pedigrees with the new individual
+        combined_list = []
+        for up_dct, ll in up_dct_list:
+            # Try different ways to combine pedigrees
+            combinations = combine_pedigrees(
+                up_dct1=up_dct,
+                up_dct2=new_up_dct,
+                id_to_shared_ibd=id_to_shared_ibd,
+                id_to_info=id_to_info,
+                pw_ll=pw_ll,
+                max_up=max_up,
+                keep_num=n_keep,
+                return_many=True,
+            )
+            
+            # Add all combinations to the list
+            combined_list.extend(combinations)
+        
+        # If no valid combinations were found, continue
+        if not combined_list:
+            continue
+            
+        # Sort by likelihood and keep top n_keep
+        combined_list.sort(key=lambda x: x[1], reverse=True)
+        up_dct_list = combined_list[:n_keep]
+    
+    return up_dct_list</code></pre>
+                
+                <p>This function orchestrates the incremental optimization process, which follows these key steps:</p>
+                
+                <ol>
+                    <li>Identify individuals with IBD sharing to prioritize important connections</li>
+                    <li>Sort pairs by amount of IBD sharing, focusing on the strongest connections first</li>
+                    <li>Build pedigrees incrementally, starting with one individual and adding others</li>
+                    <li>Evaluate multiple ways to combine pedigrees at each step</li>
+                    <li>Maintain a list of the most likely pedigree configurations</li>
+                    <li>Return the optimized pedigrees with their calculated likelihoods</li>
+                </ol>
+                
+                <p>This incremental approach allows Bonsai v3 to handle the combinatorial complexity of pedigree optimization while focusing computational resources on the most promising configurations. It's a balance between exhaustive search and efficient pruning of the search space.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Evaluating Pedigree Configurations</h4>
+                <p>At the heart of pedigree optimization is the ability to evaluate how well different configurations explain the observed genetic data. In Bonsai v3, this is implemented in the <code>get_ped_like</code> function:</p>
+                
+                <pre><code>def get_ped_like(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+):
+    """
+    Calculate the log-likelihood of a pedigree given IBD data.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        
+    Returns:
+        log_like: Log-likelihood of the pedigree
+    """
+    log_like = 0.0
+    
+    # Get all genotyped individuals in the pedigree
+    genotyped_ids = get_genotyped_ids(up_dct)
+    
+    # For each pair of genotyped individuals
+    for i, id1 in enumerate(genotyped_ids):
+        for id2 in genotyped_ids[i+1:]:
+            # Skip if no IBD data for this pair
+            pair = (min(id1, id2), max(id1, id2))
+            if pair not in id_to_shared_ibd:
+                continue
+                
+            # Get IBD data for this pair
+            ibd_segs = id_to_shared_ibd[pair]
+            
+            # Get relationship from pedigree
+            rel_tuple = get_simple_rel_tuple(up_dct, id1, id2)
+            
+            # Calculate likelihood of this relationship
+            pair_ll = pw_ll.get_ibd_log_like(
+                id1=id1,
+                id2=id2,
+                rel_tuple=rel_tuple,
+                ibd_segs=ibd_segs,
+            )
+            
+            # Add to total log-likelihood
+            log_like += pair_ll
+    
+    # Add age-based likelihood component
+    age_ll = get_age_log_like(up_dct, id_to_info)
+    log_like += age_ll
+    
+    # Add structural likelihood component
+    struct_ll = get_structural_log_like(up_dct)
+    log_like += struct_ll
+    
+    return log_like</code></pre>
+                
+                <p>This function computes the total log-likelihood of a pedigree by combining several components:</p>
+                
+                <ul>
+                    <li><strong>Genetic Component:</strong> How well the pedigree explains observed IBD patterns between pairs of individuals</li>
+                    <li><strong>Age Component:</strong> How well the pedigree respects age constraints (e.g., parents older than children)</li>
+                    <li><strong>Structural Component:</strong> How biologically plausible the pedigree structure is</li>
+                </ul>
+                
+                <p>The genetic component is calculated using the <code>PwLogLike</code> class, which implements sophisticated statistical models for the expected patterns of IBD sharing between different types of relatives. These models account for:</p>
+                
+                <ol>
+                    <li><strong>Total Shared IBD:</strong> The total amount of DNA shared (in centimorgans)</li>
+                    <li><strong>Number of Segments:</strong> How many distinct IBD segments are shared</li>
+                    <li><strong>Segment Length Distribution:</strong> The pattern of segment lengths characteristic of different relationships</li>
+                    <li><strong>IBD2 Regions:</strong> Regions where both chromosomes are identical (important for distinguishing full siblings)</li>
+                </ol>
+                
+                <p>By combining these components, Bonsai v3 can evaluate pedigree configurations based on both genetic evidence and biological constraints, making it a powerful tool for pedigree optimization.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Generating Alternative Configurations</h4>
+                <p>An essential part of pedigree optimization is generating alternative configurations to explore the space of possible pedigrees. Bonsai v3 handles this through the <code>combine_pedigrees</code> function:</p>
+                
+                <pre><code>def combine_pedigrees(
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    keep_num: int = 3,
+    return_many: bool = False,
+):
+    """
+    Combine two pedigrees into one, using IBD sharing to guide the connection.
+    
+    Args:
+        up_dct1, up_dct2: The pedigrees to combine
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to biographical information
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        keep_num: Number of top combinations to keep
+        return_many: Whether to return multiple possible combinations
+        
+    Returns:
+        Combined pedigree or list of top combinations with likelihoods
+    """
+    # Find pairs of individuals that connect the pedigrees
+    con_pairs = find_connecting_pairs(
+        up_dct1=up_dct1,
+        up_dct2=up_dct2,
+        id_to_shared_ibd=id_to_shared_ibd,
+    )
+    
+    if not con_pairs:
+        return None if not return_many else []
+    
+    # Get connection points in each pedigree
+    con_pts1 = get_possible_connection_point_set(up_dct1)
+    con_pts2 = get_possible_connection_point_set(up_dct2)
+    
+    # Identify likely connection points based on IBD sharing
+    likely_pts1 = get_likely_con_pt_set(up_dct1, id_to_shared_ibd, con_pts1)
+    likely_pts2 = get_likely_con_pt_set(up_dct2, id_to_shared_ibd, con_pts2)
+    
+    # Generate and evaluate different ways to connect the pedigrees
+    all_combinations = []
+    for (id1, id2) in con_pairs:
+        for cp1 in likely_pts1:
+            if cp1[0] != id1:
+                continue
+                
+            for cp2 in likely_pts2:
+                if cp2[0] != id2:
+                    continue
+                    
+                # Try different relationship configurations
+                for up in range(max_up + 1):
+                    for down in range(max_up + 1):
+                        if up + down > max_up:
+                            continue
+                            
+                        # Try both one and two common ancestors
+                        for num_ancs in [1, 2]:
+                            # Connect the pedigrees with this configuration
+                            combinations = connect_pedigrees_through_points(
+                                id1=cp1[0], 
+                                id2=cp2[0],
+                                pid1=cp1[1], 
+                                pid2=cp2[1],
+                                up_dct1=up_dct1, 
+                                up_dct2=up_dct2,
+                                deg1=up, 
+                                deg2=down,
+                                num_ancs=num_ancs,
+                            )
+                            
+                            # Evaluate each combination
+                            for comb in combinations:
+                                ll = get_ped_like(
+                                    up_dct=comb,
+                                    id_to_shared_ibd=id_to_shared_ibd,
+                                    id_to_info=id_to_info,
+                                    pw_ll=pw_ll,
+                                )
+                                
+                                all_combinations.append((comb, ll))
+    
+    # Sort by likelihood and keep top combinations
+    all_combinations.sort(key=lambda x: x[1], reverse=True)
+    top_combinations = all_combinations[:keep_num]
+    
+    # Return results based on return_many parameter
+    if return_many:
+        return top_combinations
+    else:
+        return top_combinations[0][0] if top_combinations else None</code></pre>
+                
+                <p>This function systematically generates alternative pedigree configurations by:</p>
+                
+                <ol>
+                    <li>Identifying pairs of individuals that connect the pedigrees based on IBD sharing</li>
+                    <li>Finding all possible connection points in each pedigree</li>
+                    <li>Restricting to likely connection points based on IBD sharing patterns</li>
+                    <li>Generating different relationship configurations by varying the number of generations up and down</li>
+                    <li>Trying different numbers of common ancestors (1 or 2) for the connection</li>
+                    <li>Evaluating each configuration based on its likelihood</li>
+                    <li>Returning either the best configuration or a ranked list of top configurations</li>
+                </ol>
+                
+                <p>This approach allows Bonsai v3 to explore a wide range of possible pedigree structures while focusing computational resources on the most promising configurations. It systematically varies key parameters that define relationship types:</p>
+                
+                <ul>
+                    <li><strong>Number of generations up (up):</strong> How many generations to extend upward from the first individual</li>
+                    <li><strong>Number of generations down (down):</strong> How many generations to extend downward from the second individual</li>
+                    <li><strong>Number of common ancestors (num_ancs):</strong> Whether the connection involves one or two common ancestors</li>
+                </ul>
+                
+                <p>By varying these parameters, Bonsai v3 can generate configurations for all biologically possible relationship types, from parent-child to distant cousins.</p>
+            </div>
+
+            <h3>Optimizing With Multiple Constraints</h3>
+            
+            <div class="concept-section">
+                <h4>Integrating Genetic and Non-Genetic Evidence</h4>
+                <p>Bonsai v3 optimizes pedigree configurations by integrating multiple types of evidence, including both genetic and non-genetic information. This is implemented through a composite likelihood approach:</p>
+                
+                <pre><code>def evaluate_up_dict_with_likelihood_components(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    return_components: bool = False,
+):
+    """
+    Evaluate a pedigree with separate likelihood components.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        return_components: Whether to return individual components
+        
+    Returns:
+        Total log-likelihood or tuple of (total, components)
+    """
+    # Calculate genetic likelihood component
+    genetic_ll = 0.0
+    for pair, ibd_segs in id_to_shared_ibd.items():
+        id1, id2 = pair
+        
+        # Skip if either individual is not in pedigree
+        if id1 not in up_dct or id2 not in up_dct:
+            continue
+            
+        # Get relationship from pedigree
+        rel_tuple = get_simple_rel_tuple(up_dct, id1, id2)
+        
+        # Calculate likelihood for this pair
+        pair_ll = pw_ll.get_ibd_log_like(
+            id1=id1,
+            id2=id2,
+            rel_tuple=rel_tuple,
+            ibd_segs=ibd_segs,
+        )
+        
+        genetic_ll += pair_ll
+    
+    # Calculate age likelihood component
+    age_ll = 0.0
+    if id_to_info:
+        age_ll = get_age_log_like(up_dct, id_to_info)
+    
+    # Calculate structural likelihood component
+    struct_ll = get_structural_log_like(up_dct)
+    
+    # Calculate sex constraint likelihood component
+    sex_ll = 0.0
+    if id_to_info:
+        sex_ll = get_sex_constraint_log_like(up_dct, id_to_info)
+    
+    # Combine components with appropriate weights
+    total_ll = (0.7 * genetic_ll + 
+                0.15 * age_ll + 
+                0.1 * struct_ll + 
+                0.05 * sex_ll)
+    
+    if return_components:
+        components = {
+            'genetic': genetic_ll,
+            'age': age_ll,
+            'structural': struct_ll,
+            'sex': sex_ll
+        }
+        return total_ll, components
+    else:
+        return total_ll</code></pre>
+                
+                <p>This function calculates a weighted sum of multiple likelihood components:</p>
+                
+                <ol>
+                    <li><strong>Genetic Likelihood (70%):</strong> How well the pedigree explains observed IBD patterns</li>
+                    <li><strong>Age Likelihood (15%):</strong> How well the pedigree respects age constraints</li>
+                    <li><strong>Structural Likelihood (10%):</strong> How biologically plausible the structure is</li>
+                    <li><strong>Sex Constraint Likelihood (5%):</strong> How well the pedigree respects sex constraints</li>
+                </ol>
+                
+                <p>By weighting these components, Bonsai v3 can prioritize genetic evidence while still ensuring that the resulting pedigrees respect biological constraints. This is crucial for resolving ambiguities in cases where multiple configurations might explain the genetic data equally well.</p>
+                
+                <p>The age-based component is particularly important for distinguishing relationships that have similar IBD patterns but different generational structures, such as half-siblings vs. grandparent-grandchild. This is implemented in the <code>get_age_log_like</code> function:</p>
+                
+                <pre><code>def get_age_log_like(
+    up_dct: dict[int, dict[int, int]],
+    id_to_info: dict[int, dict],
+):
+    """
+    Calculate log-likelihood of a pedigree based on age constraints.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        id_to_info: Dict mapping IDs to demographic information
+        
+    Returns:
+        log_like: Log-likelihood based on age constraints
+    """
+    log_like = 0.0
+    
+    # For each parent-child relationship
+    for child, parents in up_dct.items():
+        if child not in id_to_info:
+            continue
+            
+        child_age = id_to_info[child].get('age')
+        if child_age is None:
+            continue
+            
+        for parent in parents:
+            if parent not in id_to_info:
+                continue
+                
+            parent_age = id_to_info[parent].get('age')
+            if parent_age is None:
+                continue
+                
+            # Calculate age difference
+            age_diff = parent_age - child_age
+            
+            # Parent should be older than child by at least MIN_PARENT_AGE
+            MIN_PARENT_AGE = 15
+            
+            if age_diff < MIN_PARENT_AGE:
+                # Penalty for implausible age difference
+                log_like -= 10.0 * (MIN_PARENT_AGE - age_diff)
+            elif age_diff > 100:
+                # Penalty for extremely large age differences
+                log_like -= 0.1 * (age_diff - 100)
+    
+    return log_like</code></pre>
+                
+                <p>This function penalizes biologically implausible age relationships, such as parents who are younger than their children or age differences that are too small or too large. By incorporating these constraints, Bonsai v3 can optimize pedigree configurations that respect both genetic evidence and biological reality.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Resolving Ambiguous Cases</h4>
+                <p>In many cases, multiple pedigree configurations might explain the observed genetic data equally well. Bonsai v3 handles these ambiguous cases by maintaining multiple hypotheses and resolving them using additional evidence when available. This is implemented in the <code>resolve_ambiguity</code> function:</p>
+                
+                <pre><code>def resolve_ambiguity(
+    candidates: list[tuple[dict[int, dict[int, int]], float]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    min_like_diff: float = 3.0,
+):
+    """
+    Resolve ambiguity between multiple candidate pedigrees.
+    
+    Args:
+        candidates: List of (pedigree, log_likelihood) candidates
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        min_like_diff: Minimum log-likelihood difference to consider decisive
+        
+    Returns:
+        best_ped: The best pedigree after ambiguity resolution
+        confidence: Confidence score (0-1) in the result
+        alternatives: List of plausible alternative pedigrees
+    """
+    # Sort candidates by likelihood
+    candidates.sort(key=lambda x: x[1], reverse=True)
+    
+    # If only one candidate or large likelihood difference, unambiguous
+    if len(candidates) == 1 or candidates[0][1] - candidates[1][1] >= min_like_diff:
+        return candidates[0][0], 1.0, []
+    
+    # Calculate comprehensive likelihood with all components
+    scored_candidates = []
+    for ped, _ in candidates:
+        total_ll, components = evaluate_up_dict_with_likelihood_components(
+            up_dct=ped,
+            id_to_shared_ibd=id_to_shared_ibd,
+            id_to_info=id_to_info,
+            pw_ll=pw_ll,
+            return_components=True,
+        )
+        scored_candidates.append((ped, total_ll, components))
+    
+    # Sort candidates by comprehensive likelihood
+    scored_candidates.sort(key=lambda x: x[1], reverse=True)
+    
+    # Get best candidate and alternatives
+    best_ped, best_ll, _ = scored_candidates[0]
+    
+    # Identify plausible alternatives
+    alternatives = []
+    for ped, ll, _ in scored_candidates[1:]:
+        if best_ll - ll < min_like_diff:
+            alternatives.append(ped)
+    
+    # Calculate confidence based on likelihood difference
+    if alternatives:
+        second_best_ll = scored_candidates[1][1]
+        confidence = 1.0 - math.exp(-(best_ll - second_best_ll))
+    else:
+        confidence = 1.0
+    
+    return best_ped, confidence, alternatives</code></pre>
+                
+                <p>This function resolves ambiguity by:</p>
+                
+                <ol>
+                    <li>Evaluating candidates using a comprehensive likelihood that includes all evidence</li>
+                    <li>Identifying the best candidate based on total likelihood</li>
+                    <li>Finding plausible alternatives whose likelihood is close to the best</li>
+                    <li>Calculating a confidence score based on the likelihood difference</li>
+                    <li>Returning the best pedigree, confidence score, and plausible alternatives</li>
+                </ol>
+                
+                <p>This approach allows Bonsai v3 to make a principled choice while still acknowledging uncertainty when multiple configurations are almost equally likely. The confidence score provides a quantitative measure of how certain the system is about the chosen configuration, which is crucial for transparent and reliable pedigree reconstruction.</p>
+                
+                <p>In cases where ambiguity cannot be resolved with available evidence, Bonsai v3 can maintain multiple hypotheses for future resolution when more data becomes available. This is particularly important for small pedigree structures, where ambiguity is common due to limited genetic data and the similarity of IBD patterns between different relationship types.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Systematic Search of Configuration Space</h4>
+                <p>To find the optimal pedigree configuration, Bonsai v3 implements a systematic search of the configuration space. The search process is guided by likelihood scores and focuses computational resources on the most promising regions of the search space. This is implemented through the <code>optimize_pedigree</code> function:</p>
+                
+                <pre><code>def optimize_pedigree(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_iterations: int = 10,
+    max_alternatives: int = 5,
+):
+    """
+    Optimize a pedigree through iterative improvements.
+    
+    Args:
+        up_dct: Initial up-node dictionary pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_iterations: Maximum number of optimization iterations
+        max_alternatives: Maximum number of alternatives to consider
+        
+    Returns:
+        optimized pedigree: The optimized pedigree structure
+        log_likelihood: Log-likelihood of the optimized pedigree
+    """
+    current_ped = copy.deepcopy(up_dct)
+    current_ll = get_ped_like(current_ped, id_to_shared_ibd, id_to_info, pw_ll)
+    
+    for iteration in range(max_iterations):
+        # Generate alternative configurations
+        alternatives = generate_alternatives(
+            up_dct=current_ped,
+            id_to_shared_ibd=id_to_shared_ibd,
+            max_alternatives=max_alternatives,
+        )
+        
+        # Evaluate alternatives
+        best_alt = None
+        best_alt_ll = current_ll
+        
+        for alt in alternatives:
+            alt_ll = get_ped_like(alt, id_to_shared_ibd, id_to_info, pw_ll)
+            
+            if alt_ll > best_alt_ll:
+                best_alt = alt
+                best_alt_ll = alt_ll
+        
+        # If no improvement, stop optimization
+        if best_alt is None or best_alt_ll <= current_ll:
+            break
+            
+        # Update current pedigree
+        current_ped = best_alt
+        current_ll = best_alt_ll
+    
+    return current_ped, current_ll</code></pre>
+                
+                <p>This function implements an iterative optimization process:</p>
+                
+                <ol>
+                    <li>Start with an initial pedigree configuration</li>
+                    <li>Generate alternative configurations through systematic variations</li>
+                    <li>Evaluate each alternative using the likelihood function</li>
+                    <li>Select the best alternative if it improves the likelihood</li>
+                    <li>Repeat until no further improvement or maximum iterations reached</li>
+                </ol>
+                
+                <p>The alternative configurations are generated by <code>generate_alternatives</code>, which systematically varies the pedigree structure:</p>
+                
+                <pre><code>def generate_alternatives(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    max_alternatives: int = 5,
+):
+    """
+    Generate alternative pedigree configurations.
+    
+    Args:
+        up_dct: Current pedigree configuration
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        max_alternatives: Maximum number of alternatives to generate
+        
+    Returns:
+        alternatives: List of alternative pedigree configurations
+    """
+    alternatives = []
+    
+    # 1. Try adding new relationships between individuals with IBD
+    for (id1, id2), ibd_segs in id_to_shared_ibd.items():
+        # Skip if no significant IBD sharing
+        if sum(seg['length_cm'] for seg in ibd_segs) < 20:
+            continue
+            
+        # Skip if both individuals not in pedigree
+        if id1 not in up_dct or id2 not in up_dct:
+            continue
+            
+        # Get current relationship
+        rel_tuple = get_simple_rel_tuple(up_dct, id1, id2)
+        
+        # If no relationship exists, try parent-child
+        if rel_tuple is None:
+            # Try making id1 parent of id2
+            new_ped = copy.deepcopy(up_dct)
+            if id2 not in new_ped:
+                new_ped[id2] = {}
+            new_ped[id2][id1] = 1
+            alternatives.append(new_ped)
+            
+            if len(alternatives) >= max_alternatives:
+                break
+                
+            # Try making id2 parent of id1
+            new_ped = copy.deepcopy(up_dct)
+            if id1 not in new_ped:
+                new_ped[id1] = {}
+            new_ped[id1][id2] = 1
+            alternatives.append(new_ped)
+            
+            if len(alternatives) >= max_alternatives:
+                break
+    
+    # 2. Try adding new ancestors
+    for node in up_dct:
+        if len(up_dct[node]) < 2:
+            # Add a parent
+            new_ped, _ = add_parent(node, up_dct)
+            alternatives.append(new_ped)
+            
+            if len(alternatives) >= max_alternatives:
+                break
+    
+    # 3. Try removing relationships
+    for child, parents in up_dct.items():
+        for parent in list(parents.keys()):
+            # Create a new configuration with this relationship removed
+            new_ped = copy.deepcopy(up_dct)
+            new_ped[child].pop(parent, None)
+            
+            alternatives.append(new_ped)
+            if len(alternatives) >= max_alternatives:
+                break
+    
+    return alternatives</code></pre>
+                
+                <p>This function generates alternatives through various operations:</p>
+                
+                <ul>
+                    <li><strong>Adding Relationships:</strong> Adding new parent-child relationships between individuals with IBD sharing</li>
+                    <li><strong>Adding Ancestors:</strong> Adding new ungenotyped parents to individuals with fewer than two parents</li>
+                    <li><strong>Removing Relationships:</strong> Removing existing parent-child relationships to explore simpler structures</li>
+                </ul>
+                
+                <p>By systematically exploring the configuration space through these operations, Bonsai v3 can find the optimal small pedigree structure that best explains the observed genetic data while respecting biological constraints.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Bonsai v3's ability to optimize small pedigree configurations is essential for accurate pedigree reconstruction. By systematically exploring the space of possible configurations, evaluating them based on multiple types of evidence, and resolving ambiguities with additional constraints, Bonsai can identify the most likely pedigree structure that explains observed genetic data, even in the presence of noise and uncertainty.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab14 notebook provides a simplified exploration of pedigree optimization, while the production implementation in Bonsai v3 includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Advanced Search Strategies:</strong> The production code uses more sophisticated search strategies that efficiently prune the vast configuration space</li>
+                <li><strong>Comprehensive Likelihood Models:</strong> The real implementation includes more detailed likelihood models calibrated on large reference datasets</li>
+                <li><strong>Optimization Heuristics:</strong> Production code includes various heuristics to focus computational resources on promising configurations</li>
+                <li><strong>Uncertainty Quantification:</strong> More rigorous statistical methods for quantifying uncertainty and maintaining multiple hypotheses</li>
+                <li><strong>Performance Optimization:</strong> Advanced techniques for caching, parallelization, and memory management to handle large-scale pedigrees</li>
+                <li><strong>Sophisticated Constraints:</strong> More comprehensive biological constraints beyond just age and sex relationships</li>
+            </ul>
+            
+            <p>The notebook provides an educational introduction to the key concepts, but the production implementation represents years of refinement to handle the complexities of real-world pedigree optimization.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 14 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab14_Optimizing_Pedigrees.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab14_Optimizing_Pedigrees.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 14 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore pedigree optimization techniques, consider these broader implications:</p>
+            <ul>
+                <li><strong>Statistical Interpretation:</strong> The likelihood framework allows for principled statistical interpretation of pedigree reconstruction confidence</li>
+                <li><strong>Ethical Considerations:</strong> Handling ambiguity responsibly is crucial, especially when reconstruction might reveal unexpected family relationships</li>
+                <li><strong>Historical Applications:</strong> How optimization techniques can be applied to reconstruct historical pedigrees from limited genetic data</li>
+                <li><strong>Computational Challenges:</strong> The balance between exhaustive search and efficient algorithms when scaling to larger pedigrees</li>
+                <li><strong>Inter-Disciplinary Connections:</strong> How techniques from operations research, combinatorial optimization, and Bayesian statistics contribute to pedigree optimization</li>
+            </ul>
+            <p>These considerations highlight how pedigree optimization is not just a technical challenge but one with significant methodological, ethical, and interdisciplinary dimensions that must be considered in applications of computational genetic genealogy.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationship Assessment</h5>
+                        <p>Lab 12</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Small Pedigrees</h5>
+                        <p>Lab 13</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Optimizing Pedigrees</h5>
+                        <p>Lab 14</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab13_small_pedigree_structures.html" class="prev-lab">Small Pedigree Structures</a>
+                <a href="contents.html" class="next-lab">Back to Contents</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

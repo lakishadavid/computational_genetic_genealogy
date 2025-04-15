@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12: Relationship Assessment | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Relationship Assessment and Validation</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab12_relationship_assessment.html" class="active">Lab 12: Relationship Assessment</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 12: Relationship Assessment and Validation</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 assesses and validates relationships between individuals in a pedigree. Understanding these mechanisms is crucial for pedigree reconstruction, as they determine which relationships are included in the final pedigree and how conflicting evidence is resolved.</p>
+            </div>
+
+            <h3>Relationship Validation Framework</h3>
+            
+            <div class="concept-section">
+                <h4>The Challenge of Relationship Validation</h4>
+                <p>In genetic genealogy, relationship validation involves determining whether a proposed relationship between two individuals is:</p>
+                
+                <ol>
+                    <li><strong>Biologically Plausible:</strong> Consistent with biological constraints (sex, age, etc.)</li>
+                    <li><strong>Genetically Consistent:</strong> Supported by observed patterns of DNA sharing</li>
+                    <li><strong>Structurally Coherent:</strong> Compatible with other known relationships in the pedigree</li>
+                </ol>
+                
+                <p>Bonsai v3 addresses this challenge through a sophisticated framework implemented in the <code>connections.py</code> module. The core functions in this framework include:</p>
+                
+                <pre><code>def is_valid_relationship(rel_tuple, sex1, sex2, age1, age2, min_age_of_fertility=16, max_age_of_fertility=50):
+    """Check if a relationship is biologically valid based on sex and age constraints.
+    
+    Args:
+        rel_tuple: (up, down, num_ancs) tuple representing the relationship
+        sex1: Sex of individual 1 ('M', 'F', or None)
+        sex2: Sex of individual 2 ('M', 'F', or None)
+        age1: Age of individual 1 (in years) or None
+        age2: Age of individual 2 (in years) or None
+        min_age_of_fertility: Minimum age for having children
+        max_age_of_fertility: Maximum age for having children
+        
+    Returns:
+        is_valid: True if the relationship is biologically valid
+    """</code></pre>
+                
+                <p>This function performs a series of validation checks based on the biological constraints of the proposed relationship. For example, it ensures that:</p>
+                
+                <ul>
+                    <li>A male individual cannot be the biological mother of a child</li>
+                    <li>A female individual cannot be the biological father of a child</li>
+                    <li>Parents must be at least 16 years older than their children</li>
+                    <li>For full biological parenthood (num_ancs=2), both parents must be present</li>
+                </ul>
+                
+                <p>These checks provide an initial filter to eliminate biologically impossible relationships before more computationally intensive genetic analysis is performed.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Age-Based Validation</h4>
+                <p>Age differences provide particularly powerful constraints for relationship validation. Bonsai v3 implements detailed age checks through the <code>passes_age_check</code> function:</p>
+                
+                <pre><code>def passes_age_check(rel_tuple, age1, age2, min_age_of_fertility=16, max_age_of_fertility=50):
+    """Check if a relationship passes age constraints.
+    
+    Args:
+        rel_tuple: (up, down, num_ancs) tuple representing the relationship
+        age1: Age of individual 1 (in years) or None
+        age2: Age of individual 2 (in years) or None
+        min_age_of_fertility: Minimum age for having children
+        max_age_of_fertility: Maximum age for having children
+        
+    Returns:
+        passes: True if the relationship passes age constraints
+    """
+    # If no age data or no relationship, we can't validate
+    if rel_tuple is None or age1 is None or age2 is None:
+        return True
+    
+    up, down, num_ancs = rel_tuple
+    
+    # Handle parent-child relationships
+    if up == 0 and down == 1:  # id1 is parent of id2
+        age_diff = age1 - age2
+        # Parent should be older by at least min_age_of_fertility
+        # But not impossibly old at time of birth
+        return (age_diff >= min_age_of_fertility and 
+                age_diff <= max_age_of_fertility + age2)
+    
+    elif up == 1 and down == 0:  # id1 is child of id2
+        age_diff = age2 - age1
+        # Same checks in the other direction
+        return (age_diff >= min_age_of_fertility and 
+                age_diff <= max_age_of_fertility + age1)
+    
+    # For grandparent relationships
+    elif up == 0 and down == 2:  # id1 is grandparent of id2
+        # Grandparent should be at least 2*min_age_of_fertility older
+        return age1 - age2 >= 2 * min_age_of_fertility
+    
+    elif up == 2 and down == 0:  # id1 is grandchild of id2
+        # Same check in reverse
+        return age2 - age1 >= 2 * min_age_of_fertility
+    
+    # For aunt/uncle relationships
+    elif up == 1 and down == 2:  # id1 is aunt/uncle of id2
+        # Should be at least min_age_of_fertility older than niece/nephew
+        # But can be younger than the niece/nephew's parent (id1's sibling)
+        return age1 - age2 >= 0
+    
+    # For other relationships, we need more complex models
+    # that account for generation differences
+    else:
+        # Default to allowing the relationship if we don't have
+        # specific constraints defined
+        return True</code></pre>
+                
+                <p>This function implements a range of age-based validation checks based on the type of relationship:</p>
+                
+                <ul>
+                    <li><strong>Parent-Child:</strong> Parent must be at least <code>min_age_of_fertility</code> older than child, but not impossibly old at time of birth</li>
+                    <li><strong>Grandparent-Grandchild:</strong> Grandparent must be at least twice <code>min_age_of_fertility</code> older than grandchild</li>
+                    <li><strong>Aunt/Uncle-Niece/Nephew:</strong> Aunt/uncle should not be younger than niece/nephew (though they can be very close in age)</li>
+                </ul>
+                
+                <p>The function uses configurable parameters for <code>min_age_of_fertility</code> (typically 16) and <code>max_age_of_fertility</code> (typically 50), which can be adjusted for different historical contexts or populations. This flexibility allows Bonsai to handle variations in reproductive patterns across different time periods and cultures.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship Assessment Through IBD</h4>
+                <p>Beyond basic biological validation, Bonsai v3 assesses how well proposed relationships explain observed genetic sharing through Identity by Descent (IBD) segments. This is implemented in the <code>assess_connections</code> function:</p>
+                
+                <pre><code>def assess_connections(rel_tuple, ibd_df, demography=None, sex1=None, sex2=None, age1=None, age2=None):
+    """Assess whether a relationship is consistent with observed IBD.
+    
+    Args:
+        rel_tuple: (up, down, num_ancs) tuple representing the relationship
+        ibd_df: DataFrame of IBD segments between the individuals
+        demography: Optional demographic context (time period, population, etc.)
+        sex1, sex2: Sex of individuals 1 and 2 ('M', 'F', or None)
+        age1, age2: Age of individuals 1 and 2 (in years) or None
+        
+    Returns:
+        score: A score between 0 and 1 indicating consistency
+              Higher scores indicate better consistency
+    """
+    if rel_tuple is None:
+        return 0.0  # No relationship
+    
+    # Check if the relationship is biologically valid
+    if not is_valid_relationship(rel_tuple, sex1, sex2, age1, age2):
+        return 0.0  # Invalid relationship
+    
+    # Extract IBD statistics
+    total_ibd = ibd_df['length_cm'].sum() if not ibd_df.empty else 0
+    num_segments = len(ibd_df)
+    avg_segment = total_ibd / num_segments if num_segments > 0 else 0
+    
+    # Get expected IBD statistics for this relationship
+    expected_stats = get_expected_ibd_stats(rel_tuple)
+    expected_total = expected_stats['total_cm']
+    expected_segments = expected_stats['num_segments']
+    expected_avg_length = expected_stats['avg_length']
+    
+    # Calculate score components
+    # 1. Total IBD component
+    total_score = gaussian_score(total_ibd, expected_total, expected_total * 0.3)
+    
+    # 2. Segment count component
+    count_score = poisson_score(num_segments, expected_segments)
+    
+    # 3. Average segment length component
+    length_score = gaussian_score(avg_segment, expected_avg_length, expected_avg_length * 0.4)
+    
+    # Combine scores with appropriate weights
+    combined_score = (0.5 * total_score + 
+                      0.3 * count_score + 
+                      0.2 * length_score)
+    
+    # Apply age-based adjustments if age data is available
+    if age1 is not None and age2 is not None:
+        age_factor = age_adjustment_factor(rel_tuple, age1, age2)
+        combined_score *= age_factor
+    
+    return combined_score</code></pre>
+                
+                <p>This function computes a comprehensive assessment score by comparing observed IBD patterns to what would be expected for the proposed relationship. The assessment considers multiple aspects of IBD sharing:</p>
+                
+                <ol>
+                    <li><strong>Total IBD:</strong> The total amount of DNA shared (in centimorgans)</li>
+                    <li><strong>Segment Count:</strong> The number of distinct IBD segments</li>
+                    <li><strong>Average Segment Length:</strong> The average size of shared segments</li>
+                </ol>
+                
+                <p>Each aspect is scored using appropriate statistical models (Gaussian for total and average length, Poisson for count), and the scores are combined with weights reflecting their relative importance for relationship inference. The function also applies age-based adjustments to the final score, reducing consistency for biologically implausible age differences.</p>
+                
+                <p>By integrating biological validation with sophisticated genetic assessment, Bonsai v3 can accurately evaluate the plausibility of proposed relationships even in the presence of noisy or incomplete data.</p>
+            </div>
+
+            <h3>Relationship Assessment in Practice</h3>
+            
+            <div class="concept-section">
+                <h4>The Connection Log-Likelihood Model</h4>
+                <p>At the heart of Bonsai v3's relationship assessment is a log-likelihood model that quantifies how well a proposed relationship explains the observed genetic data. This is implemented in the <code>get_connection_log_like</code> function:</p>
+                
+                <pre><code>def get_connection_log_like(up_dct, rel_tuple, id1, id2, id_to_shared_ibd,
+                         id_to_info, pw_ll, prev_age_ll, return_components=False):
+    """Calculate the log-likelihood of connecting two individuals with a relationship.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        rel_tuple: (up, down, num_ancs) tuple for the proposed relationship
+        id1, id2: IDs of the individuals to connect
+        id_to_shared_ibd: Dict mapping IDs to their IBD sharing
+        id_to_info: Dict mapping IDs to their demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        prev_age_ll: Previous age-based log-likelihood (for comparison)
+        return_components: Whether to return individual components of the likelihood
+        
+    Returns:
+        log_like: Log-likelihood of the connection (higher is better)
+                  or tuple of (log_like, components) if return_components=True
+    """
+    # Make a copy of the pedigree to avoid modifying the original
+    new_up_dct = copy.deepcopy(up_dct)
+    
+    # Implement the relationship in the pedigree
+    try:
+        new_up_dct = implement_relationship(new_up_dct, rel_tuple, id1, id2)
+    except Exception as e:
+        # If the relationship can't be implemented, return a very low likelihood
+        return float('-inf')
+    
+    # Calculate genetic likelihood components
+    genetic_ll = 0.0
+    
+    # For each individual with IBD sharing, calculate how well the new
+    # pedigree explains their IBD sharing patterns
+    for i, shared_ibd in id_to_shared_ibd.items():
+        # Skip individuals not in the pedigree
+        if i not in new_up_dct:
+            continue
+        
+        # Calculate expected IBD based on the pedigree relationships
+        expected_ibd = calculate_expected_ibd(new_up_dct, i, id_to_shared_ibd)
+        
+        # Calculate likelihood of observed vs. expected IBD
+        i_genetic_ll = calculate_ibd_likelihood(shared_ibd, expected_ibd)
+        genetic_ll += i_genetic_ll
+    
+    # Calculate age likelihood component
+    age_ll = 0.0
+    
+    # For each pair of individuals with age information, calculate
+    # how well the new pedigree respects age constraints
+    for i in new_up_dct:
+        for j in new_up_dct:
+            if i >= j:  # Avoid duplicate pairs
+                continue
+                
+            # Get relationship in the new pedigree
+            pair_rel = get_simple_rel_tuple(new_up_dct, i, j)
+            if pair_rel is None:
+                continue
+                
+            # Get age information
+            age_i = id_to_info.get(i, {}).get('age')
+            age_j = id_to_info.get(j, {}).get('age')
+            
+            if age_i is not None and age_j is not None:
+                # Calculate age likelihood for this pair
+                pair_age_ll = calculate_age_likelihood(pair_rel, age_i, age_j)
+                age_ll += pair_age_ll
+    
+    # Compare new age likelihood to previous
+    age_change_ll = age_ll - prev_age_ll
+    
+    # Calculate structural likelihood component
+    # This assesses how well the new relationship fits with existing ones
+    structural_ll = calculate_structural_likelihood(new_up_dct)
+    
+    # Combine likelihood components with appropriate weights
+    total_ll = (0.7 * genetic_ll + 
+                0.2 * age_change_ll + 
+                0.1 * structural_ll)
+    
+    if return_components:
+        components = {
+            'genetic_ll': genetic_ll,
+            'age_change_ll': age_change_ll,
+            'structural_ll': structural_ll
+        }
+        return total_ll, components
+    else:
+        return total_ll</code></pre>
+                
+                <p>This function calculates the log-likelihood of connecting two individuals with a specific relationship, considering multiple sources of evidence:</p>
+                
+                <ol>
+                    <li><strong>Genetic Likelihood:</strong> How well the connection explains observed IBD sharing patterns</li>
+                    <li><strong>Age Likelihood:</strong> How well the connection respects age constraints compared to the previous state</li>
+                    <li><strong>Structural Likelihood:</strong> How well the connection fits with existing relationships in the pedigree</li>
+                </ol>
+                
+                <p>These components are weighted based on their reliability and combined to produce a total log-likelihood score. Higher scores indicate more plausible relationships, allowing Bonsai to rank alternative hypotheses and select the most likely explanation for the observed data.</p>
+                
+                <p>The log-likelihood approach has several advantages for relationship assessment:</p>
+                
+                <ul>
+                    <li>It provides a principled way to compare different relationship hypotheses</li>
+                    <li>It naturally handles uncertainty and ambiguity in the data</li>
+                    <li>It allows for the integration of multiple sources of evidence</li>
+                    <li>It can be extended to incorporate additional information as it becomes available</li>
+                </ul>
+                
+                <p>This probabilistic framework is essential for Bonsai's ability to construct accurate pedigrees even in the presence of noisy or incomplete genetic data.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Disambiguating Similar Relationships</h4>
+                <p>One of the most challenging aspects of relationship assessment is disambiguating relationships with similar genetic signatures. For example, half-siblings, grandparent-grandchild, and avuncular (aunt/uncle-niece/nephew) relationships all involve approximately 25% shared DNA but have different IBD patterns.</p>
+                
+                <p>Bonsai v3 addresses this challenge by analyzing not just the total amount of shared DNA but also the distribution patterns. Key distinguishing factors include:</p>
+                
+                <pre><code>def get_distinguishing_features(rel_tuple):
+    """Get features that help distinguish relationships with similar total IBD.
+    
+    Args:
+        rel_tuple: (up, down, num_ancs) tuple representing the relationship
+        
+    Returns:
+        features: Dictionary of distinguishing features
+    """
+    up, down, num_ancs = rel_tuple
+    
+    # Base features for all relationships
+    features = {
+        'segment_count_factor': 1.0,
+        'long_segment_factor': 1.0,
+        'segment_std_dev_factor': 1.0,
+        'ibd2_proportion': 0.0
+    }
+    
+    # Half siblings (1, 1, 1)
+    if up == 1 and down == 1 and num_ancs == 1:
+        features['segment_count_factor'] = 1.2  # More segments than grandparent-grandchild
+        features['long_segment_factor'] = 0.8   # Fewer long segments than grandparent-grandchild
+        features['segment_std_dev_factor'] = 1.0  # Average variation in segment lengths
+        features['ibd2_proportion'] = 0.0  # No IBD2 regions
+    
+    # Grandparent-grandchild (0, 2, 1) or (2, 0, 1)
+    elif (up == 0 and down == 2) or (up == 2 and down == 0):
+        features['segment_count_factor'] = 0.8  # Fewer segments than half siblings
+        features['long_segment_factor'] = 1.2   # More long segments than half siblings
+        features['segment_std_dev_factor'] = 1.3  # Higher variation in segment lengths
+        features['ibd2_proportion'] = 0.0  # No IBD2 regions
+    
+    # Avuncular (1, 2, 1) or (2, 1, 1)
+    elif (up == 1 and down == 2) or (up == 2 and down == 1):
+        features['segment_count_factor'] = 1.0  # Medium number of segments
+        features['long_segment_factor'] = 0.9   # Fewer long segments than grandparent-grandchild
+        features['segment_std_dev_factor'] = 1.1  # Slightly higher variation than half siblings
+        features['ibd2_proportion'] = 0.0  # No IBD2 regions
+    
+    # Full siblings (1, 1, 2)
+    elif up == 1 and down == 1 and num_ancs == 2:
+        features['segment_count_factor'] = 1.1  # More segments than parent-child
+        features['long_segment_factor'] = 0.9   # Fewer long segments than parent-child
+        features['segment_std_dev_factor'] = 0.8  # Lower variation in segment lengths
+        features['ibd2_proportion'] = 0.25  # ~25% IBD2 regions
+    
+    # Parent-child (0, 1, 1) or (1, 0, 1)
+    elif (up == 0 and down == 1) or (up == 1 and down == 0):
+        features['segment_count_factor'] = 0.7  # Fewer, longer segments
+        features['long_segment_factor'] = 1.5   # Many long segments
+        features['segment_std_dev_factor'] = 0.6  # Lower variation in segment lengths
+        features['ibd2_proportion'] = 0.0  # No IBD2 regions
+    
+    return features</code></pre>
+                
+                <p>By analyzing these distinguishing features, Bonsai can effectively disambiguate relationships that have similar total DNA sharing:</p>
+                
+                <ul>
+                    <li><strong>Parent-Child Relationships:</strong> Characterized by many long segments, low variation in segment lengths, and covering exactly half the genome</li>
+                    <li><strong>Full Siblings:</strong> Distinguished by the presence of IBD2 regions (where both chromosomes are identical)</li>
+                    <li><strong>Half Siblings vs. Grandparent-Grandchild:</strong> Distinguished by segment count and the presence of longer segments in grandparent-grandchild relationships</li>
+                    <li><strong>Avuncular vs. Half Siblings:</strong> Distinguished by subtle differences in segment length distribution</li>
+                </ul>
+                
+                <p>This sophisticated pattern analysis allows Bonsai to make accurate relationship assessments even when total IBD amounts are similar, a key capability for reconstructing complex pedigrees from genetic data.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Handling Uncertainty and Ambiguity</h4>
+                <p>Real-world genetic data often contains noise, gaps, and ambiguities that make relationship assessment challenging. Bonsai v3 addresses these challenges through a robust handling of uncertainty:</p>
+                
+                <pre><code>def assess_relationship_confidence(rel_tuple, ibd_df, sex1=None, sex2=None, age1=None, age2=None):
+    """Assess confidence in a relationship assessment.
+    
+    Args:
+        rel_tuple: (up, down, num_ancs) tuple representing the relationship
+        ibd_df: DataFrame of IBD segments between the individuals
+        sex1, sex2: Sex of individuals 1 and 2 ('M', 'F', or None)
+        age1, age2: Age of individuals 1 and 2 (in years) or None
+        
+    Returns:
+        confidence: A value between 0 and 1 indicating confidence
+                   Higher values indicate greater confidence
+        ambiguity: A list of alternative relationships that are also plausible
+    """
+    # Calculate score for the proposed relationship
+    primary_score = assess_connections(rel_tuple, ibd_df, sex1=sex1, sex2=sex2, age1=age1, age2=age2)
+    
+    # Generate alternative relationship hypotheses
+    alternatives = generate_alternative_relationships(rel_tuple)
+    
+    # Assess each alternative
+    alternative_scores = []
+    for alt_rel in alternatives:
+        score = assess_connections(alt_rel, ibd_df, sex1=sex1, sex2=sex2, age1=age1, age2=age2)
+        if score > 0:  # Only consider non-zero scores
+            alternative_scores.append((alt_rel, score))
+    
+    # Sort alternatives by score (highest first)
+    alternative_scores.sort(key=lambda x: x[1], reverse=True)
+    
+    # Calculate confidence based on difference between primary and best alternative
+    if alternative_scores:
+        best_alt_score = alternative_scores[0][1]
+        score_diff = primary_score - best_alt_score
+        
+        # Convert score difference to confidence
+        # Larger differences indicate higher confidence
+        confidence = 1.0 - min(1.0, math.exp(-score_diff * 5))
+    else:
+        # No viable alternatives, high confidence
+        confidence = 0.95
+    
+    # Identify ambiguous alternatives (scores close to primary score)
+    ambiguity = []
+    for alt_rel, score in alternative_scores:
+        if primary_score - score < 0.2:  # Threshold for ambiguity
+            ambiguity.append(alt_rel)
+    
+    return confidence, ambiguity</code></pre>
+                
+                <p>This function assesses both the confidence in a relationship inference and identifies possible alternative explanations. Key aspects of uncertainty handling include:</p>
+                
+                <ul>
+                    <li><strong>Confidence Scoring:</strong> Quantifying how confident we are in a relationship assessment based on the difference between the primary hypothesis and the best alternative</li>
+                    <li><strong>Ambiguity Detection:</strong> Identifying alternative relationships that are also plausible given the available evidence</li>
+                    <li><strong>Threshold-Based Classification:</strong> Using score thresholds to determine when relationships are too ambiguous to confidently distinguish</li>
+                </ul>
+                
+                <p>In practical applications, Bonsai v3 uses these confidence assessments to:</p>
+                
+                <ol>
+                    <li>Focus investigation on high-confidence relationships first</li>
+                    <li>Flag ambiguous relationships for additional evidence collection</li>
+                    <li>Present multiple plausible hypotheses when the data doesn't support a single conclusion</li>
+                    <li>Adjust the certainty of downstream inferences based on the confidence in input relationships</li>
+                </ol>
+                
+                <p>This nuanced approach to uncertainty is essential for responsible pedigree reconstruction, ensuring that Bonsai's conclusions accurately reflect the limitations of the available evidence.</p>
+            </div>
+
+            <h3>Integration with Pedigree Construction</h3>
+            
+            <div class="concept-section">
+                <h4>The Pedigree Building Workflow</h4>
+                <p>Relationship assessment is integrated into Bonsai v3's broader pedigree building workflow, which follows this general process:</p>
+                
+                <ol>
+                    <li><strong>Data Preparation:</strong> Process raw genetic data to identify IBD segments between individuals</li>
+                    <li><strong>Pairwise Relationship Inference:</strong> Use <code>assess_connections</code> to infer relationships between all pairs of individuals</li>
+                    <li><strong>Relationship Filtering:</strong> Apply <code>is_valid_relationship</code> and <code>passes_age_check</code> to filter out biologically implausible relationships</li>
+                    <li><strong>Incremental Pedigree Construction:</strong> Build the pedigree by adding relationships in order of confidence</li>
+                    <li><strong>Conflict Resolution:</strong> Use <code>get_connection_log_like</code> to resolve conflicts when different relationships are incompatible</li>
+                    <li><strong>Pedigree Optimization:</strong> Evaluate different possible pedigrees to find the one that best explains the observed data</li>
+                </ol>
+                
+                <p>The <code>connections.py</code> module includes higher-level functions that orchestrate this workflow, such as <code>combine_pedigrees</code>:</p>
+                
+                <pre><code>def combine_pedigrees(up_dct1, up_dct2, id_to_shared_ibd, id_to_info, pw_ll):
+    """Combine two pedigrees based on IBD sharing between them.
+    
+    Args:
+        up_dct1, up_dct2: Up-node dictionaries for the pedigrees to combine
+        id_to_shared_ibd: Dict mapping IDs to their IBD sharing
+        id_to_info: Dict mapping IDs to their demographic information
+        pw_ll: PwLogLike instance for likelihood calculation
+        
+    Returns:
+        combined_pedigree: The combined pedigree as an up-node dictionary
+        log_like: Log-likelihood of the combination
+    """
+    # Find individuals who share IBD between the pedigrees
+    sharing_ids1, sharing_ids2 = get_sharing_ids(up_dct1, up_dct2, id_to_shared_ibd)
+    
+    if not sharing_ids1 or not sharing_ids2:
+        return None, float('-inf')  # No sharing, can't combine
+    
+    # Find all possible connection points in each pedigree
+    con_pts1 = get_possible_connection_point_set(up_dct1)
+    con_pts2 = get_possible_connection_point_set(up_dct2)
+    
+    # Restrict to connection points involving individuals who share IBD
+    con_pts1 = restrict_connection_point_set(up_dct1, con_pts1, sharing_ids1)
+    con_pts2 = restrict_connection_point_set(up_dct2, con_pts2, sharing_ids2)
+    
+    # Find the most likely connection points
+    likely_con_pts1 = get_likely_con_pt_set(up_dct1, id_to_shared_ibd, 
+                                          get_rel_dict(up_dct1), con_pts1)
+    likely_con_pts2 = get_likely_con_pt_set(up_dct2, id_to_shared_ibd, 
+                                          get_rel_dict(up_dct2), con_pts2)
+    
+    # Evaluate all possible combinations of connection points
+    best_combination = None
+    best_log_like = float('-inf')
+    
+    for cp1 in likely_con_pts1:
+        for cp2 in likely_con_pts2:
+            # Try connecting the pedigrees through these points
+            combined, log_like = try_connect_pedigrees(up_dct1, up_dct2, cp1, cp2, 
+                                                    id_to_shared_ibd, id_to_info, pw_ll)
+            
+            if combined and log_like > best_log_like:
+                best_combination = combined
+                best_log_like = log_like
+    
+    return best_combination, best_log_like</code></pre>
+                
+                <p>This function demonstrates how relationship assessment is used to guide pedigree construction, by:</p>
+                
+                <ol>
+                    <li>Identifying individuals who share IBD between pedigrees</li>
+                    <li>Finding potential connection points in each pedigree</li>
+                    <li>Restricting to connection points involving individuals who share IBD</li>
+                    <li>Identifying the most likely connection points based on IBD patterns</li>
+                    <li>Systematically evaluating different combinations of connection points</li>
+                    <li>Selecting the combination with the highest log-likelihood</li>
+                </ol>
+                
+                <p>This approach allows Bonsai v3 to construct pedigrees that optimally explain the observed genetic data, while respecting biological constraints and resolving conflicts in a principled way.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Incremental Pedigree Refinement</h4>
+                <p>Bonsai v3's relationship assessment framework supports an incremental approach to pedigree construction, where the pedigree is built and refined through a series of steps. This process is managed by the <code>incrementally_build_pedigree</code> function:</p>
+                
+                <pre><code>def incrementally_build_pedigree(unphased_ibd_seg_list, bio_info, max_iterations=100):
+    """Incrementally build a pedigree from IBD segments and biographical information.
+    
+    Args:
+        unphased_ibd_seg_list: List of unphased IBD segments
+        bio_info: List of dictionaries with biographical information
+        max_iterations: Maximum number of iterations
+        
+    Returns:
+        final_pedigree: The constructed pedigree as an up-node dictionary
+    """
+    # Initialize pedigree with isolated individuals
+    pedigree = {info['id']: {} for info in bio_info}
+    
+    # Convert bio_info to id_to_info format
+    id_to_info = {info['id']: info for info in bio_info}
+    
+    # Create a PwLogLike instance for relationship inference
+    pw_ll = PwLogLike(bio_info=bio_info, unphased_ibd_seg_list=unphased_ibd_seg_list)
+    
+    # Initial assessment of all pairwise relationships
+    pairwise_rels = []
+    for i, info1 in enumerate(bio_info):
+        id1 = info1['id']
+        for j, info2 in enumerate(bio_info):
+            id2 = info2['id']
+            if id1 >= id2:  # Avoid duplicate pairs
+                continue
+                
+            # Get demographic information
+            sex1 = info1.get('sex')
+            sex2 = info2.get('sex')
+            age1 = info1.get('age')
+            age2 = info2.get('age')
+            
+            # Infer the most likely relationship
+            rel_tuple, log_ll = pw_ll.get_most_likely_rel(id1, id2)
+            
+            # Check if the relationship is valid
+            if is_valid_relationship(rel_tuple, sex1, sex2, age1, age2):
+                # Add to the list of pairwise relationships
+                pairwise_rels.append((id1, id2, rel_tuple, log_ll))
+    
+    # Sort relationships by likelihood (highest first)
+    pairwise_rels.sort(key=lambda x: x[3], reverse=True)
+    
+    # Iteratively add relationships to the pedigree
+    for iteration in range(max_iterations):
+        # If no more pairwise relationships, we're done
+        if not pairwise_rels:
+            break
+            
+        # Take the most likely relationship
+        id1, id2, rel_tuple, log_ll = pairwise_rels.pop(0)
+        
+        # Try to add this relationship to the pedigree
+        new_pedigree = try_add_relationship(pedigree, id1, id2, rel_tuple,
+                                           id_to_info, pw_ll)
+        
+        # If successful, update the pedigree
+        if new_pedigree:
+            pedigree = new_pedigree
+            
+            # Re-evaluate remaining relationships in light of the updated pedigree
+            # This is where relationship assessment is crucial
+            new_pairwise_rels = []
+            for i1, i2, rt, ll in pairwise_rels:
+                # Check if the relationship is still compatible with the pedigree
+                compatibility_score = assess_relationship_compatibility(
+                    pedigree, i1, i2, rt, id_to_info, pw_ll)
+                
+                if compatibility_score > 0:
+                    # Update the log-likelihood based on compatibility
+                    new_ll = ll + math.log(compatibility_score)
+                    new_pairwise_rels.append((i1, i2, rt, new_ll))
+            
+            # Update and resort the relationships
+            pairwise_rels = sorted(new_pairwise_rels, key=lambda x: x[3], reverse=True)
+    
+    return pedigree</code></pre>
+                
+                <p>This incremental approach offers several advantages:</p>
+                
+                <ul>
+                    <li><strong>Prioritization:</strong> It starts with the most confident relationships, establishing a reliable foundation</li>
+                    <li><strong>Constraint Propagation:</strong> Each added relationship constrains future additions, reducing ambiguity</li>
+                    <li><strong>Context-Sensitive Assessment:</strong> Relationships are re-evaluated in the context of the growing pedigree</li>
+                    <li><strong>Efficiency:</strong> The search space is progressively pruned, making optimization tractable</li>
+                </ul>
+                
+                <p>This approach enables Bonsai v3 to handle large, complex pedigrees with many individuals, where exhaustive search of all possible pedigree configurations would be computationally infeasible.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Relationship assessment and validation are fundamental to Bonsai v3's pedigree reconstruction capabilities. Through a combination of biological validation, IBD-based assessment, and probabilistic inference, Bonsai can accurately determine relationships between individuals even in the presence of noisy or incomplete data, making it a powerful tool for computational genetic genealogy.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab12 notebook provides a simplified exploration of relationship assessment mechanisms, while the production implementation in Bonsai v3 includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Statistical Rigor:</strong> The production code uses more sophisticated statistical models calibrated on large datasets</li>
+                <li><strong>Comprehensive Validation:</strong> Additional validation checks for a wider range of relationships and edge cases</li>
+                <li><strong>Optimized Algorithms:</strong> Highly optimized implementations for performance with large pedigrees</li>
+                <li><strong>Uncertainty Quantification:</strong> More detailed quantification of uncertainty and ambiguity in relationship assessment</li>
+                <li><strong>Population-Specific Parameters:</strong> Calibrated parameters for different populations and historical contexts</li>
+                <li><strong>Integration with Visualization:</strong> Assessment results feed directly into pedigree visualization tools</li>
+            </ul>
+            
+            <p>The notebook provides a valuable introduction to the key concepts, but the production implementation represents years of refinement to handle the complexities of real-world genetic data and pedigree structures.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 12 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab12_Relationship_Assessment.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab12_Relationship_Assessment.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 12 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore relationship assessment mechanisms, consider these broader implications:</p>
+            <ul>
+                <li><strong>Ethical Considerations:</strong> How to handle unexpected relationship discoveries (misattributed parentage, unknown adoptions) with sensitivity</li>
+                <li><strong>Privacy Implications:</strong> The balance between sharing relationship information and respecting individual privacy</li>
+                <li><strong>Cultural Context:</strong> How different cultural definitions of family and relationship may not always align with genetic relationships</li>
+                <li><strong>Historical Applications:</strong> How relationship assessment can help reconstruct historical populations and migration patterns</li>
+            </ul>
+            <p>These considerations highlight how relationship assessment is not just a technical problem but one with significant social, ethical, and cultural dimensions that must be navigated carefully in applications of computational genetic genealogy.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Relationship Assessment</h5>
+                        <p>Lab 12</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab11_finding_connection_points.html" class="prev-lab">Finding Connection Points</a>
+                <a href="lab13_small_pedigree_structures.html" class="next-lab">Small Pedigree Structures</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

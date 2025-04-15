@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Computational Genetic Genealogy: Bonsai v3 Deep Dive</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">
+                <a href="https://www.takir.org" target="_blank">TAKiR</a>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#about">About</a></li>
+                <li><a href="#curriculum">Curriculum</a></li>
+                <li><a href="#labs">Labs</a></li>
+                <li><a href="https://github.com/lakishadavid/computational_genetic_genealogy" target="_blank">GitHub</a></li>
+                <li><a href="index.html">Main Course</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <h1>Bonsai v3 Deep Dive</h1>
+            <p class="hero-subtitle">Advanced Computational Genetic Genealogy</p>
+            <p class="hero-description">Exploring the architecture and implementation of Bonsai v3, a state-of-the-art genetic pedigree reconstruction system.</p>
+            <div class="hero-attribution">
+                <span>Dr. LaKisha David</span>
+                <span>Assistant Professor</span>
+                <span>Department of Anthropology</span>
+                <span>University of Illinois Urbana-Champaign</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <section id="about" class="section">
+            <div class="section-header">
+                <i class="fas fa-info-circle section-icon"></i>
+                <h2>About This Module</h2>
+            </div>
+            <div class="content-card">
+                <p>This advanced module provides a comprehensive exploration of Bonsai v3, a sophisticated system for pedigree reconstruction from genetic data. Unlike the introductory materials that focus on simplified concepts, this module dives deep into the actual implementation details of the production codebase.</p>
+                
+                <div class="about-highlights">
+                    <div class="highlight-item">
+                        <i class="fas fa-code"></i>
+                        <h4>Production Code</h4>
+                        <p>Examine the real implementation of Bonsai v3, not simplified examples</p>
+                    </div>
+                    <div class="highlight-item">
+                        <i class="fas fa-sitemap"></i>
+                        <h4>Architecture</h4>
+                        <p>Understand the modular design and component interactions</p>
+                    </div>
+                    <div class="highlight-item">
+                        <i class="fas fa-calculator"></i>
+                        <h4>Algorithms</h4>
+                        <p>Explore sophisticated algorithms for relationship inference</p>
+                    </div>
+                    <div class="highlight-item">
+                        <i class="fas fa-database"></i>
+                        <h4>Data Structures</h4>
+                        <p>Master the data structures that enable efficient pedigree operations</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-4">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>Target Audience:</strong> This module is designed for advanced students who have completed the introductory computational genetic genealogy curriculum and are ready to explore the intricacies of a production-grade system.
+                </div>
+            </div>
+        </section>
+
+        <section id="curriculum" class="section">
+            <div class="section-header">
+                <i class="fas fa-graduation-cap section-icon"></i>
+                <h2>Curriculum Overview</h2>
+            </div>
+            <div class="content-card">
+                <p>The Bonsai v3 Deep Dive curriculum follows a structured progression through the key components of the system:</p>
+
+                <div class="curriculum-flow">
+                    <div class="flow-item">
+                        <div class="flow-number">01</div>
+                        <h4>Foundations</h4>
+                        <p>Introduction to genetic genealogy and Bonsai architecture</p>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-number">02</div>
+                        <h4>IBD Processing</h4>
+                        <p>Working with IBD formats, statistics, and models</p>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-number">03</div>
+                        <h4>Relationship Inference</h4>
+                        <p>Probabilistic relationship inference and likelihood calculation</p>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-number">04</div>
+                        <h4>Pedigree Construction</h4>
+                        <p>Pedigree data structures and manipulation techniques</p>
+                    </div>
+                    <div class="flow-item">
+                        <div class="flow-number">05</div>
+                        <h4>Advanced Topics</h4>
+                        <p>Connection points, relationship assessment, and pedigree optimization</p>
+                    </div>
+                </div>
+                
+                <div class="textbook-link mt-4">
+                    <a href="textbook/contents.html" class="btn">
+                        <i class="fas fa-book"></i> Explore Full Textbook
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <section id="labs" class="section">
+            <div class="section-header">
+                <i class="fas fa-flask section-icon"></i>
+                <h2>Labs</h2>
+            </div>
+            <div class="content-card lab-series">
+                <div class="tabs">
+                    <button class="tab-btn active" data-target="foundations">Foundations</button>
+                    <button class="tab-btn" data-target="ibd">IBD Processing</button>
+                    <button class="tab-btn" data-target="relationships">Relationships</button>
+                    <button class="tab-btn" data-target="pedigrees">Pedigrees</button>
+                    <button class="tab-btn" data-target="advanced">Advanced Topics</button>
+                </div>
+
+                <div id="foundations" class="tab-content active">
+                    <ul class="lab-list">
+                        <li><a href="textbook/lab01_ibd_genealogy_intro.html"><span class="lab-number">01</span> IBD & Genealogy Introduction</a></li>
+                        <li><a href="textbook/lab02_bonsai_architecture.html"><span class="lab-number">02</span> Bonsai Architecture</a></li>
+                    </ul>
+                </div>
+
+                <div id="ibd" class="tab-content">
+                    <ul class="lab-list">
+                        <li><a href="textbook/lab03_ibd_formats.html"><span class="lab-number">03</span> IBD Formats</a></li>
+                        <li><a href="textbook/lab04_ibd_statistics.html"><span class="lab-number">04</span> IBD Statistics Extraction</a></li>
+                        <li><a href="textbook/lab05_statistical_models.html"><span class="lab-number">05</span> Statistical Models</a></li>
+                    </ul>
+                </div>
+
+                <div id="relationships" class="tab-content">
+                    <ul class="lab-list">
+                        <li><a href="textbook/lab06_probabilistic_relationship_inference.html"><span class="lab-number">06</span> Probabilistic Relationship Inference</a></li>
+                        <li><a href="textbook/lab07_pwloglike_class.html"><span class="lab-number">07</span> PwLogLike Class</a></li>
+                        <li><a href="textbook/lab08_age_based_relationship_modeling.html"><span class="lab-number">08</span> Age-Based Relationship Modeling</a></li>
+                    </ul>
+                </div>
+
+                <div id="pedigrees" class="tab-content">
+                    <ul class="lab-list">
+                        <li><a href="textbook/lab09_pedigree_data_structures.html"><span class="lab-number">09</span> Pedigree Data Structures</a></li>
+                        <li><a href="textbook/lab10_up_node_dictionary.html"><span class="lab-number">10</span> Up-Node Dictionary</a></li>
+                    </ul>
+                </div>
+
+                <div id="advanced" class="tab-content">
+                    <ul class="lab-list">
+                        <li><a href="textbook/lab11_finding_connection_points.html"><span class="lab-number">11</span> Finding Connection Points</a></li>
+                        <li><a href="textbook/lab12_relationship_assessment.html"><span class="lab-number">12</span> Relationship Assessment</a></li>
+                        <li><a href="textbook/lab13_small_pedigree_structures.html"><span class="lab-number">13</span> Small Pedigree Structures</a></li>
+                        <li><a href="textbook/lab14_optimizing_pedigrees.html"><span class="lab-number">14</span> Optimizing Pedigrees</a></li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="section">
+            <div class="section-header">
+                <i class="fas fa-star section-icon"></i>
+                <h2>Key Features</h2>
+            </div>
+            <div class="content-card">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-code-branch"></i>
+                        </div>
+                        <h4>Production Code Focus</h4>
+                        <p>All labs examine the true Bonsai v3 implementation from the utils directory, not simplified variants.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-laptop-code"></i>
+                        </div>
+                        <h4>Interactive Learning</h4>
+                        <p>Each lab includes access to an interactive JupyterLite notebook for hands-on experimentation.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <h4>Comprehensive Coverage</h4>
+                        <p>The curriculum covers all major components and algorithms in the Bonsai v3 system.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <h4>Beyond the Code</h4>
+                        <p>Each lab explores broader implications and applications of the concepts being covered.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="getting-started" class="section">
+            <div class="section-header">
+                <i class="fas fa-play-circle section-icon"></i>
+                <h2>Getting Started</h2>
+            </div>
+            <div class="content-card">
+                <div class="start-options">
+                    <div class="start-option">
+                        <h4><i class="fas fa-globe"></i> Browser-Based</h4>
+                        <p>No installation required! Access interactive Jupyter notebooks directly in your browser via JupyterLite.</p>
+                        <a href="jupyterlite_app/lab/index.html" class="btn btn-primary">
+                            Launch JupyterLite
+                        </a>
+                    </div>
+                    <div class="start-option">
+                        <h4><i class="fas fa-download"></i> Local Environment</h4>
+                        <p>For the full experience, clone the repository and set up your local environment with Python and dependencies.</p>
+                        <a href="https://github.com/lakishadavid/computational_genetic_genealogy" class="btn btn-secondary" target="_blank">
+                            View on GitHub
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="prerequisites mt-4">
+                    <h4>Prerequisites</h4>
+                    <p>To get the most from this advanced module, you should have:</p>
+                    <ul>
+                        <li>Basic understanding of genetic concepts (IBD, SNPs, etc.)</li>
+                        <li>Familiarity with Python programming</li>
+                        <li>Basic knowledge of statistical concepts and probability</li>
+                        <li>Completed the introductory computational genetic genealogy curriculum or equivalent</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>Bonsai v3 Deep Dive</h3>
+                    <p>University of Illinois Urbana-Champaign</p>
+                    <p>Department of Anthropology</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Main Course</a></li>
+                        <li><a href="textbook/contents.html">Course Textbook</a></li>
+                        <li><a href="https://github.com/lakishadavid/computational_genetic_genealogy" target="_blank">GitHub Repository</a></li>
+                        <li><a href="https://www.takir.org/" target="_blank">TAKIR</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact</h4>
+                    <p><i class="fas fa-envelope"></i> Email: <a href="mailto:ltdavid2@illinois.edu">ltdavid2@illinois.edu</a></p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Navigation toggle for mobile
+        const navToggle = document.getElementById('navToggle');
+        const navMenu = document.querySelector('.nav-menu');
+
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('show');
+        });
+
+        // Tab functionality
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // Remove active class from all buttons and content
+                tabBtns.forEach(b => b.classList.remove('active'));
+                tabContents.forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked button and corresponding content
+                btn.classList.add('active');
+                const target = btn.getAttribute('data-target');
+                document.getElementById(target).classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 16: Merging Pedigrees with Optimal Connection Points | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Merging Pedigrees with Optimal Connection Points</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab16_merging_pedigrees.html" class="active">Lab 16: Merging Pedigrees</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 16: Merging Pedigrees with Optimal Connection Points</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 finds and uses optimal connection points to merge separate pedigrees into larger structures. Understanding this process is crucial for reconstructing complex family networks from genetic data, as it determines how smaller family units connect to form larger genealogies.</p>
+            </div>
+
+            <h3>The Challenge of Finding Optimal Connection Points</h3>
+            
+            <div class="concept-section">
+                <h4>From Connection Points to Optimal Connections</h4>
+                <p>In previous labs, we learned how Bonsai identifies <em>possible</em> connection points within pedigrees. However, not all connection points are equally good for merging pedigrees. The challenge lies in determining which connections are:</p>
+                
+                <ol>
+                    <li><strong>Genetically Plausible:</strong> Consistent with observed patterns of IBD sharing</li>
+                    <li><strong>Biologically Viable:</strong> Respecting constraints like age, sex, and generation gaps</li>
+                    <li><strong>Structurally Optimal:</strong> Creating coherent pedigree structures that minimize complexity</li>
+                    <li><strong>Computationally Efficient:</strong> Focusing on connections that are likely to result in good overall pedigrees</li>
+                </ol>
+                
+                <p>Bonsai v3 addresses this challenge through a sophisticated set of functions in the <code>connections.py</code> and <code>pedigrees.py</code> modules. The core of this functionality is the <code>get_connecting_points_degs_and_log_likes</code> function:</p>
+                
+                <pre><code>def get_connecting_points_degs_and_log_likes(
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+    id1: int,
+    id2: int,
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    max_con_pts: int = INF,
+    restrict_connection_points: bool = False,
+    connect_up_only: bool = False,
+):
+    """
+    Find optimal ways to connect pedigrees up_dct1 and up_dct2
+    through individuals id1 and id2 who share IBD.
+    
+    Args:
+        up_dct1, up_dct2: Up-node dictionaries of the pedigrees to connect
+        id1, id2: IDs of individuals in each pedigree who share IBD
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        max_con_pts: Maximum number of connection points to consider
+        restrict_connection_points: Whether to restrict to subtree connection points
+        connect_up_only: Whether to only consider upward connections
+        
+    Returns:
+        connecting_points_degs_log_likes: List of tuples containing connection points,
+            degrees of relationship, and log-likelihoods
+    """
+    # Core algorithm implementation...</code></pre>
+                
+                <p>This function orchestrates the process of finding optimal connection points between two pedigrees, taking into account both genetic evidence (IBD sharing) and non-genetic constraints (demographic information). It forms the foundation of Bonsai's approach to merging pedigrees in a way that maximizes the likelihood of the resulting structure.</p>
+                
+                <p>The function works by:</p>
+                
+                <ol>
+                    <li>Identifying possible connection points in each pedigree</li>
+                    <li>Filtering these points based on various criteria</li>
+                    <li>Evaluating different relationship configurations for connecting the points</li>
+                    <li>Calculating likelihoods for each potential connection</li>
+                    <li>Returning a ranked list of connection options</li>
+                </ol>
+                
+                <p>By systematically evaluating different connection options, Bonsai v3 can find the optimal way to merge pedigrees, even in the presence of noisy or incomplete genetic data.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Restricting the Search Space</h4>
+                <p>A key challenge in finding optimal connection points is the vast search space of possible connections. Bonsai v3 addresses this by intelligently restricting the search space using several specialized functions.</p>
+                
+                <p>The first step is to restrict connection points to those that are most relevant for the specific pedigrees being merged:</p>
+                
+                <pre><code>def get_restricted_connection_point_sets(
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+    con_pts1: set[tuple[int, Optional[int], Optional[int]]],
+    con_pts2: set[tuple[int, Optional[int], Optional[int]]],
+    id1: int,
+    id2: int,
+):
+    """
+    Restrict connection points to only those on the subtree
+    connecting genotyped nodes that share IBD.
+    """
+    # Get subtrees in each pedigree
+    id1_anc = get_ancestors(id1, up_dct1)
+    id1_desc = get_descendants(id1, up_dct1)
+    id1_subtree = id1_anc.union(id1_desc).union({id1})
+    
+    id2_anc = get_ancestors(id2, up_dct2)
+    id2_desc = get_descendants(id2, up_dct2)
+    id2_subtree = id2_anc.union(id2_desc).union({id2})
+    
+    # Restrict connection points to those in the subtrees
+    con_pts1_restricted = {
+        pt for pt in con_pts1 
+        if pt[0] in id1_subtree and (pt[1] is None or pt[1] in id1_subtree)
+    }
+    
+    con_pts2_restricted = {
+        pt for pt in con_pts2 
+        if pt[0] in id2_subtree and (pt[1] is None or pt[1] in id2_subtree)
+    }
+    
+    return con_pts1_restricted, con_pts2_restricted</code></pre>
+                
+                <p>This function drastically reduces the search space by focusing only on connection points that are in the subtree connecting the individuals who share IBD. This is a powerful heuristic because:</p>
+                
+                <ul>
+                    <li>Individuals sharing IBD are likely to be related through a common ancestor</li>
+                    <li>The subtree containing these individuals and their ancestors is the most relevant for finding this relationship</li>
+                    <li>Connection points outside this subtree are unlikely to produce optimal connections</li>
+                </ul>
+                
+                <p>For pedigrees with many individuals, this restriction can reduce the search space by orders of magnitude.</p>
+                
+                <p>Another important restriction is the <code>get_likely_con_pt_set</code> function, which identifies connection points based on the correlation between IBD sharing and relationship distances:</p>
+                
+                <pre><code>def get_likely_con_pt_set(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    get_rel_dict: dict[tuple[int, int], tuple[int, int, int]],
+    con_pt_set: set[tuple[int, Optional[int], Optional[int]]],
+    corr_thresh: float = 0.3,
+):
+    """
+    Find connection points based on correlation between
+    IBD sharing and relationship distances.
+    
+    Args:
+        up_dct: Up-node dictionary representing the pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        get_rel_dict: Dict mapping ID pairs to relationship tuples
+        con_pt_set: Set of potential connection points to filter
+        corr_thresh: Correlation threshold for including a point
+        
+    Returns:
+        likely_con_pts: Set of likely connection points
+    """
+    # Calculate IBD sharing for each pair
+    id_pair_to_cm = {}
+    for (id1, id2), ibd_segs in id_to_shared_ibd.items():
+        id_pair_to_cm[(id1, id2)] = sum(seg['length_cm'] for seg in ibd_segs)
+    
+    # Calculate relationship distances
+    con_pt_to_corr = {}
+    for con_pt in con_pt_set:
+        id1, id2, dir = con_pt
+        
+        # Get all pairs involving id1
+        id1_pairs = [(i, j) for (i, j) in id_pair_to_cm if i == id1 or j == id1]
+        
+        # Calculate correlation between IBD and relationship distance
+        ibds = []
+        dists = []
+        for pair in id1_pairs:
+            # Get IBD amount
+            ibds.append(id_pair_to_cm[pair])
+            
+            # Get relationship distance
+            other_id = pair[0] if pair[1] == id1 else pair[1]
+            rel_tuple = get_rel_dict.get((id1, other_id))
+            if rel_tuple:
+                up, down, _ = rel_tuple
+                dists.append(up + down)
+            else:
+                dists.append(10)  # Default large distance if no relationship
+        
+        # Calculate correlation
+        if len(ibds) > 2:
+            corr = np.corrcoef(ibds, dists)[0, 1]
+            con_pt_to_corr[con_pt] = corr
+    
+    # Filter by correlation threshold
+    likely_con_pts = {
+        con_pt for con_pt, corr in con_pt_to_corr.items()
+        if corr < -corr_thresh  # Negative correlation (closer = more IBD)
+    }
+    
+    return likely_con_pts</code></pre>
+                
+                <p>This function uses a statistical approach to identify connection points that are most promising based on how well the pattern of IBD sharing correlates with relationship distances in the pedigree. The key insight is that:</p>
+                
+                <ul>
+                    <li>For a good connection point, there should be a strong negative correlation between relationship distance and IBD amount</li>
+                    <li>Individuals who are closer in the pedigree should share more IBD than those who are more distant</li>
+                    <li>Points where this pattern holds are more likely to be useful for connecting pedigrees</li>
+                </ul>
+                
+                <p>By focusing on connection points with strong correlation patterns, Bonsai can further reduce the search space and prioritize the most promising connection options.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Evaluating Connection Configurations</h4>
+                <p>Once potential connection points are identified, Bonsai v3 evaluates different configurations for connecting them. This involves determining the optimal relationship types and degrees for connecting the points, which is handled by the <code>get_connection_degs_and_log_likes</code> function:</p>
+                
+                <pre><code>def get_connection_degs_and_log_likes(
+    id1: int,
+    id2: int,
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+):
+    """
+    Determine the optimal degree (genetic distance) for
+    connecting two individuals based on IBD sharing.
+    
+    Args:
+        id1, id2: IDs of individuals to connect
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        
+    Returns:
+        deg_ll_list: List of (up, down, num_ancs, log_likelihood) tuples
+    """
+    # Get IBD segments between id1 and id2
+    pair = (min(id1, id2), max(id1, id2))
+    ibd_segs = id_to_shared_ibd.get(pair, [])
+    
+    # Get demographic information
+    id1_info = id_to_info.get(id1, {})
+    id2_info = id_to_info.get(id2, {})
+    age1 = id1_info.get('age')
+    age2 = id2_info.get('age')
+    sex1 = id1_info.get('sex')
+    sex2 = id2_info.get('sex')
+    
+    # Get all possible relationship tuples
+    all_rel_tuples = []
+    
+    # Direct connection (0 generations up)
+    all_rel_tuples.append((0, 0, 2))  # Self (identical)
+    all_rel_tuples.append((0, 1, 1))  # Parent-child (id1 is parent)
+    all_rel_tuples.append((1, 0, 1))  # Parent-child (id2 is parent)
+    
+    # One generation up
+    all_rel_tuples.append((1, 1, 2))  # Full siblings (2 common ancestors)
+    all_rel_tuples.append((1, 1, 1))  # Half siblings (1 common ancestor)
+    
+    # Additional generations up to max_up
+    for up in range(2, max_up + 1):
+        for down in range(up + 1):
+            for num_ancs in [1, 2]:
+                all_rel_tuples.append((up, down, num_ancs))
+    
+    # Filter based on age and sex constraints
+    valid_rel_tuples = []
+    for rel_tuple in all_rel_tuples:
+        up, down, num_ancs = rel_tuple
+        
+        # Check basic age constraints
+        if not passes_age_check(rel_tuple, age1, age2):
+            continue
+            
+        # Check sex constraints
+        if not passes_sex_check(rel_tuple, sex1, sex2):
+            continue
+            
+        valid_rel_tuples.append(rel_tuple)
+    
+    # Calculate likelihood for each valid relationship
+    deg_ll_list = []
+    for rel_tuple in valid_rel_tuples:
+        up, down, num_ancs = rel_tuple
+        
+        # Calculate likelihood of this relationship given IBD
+        log_like = pw_ll.get_ibd_log_like(
+            id1=id1,
+            id2=id2,
+            rel_tuple=rel_tuple,
+            ibd_segs=ibd_segs,
+        )
+        
+        deg_ll_list.append((up, down, num_ancs, log_like))
+    
+    # Sort by likelihood (descending)
+    deg_ll_list.sort(key=lambda x: x[3], reverse=True)
+    
+    return deg_ll_list</code></pre>
+                
+                <p>This function performs a comprehensive evaluation of different relationship configurations by:</p>
+                
+                <ol>
+                    <li>Generating all possible relationship types up to the specified maximum generations</li>
+                    <li>Filtering out relationships that violate age or sex constraints</li>
+                    <li>Calculating the likelihood of each remaining relationship based on IBD sharing</li>
+                    <li>Ranking relationships by their likelihood</li>
+                </ol>
+                
+                <p>The result is a list of relationship configurations (specified by <code>up</code>, <code>down</code>, and <code>num_ancs</code> parameters) with their associated likelihoods. This list forms the basis for determining the optimal way to connect two pedigrees.</p>
+                
+                <p>The likelihood calculation itself is performed by the <code>get_ibd_log_like</code> method of the <code>PwLogLike</code> class, which implements sophisticated statistical models for the expected patterns of IBD sharing between different types of relatives.</p>
+            </div>
+
+            <h3>Merging Pedigrees Through Optimal Connections</h3>
+            
+            <div class="concept-section">
+                <h4>The Merging Process</h4>
+                <p>Once optimal connection points and relationship configurations are identified, Bonsai v3 uses this information to physically merge pedigrees. This is implemented in the <code>combine_pedigrees</code> function:</p>
+                
+                <pre><code>def combine_pedigrees(
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    keep_num: int = 3,
+    return_many: bool = False,
+):
+    """
+    Combine two pedigrees into one, using IBD sharing to guide the connection.
+    
+    Args:
+        up_dct1, up_dct2: The pedigrees to combine
+        id_to_shared_ibd: Dict mapping ID pairs to IBD segments
+        id_to_info: Dict mapping IDs to biographical information
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        keep_num: Number of top combinations to keep
+        return_many: Whether to return multiple possible combinations
+        
+    Returns:
+        Combined pedigree or list of top combinations with likelihoods
+    """
+    # Find pairs of individuals that connect the pedigrees
+    con_pairs = find_connecting_pairs(
+        up_dct1=up_dct1,
+        up_dct2=up_dct2,
+        id_to_shared_ibd=id_to_shared_ibd,
+    )
+    
+    if not con_pairs:
+        return None if not return_many else []
+    
+    # Get all possible connection points in each pedigree
+    con_pts1 = get_possible_connection_point_set(up_dct1)
+    con_pts2 = get_possible_connection_point_set(up_dct2)
+    
+    # Restrict to connection points involving individuals with IBD
+    con_pts1 = restrict_connection_point_set(up_dct1, con_pts1, 
+                                          [id1 for id1, _ in con_pairs])
+    con_pts2 = restrict_connection_point_set(up_dct2, con_pts2, 
+                                          [id2 for _, id2 in con_pairs])
+    
+    # Find likely connection points
+    likely_con_pts1 = get_likely_con_pt_set(up_dct1, id_to_shared_ibd, 
+                                           get_rel_dict(up_dct1), con_pts1)
+    likely_con_pts2 = get_likely_con_pt_set(up_dct2, id_to_shared_ibd, 
+                                           get_rel_dict(up_dct2), con_pts2)
+    
+    # Generate and evaluate all possible combinations
+    all_combined = []
+    for (id1, id2) in con_pairs:
+        # Find connection points involving id1 and id2
+        rel_con_pts1 = [pt for pt in likely_con_pts1 if pt[0] == id1]
+        rel_con_pts2 = [pt for pt in likely_con_pts2 if pt[0] == id2]
+        
+        # If no relevant connection points, try all connection points
+        if not rel_con_pts1:
+            rel_con_pts1 = [pt for pt in con_pts1 if pt[0] == id1]
+        if not rel_con_pts2:
+            rel_con_pts2 = [pt for pt in con_pts2 if pt[0] == id2]
+        
+        # For each pair of connection points
+        for cp1 in rel_con_pts1:
+            for cp2 in rel_con_pts2:
+                # Find optimal relationship configurations
+                connecting_degs_ll = get_connecting_points_degs_and_log_likes(
+                    up_dct1=up_dct1,
+                    up_dct2=up_dct2,
+                    id1=id1,
+                    id2=id2,
+                    id_to_shared_ibd=id_to_shared_ibd,
+                    id_to_info=id_to_info,
+                    pw_ll=pw_ll,
+                    max_up=max_up,
+                )
+                
+                # For each relationship configuration
+                for (up, down, num_ancs, log_like) in connecting_degs_ll:
+                    # Connect the pedigrees
+                    combs = connect_pedigrees_through_points(
+                        id1=cp1[0], 
+                        id2=cp2[0],
+                        pid1=cp1[1], 
+                        pid2=cp2[1],
+                        up_dct1=up_dct1, 
+                        up_dct2=up_dct2,
+                        deg1=up, 
+                        deg2=down,
+                        num_ancs=num_ancs,
+                    )
+                    
+                    # Add to list of combinations
+                    for comb in combs:
+                        all_combined.append((comb, log_like))
+    
+    # Sort by likelihood and keep top combinations
+    all_combined.sort(key=lambda x: x[1], reverse=True)
+    top_combinations = all_combined[:keep_num]
+    
+    # Return results based on return_many parameter
+    if return_many:
+        return top_combinations
+    else:
+        return top_combinations[0][0] if top_combinations else None</code></pre>
+                
+                <p>This function orchestrates the entire process of merging pedigrees through optimal connection points:</p>
+                
+                <ol>
+                    <li><strong>Finding Connection Candidates:</strong> Using <code>find_connecting_pairs</code> to identify pairs of individuals (one from each pedigree) who share IBD segments.</li>
+                    <li><strong>Identifying Connection Points:</strong> Finding all possible connection points in each pedigree using <code>get_possible_connection_point_set</code>.</li>
+                    <li><strong>Restricting Search Space:</strong> Focusing on connection points involving individuals who share IBD.</li>
+                    <li><strong>Finding Likely Points:</strong> Using <code>get_likely_con_pt_set</code> to identify the most promising connection points.</li>
+                    <li><strong>Evaluating Connections:</strong> For each pair of connection points, finding optimal relationship configurations using <code>get_connecting_points_degs_and_log_likes</code>.</li>
+                    <li><strong>Connecting Pedigrees:</strong> Physically connecting the pedigrees through the chosen points using <code>connect_pedigrees_through_points</code>.</li>
+                    <li><strong>Ranking Combinations:</strong> Sorting the combined pedigrees by likelihood and keeping the top <code>keep_num</code>.</li>
+                </ol>
+                
+                <p>This systematic approach allows Bonsai v3 to find the most likely way to merge pedigrees based on genetic evidence and other constraints.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Physically Connecting Pedigrees</h4>
+                <p>The actual physical connection of pedigrees is performed by the <code>connect_pedigrees_through_points</code> function:</p>
+                
+                <pre><code>def connect_pedigrees_through_points(
+    id1 : int,
+    id2 : int,
+    pid1 : Optional[int],
+    pid2 : Optional[int],
+    up_dct1 : dict[int, dict[int, int]],
+    up_dct2 : dict[int, dict[int, int]],
+    deg1 : int,
+    deg2 : int,
+    num_ancs : int,
+    simple : bool=True,
+):
+    """
+    Connect up_dct1 to up_dct2 through points id1 in up_dct1
+    and id2 in up_dct2. Also connect through partner points
+    pid1 and pid2, if indicated. Connect id1 to id2 through
+    a relationship specified by (deg1, deg2, num_ancs).
+    """
+    # Validate connection parameters
+    if deg1 == deg2 == 0 and (id1 > 0 and id2 > 0) and id1 != id2:
+        return []  # Can't connect directly on different genotyped individuals
+    
+    if deg1 == deg2 == 0 and (pid1 != pid2):
+        if pid1 is None or pid2 is None:
+            return []
+        elif pid1 > 0 and pid2 > 0:
+            return []  # Can't connect on genotyped partners
+    
+    # Make copies to avoid modifying originals
+    up_dct1 = copy.deepcopy(up_dct1)
+    up_dct2 = copy.deepcopy(up_dct2)
+    
+    # Extend lineages upward if needed
+    if deg1 > 0:
+        up_dct1, _, id1, pid1 = extend_up(
+            iid=id1,
+            deg=deg1,
+            num_ancs=num_ancs,
+            up_dct=up_dct1,
+        )
+    
+    if deg2 > 0:
+        up_dct2, _, id2, pid2 = extend_up(
+            iid=id2,
+            deg=deg2,
+            num_ancs=num_ancs,
+            up_dct=up_dct2,
+        )
+    
+    # Shift IDs in up_dct2 to avoid conflicts
+    min_id = get_min_id(up_dct1) - 1
+    up_dct2, id_map = shift_ids(
+        ped=up_dct2,
+        shift=min_id,
+    )
+    id2 = id_map.get(id2, id2)
+    pid2 = id_map.get(pid2, pid2)
+    
+    # Create ID mapping for connection
+    if simple:
+        if (pid1 is not None) and (pid2 is not None):
+            id_map_list = [
+                {id1 : id2, pid1 : pid2}
+            ]
+        else:
+            id_map_list = [
+                {id1 : id2}
+            ]
+    else:
+        id_map_list = get_all_matches(
+            id1=id1,
+            id2=id2,
+            pid1=pid1,
+            pid2=pid2,
+            up_dct1=up_dct1,
+            up_dct2=up_dct2,
+        )
+    
+    # Connect pedigrees using ID mapping
+    connect_dct_list = []
+    for id_map in id_map_list:
+        up_dct = connect_on(
+            id_map=id_map,
+            up_dct1=up_dct1,
+            up_dct2=up_dct2,
+        )
+        connect_dct_list.append(up_dct)
+    
+    return connect_dct_list</code></pre>
+                
+                <p>This function handles the intricate process of physically connecting two pedigrees through specified connection points. The key steps are:</p>
+                
+                <ol>
+                    <li><strong>Validation:</strong> Ensuring the connection is biologically plausible (e.g., can't connect directly on different genotyped individuals).</li>
+                    <li><strong>Copying:</strong> Creating copies of the original pedigrees to avoid modifying them.</li>
+                    <li><strong>Lineage Extension:</strong> Using <code>extend_up()</code> to add ancestors if the connection requires multiple generations.</li>
+                    <li><strong>ID Management:</strong> Shifting IDs in the second pedigree to avoid conflicts with the first pedigree.</li>
+                    <li><strong>Connection Mapping:</strong> Creating a mapping between IDs in the two pedigrees that specifies how they should be connected.</li>
+                    <li><strong>Physical Merging:</strong> Using <code>connect_on()</code> to physically merge the pedigrees based on the ID mapping.</li>
+                </ol>
+                
+                <p>The actual connection is performed by <code>connect_on()</code>, which merges the two pedigrees based on the ID mapping:</p>
+                
+                <pre><code>def connect_on(
+    id_map: dict[int, int],
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+):
+    """
+    Connect up_dct1 to up_dct2 based on id_map.
+    Map values in up_dct1 to keys in up_dct2.
+    """
+    # Create result pedigree starting with all of up_dct1
+    result = copy.deepcopy(up_dct1)
+    
+    # Add all nodes from up_dct2 not in the mapping
+    for node2, parents2 in up_dct2.items():
+        # Skip nodes that are values in the mapping
+        if node2 in id_map.values():
+            continue
+            
+        # Add node if not already in result
+        if node2 not in result:
+            result[node2] = {}
+            
+        # Add parents, mapping them if necessary
+        for parent2, deg2 in parents2.items():
+            mapped_parent = next((k for k, v in id_map.items() if v == parent2), parent2)
+            result[node2][mapped_parent] = deg2
+    
+    # Connect nodes that are mapped
+    for node1, node2 in id_map.items():
+        # Transfer parents from node2 to node1
+        for parent2, deg2 in up_dct2.get(node2, {}).items():
+            mapped_parent = next((k for k, v in id_map.items() if v == parent2), parent2)
+            result[node1][mapped_parent] = deg2
+            
+        # Make node1 a parent for all children of node2
+        for child2, parents2 in up_dct2.items():
+            if node2 in parents2 and child2 not in id_map.values():
+                if child2 not in result:
+                    result[child2] = {}
+                result[child2][node1] = parents2[node2]
+    
+    return result</code></pre>
+                
+                <p>This function performs the actual merging of pedigrees by:</p>
+                
+                <ul>
+                    <li>Starting with a copy of the first pedigree</li>
+                    <li>Adding nodes from the second pedigree that aren't part of the connection mapping</li>
+                    <li>Transferring parents and children between the mapped nodes</li>
+                </ul>
+                
+                <p>This process ensures that the resulting pedigree preserves the relationships in both original pedigrees while correctly implementing the specified connection between them.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Handling Complex Connection Scenarios</h4>
+                <p>Merging pedigrees can involve complex scenarios, such as connecting through multiple generations or dealing with partners. Bonsai v3 handles these scenarios through specialized functions like <code>extend_up</code>:</p>
+                
+                <pre><code>def extend_up(
+    iid: int,
+    deg: int,
+    num_ancs: int,
+    up_dct: dict[int, dict[int, int]],
+):
+    """
+    Extend a lineage up from iid in up node dict up_dct.
+    
+    Args:
+        iid: ID of individual to extend from
+        deg: Number of generations to extend up
+        num_ancs: Number of ancestors to add (1 or 2)
+        up_dct: Up-node dictionary representing the pedigree
+        
+    Returns:
+        up_dct: Updated pedigree with extended lineage
+        node_id: ID of node from which extension began
+        new_id: ID of most recent ancestor added
+        part_id: ID of partner ancestor (if num_ancs=2)
+    """
+    if deg == 0:
+        return up_dct, None, iid, None
+        
+    # Get minimum ID for creating new ancestors
+    min_id = get_min_id(up_dct)
+    new_id = min(min_id - 1, -1)  # Ensure negative ID for ungenotyped
+    
+    # Initialize variables
+    prev_id = None
+    part_id = None
+    curr_id = iid
+    
+    # Extend lineage upward deg generations
+    while deg > 0:
+        # Ensure current ID exists in pedigree
+        if curr_id not in up_dct:
+            up_dct[curr_id] = {}
+            
+        # Check if can add more parents
+        if len(up_dct[curr_id]) >= 2:
+            raise ValueError(f"Cannot add parent to {curr_id}, already has 2 parents")
+            
+        # Add new ancestor as parent
+        up_dct[curr_id][new_id] = 1
+        if new_id not in up_dct:
+            up_dct[new_id] = {}
+            
+        # Add partner if this is final generation and num_ancs=2
+        if deg == 1 and num_ancs == 2:
+            part_id = new_id - 1
+            up_dct[curr_id][part_id] = 1
+            if part_id not in up_dct:
+                up_dct[part_id] = {}
+                
+        # Move up one generation
+        prev_id = curr_id
+        curr_id = new_id
+        new_id -= 1
+        deg -= 1
+        
+    return up_dct, prev_id, curr_id, part_id</code></pre>
+                
+                <p>This function handles the complexities of extending lineages upward when connecting pedigrees through multiple generations. It creates a chain of ancestors from the specified individual, with options for adding either one or two ancestors at the final generation (for full or half relationships).</p>
+                
+                <p>This approach allows Bonsai v3 to represent a wide range of relationship types when connecting pedigrees, from direct connections (like parent-child or siblings) to more distant relationships that involve multiple generations.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Merging pedigrees with optimal connection points is a central capability of Bonsai v3. By systematically identifying connection candidates, evaluating different connection configurations, and physically merging pedigrees through selected points, Bonsai can build complex family networks that best explain observed genetic data. The sophisticated algorithms for finding and using optimal connection points allow Bonsai to efficiently navigate the vast space of possible pedigree structures and find the most likely explanation for observed genetic relationships.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Bonsai v3</h3>
+            
+            <p>The Lab16 notebook explores merging pedigrees with optimal connection points through simplified implementations and examples. While the notebook provides an educational introduction to the key concepts, the actual Bonsai v3 implementation includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Advanced Statistical Models:</strong> The production code includes more sophisticated statistical models for evaluating the likelihood of different connection configurations.</li>
+                <li><strong>Optimization Heuristics:</strong> The real implementation includes various heuristics for efficiently pruning the search space and focusing on promising connection points.</li>
+                <li><strong>Constraint Handling:</strong> More comprehensive mechanisms for handling biological constraints like age, sex, and generation gaps.</li>
+                <li><strong>Error Handling:</strong> Robust error handling for edge cases like incompatible pedigrees or conflicting relationships.</li>
+                <li><strong>Performance Optimizations:</strong> The production code includes various optimizations for handling large pedigrees efficiently.</li>
+            </ul>
+            
+            <p>These differences allow the production implementation to handle the full complexity of real-world pedigree reconstruction tasks, while the notebook provides a more accessible introduction to the core concepts.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 16 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab16_Merging_Pedigrees.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                        <p><strong>Important:</strong> This notebook will be available when Lab16 is added to the labs_v2 directory.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab16_Merging_Pedigrees.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 16 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore the techniques for merging pedigrees with optimal connection points, consider these broader implications:</p>
+            <ul>
+                <li><strong>Genealogical Puzzles:</strong> How these techniques can be applied to solve real-world genealogical puzzles where traditional records are incomplete</li>
+                <li><strong>Historical Reconstruction:</strong> The potential for reconstructing historical population structures and migration patterns</li>
+                <li><strong>Biological Constraints:</strong> The interplay between genetic evidence and biological constraints in pedigree reconstruction</li>
+                <li><strong>Computational Complexity:</strong> The challenge of efficiently exploring the vast space of possible pedigree structures</li>
+                <li><strong>Uncertainty and Ambiguity:</strong> How these methods handle cases where multiple configurations are almost equally likely</li>
+            </ul>
+            <p>These considerations highlight how merging pedigrees with optimal connection points bridges theoretical computer science, statistical genetics, and practical applications in genetic genealogy and population history.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationship Assessment</h5>
+                        <p>Lab 12</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Small Pedigrees</h5>
+                        <p>Lab 13</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Optimizing Pedigrees</h5>
+                        <p>Lab 14</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Combine Up Dicts</h5>
+                        <p>Lab 15</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Merging Pedigrees</h5>
+                        <p>Lab 16</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab15_bonsai_combine_up_dicts.html" class="prev-lab">Combine Up Dicts</a>
+                <a href="lab17_incremental_addition.html" class="next-lab">Incremental Addition</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

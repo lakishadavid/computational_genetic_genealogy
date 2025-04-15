@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 05: Statistical Models | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Statistical Models of Genetic Inheritance</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab05_statistical_models.html" class="active">Lab 05: Statistical Models</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 05: Statistical Models of Genetic Inheritance</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Mathematical Foundations:</strong> This lab explores the statistical models that form the mathematical core of Bonsai v3's relationship inference capabilities. Understanding these models is crucial for grasping how the system transforms raw genetic data into probabilistic relationship assessments.</p>
+            </div>
+
+            <h3>Probability Distributions in Genetic Inheritance</h3>
+            
+            <div class="concept-section">
+                <h4>The Poisson Model for Segment Counts</h4>
+                <p>The number of IBD segments shared between relatives follows a Poisson distribution, a discrete probability distribution that models the number of events occurring in a fixed interval when these events happen independently at a constant average rate.</p>
+                
+                <p>In Bonsai v3, the Poisson parameter λ (expected number of segments) for a relationship with meiotic distance <em>d</em> is calculated as:</p>
+                
+                <pre><code class="math">λ = \frac{a(rd+c)}{2^{d-1}} \cdot p(t)</code></pre>
+                
+                <p>Where:</p>
+                <ul>
+                    <li><em>a</em> is the number of common ancestors (1 for half-relationships, 2 for full relationships)</li>
+                    <li><em>r</em> is the recombination rate (approximately 34 recombination events per meiosis for the human genome)</li>
+                    <li><em>c</em> is the number of chromosomes (22 autosomes for humans)</li>
+                    <li><em>d</em> is the meiotic distance between individuals</li>
+                    <li><em>p(t)</em> is the probability that a segment exceeds the detection threshold <em>t</em>, calculated as <em>e<sup>-dt/100</sup></em></li>
+                </ul>
+                
+                <p>The function <code>get_eta()</code> in the <code>moments.py</code> module implements this calculation:</p>
+                
+                <pre><code>def get_eta(g, r=34.0, c=22, a=1):
+    """
+    Calculates the IBD segment count parameter (eta) for a relationship.
+    
+    Args:
+        g: Meiotic distance (sum of up and down)
+        r: Recombination rate per meiosis (default 34 for human genome)
+        c: Number of chromosomes (default 22 for humans)
+        a: Number of common ancestors (1 for half, 2 for full relationships)
+        
+    Returns:
+        eta: Expected number of segments before threshold filtering
+    """
+    return a * (r * g + c) / (2 ** (g - 1))</code></pre>
+                
+                <p>This formula has a strong theoretical foundation in genetic inheritance models and has been validated against empirical data from known relationships. It captures how the expected number of IBD segments decreases with increasing relationship distance (though not linearly) and differs between full and half relationships.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>The Exponential Model for Segment Lengths</h4>
+                <p>The lengths of IBD segments follow an exponential distribution, a continuous probability distribution that describes the time between events in a Poisson point process. In genetic terms, this distribution emerges from the random nature of recombination events along chromosomes.</p>
+                
+                <p>For a relationship with meiotic distance <em>d</em>, the probability density function for segment length <em>x</em>, given that it exceeds the detection threshold <em>t</em>, is:</p>
+                
+                <pre><code class="math">f(x|x>t) = \frac{d}{100} \cdot e^{-d(x-t)/100}</code></pre>
+                
+                <p>This distribution has a mean of <em>100/d + t</em>, indicating that the expected segment length decreases with increasing meiotic distance. The function <code>get_lam_a_m()</code> in the <code>likelihoods.py</code> module calculates the rate parameter for this distribution:</p>
+                
+                <pre><code>def get_lam_a_m(g, num_ancs, min_seg_len=7.0):
+    """
+    Calculates the rate parameter for segment length distribution.
+    
+    Args:
+        g: Meiotic distance (sum of up and down)
+        num_ancs: Number of common ancestors (1 or 2)
+        min_seg_len: Minimum detectable segment length
+        
+    Returns:
+        lam: Rate parameter for exponential distribution
+    """
+    # Base rate is meiotic distance / 100
+    lam = g / 100.0
+    
+    # Adjust for relationship-specific factors
+    if num_ancs == 2 and g == 2:  # Full siblings
+        lam *= 0.9  # Empirical adjustment for full siblings
+    
+    return lam</code></pre>
+                
+                <p>This exponential model is particularly powerful because the rate parameter has a direct biological interpretation: it represents the recombination rate per unit of genetic distance, scaled by the meiotic distance. The model accurately predicts that closer relatives share longer segments on average, while more distant relatives share primarily shorter segments.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>The Normal Model for Total IBD</h4>
+                <p>While segment counts follow a Poisson distribution and segment lengths follow an exponential distribution, the total amount of IBD sharing (which is essentially the sum of many segment lengths) can be approximated by a normal distribution due to the Central Limit Theorem.</p>
+                
+                <p>For a relationship with meiotic distance <em>d</em>, the expected total IBD sharing is:</p>
+                
+                <pre><code class="math">E[Total IBD] = \lambda \cdot (100/d + t)</code></pre>
+                
+                <p>Where <em>λ</em> is the expected number of segments and <em>t</em> is the minimum detection threshold. The variance can be approximated as:</p>
+                
+                <pre><code class="math">Var[Total IBD] \approx \lambda \cdot (100/d)^2</code></pre>
+                
+                <p>This normal approximation is implemented in the <code>moments.py</code> module with functions like <code>get_muT()</code> and <code>get_sigT()</code>:</p>
+                
+                <pre><code>def get_muT(g, num_ancs=1, min_seg_len=7.0):
+    """
+    Calculates the expected total IBD sharing.
+    
+    Args:
+        g: Meiotic distance
+        num_ancs: Number of common ancestors
+        min_seg_len: Minimum segment length
+        
+    Returns:
+        muT: Expected total IBD in cM
+    """
+    # Expected number of segments
+    eta = get_eta(g, a=num_ancs)
+    
+    # Probability of detection
+    p_obs = math.exp(-g * min_seg_len / 100.0)
+    
+    # Expected total IBD
+    muT = eta * p_obs * (100.0 / g)
+    
+    return muT</code></pre>
+                
+                <p>The normal model allows Bonsai v3 to calculate the likelihood of observed total IBD values, which is a key component of relationship inference. However, the actual implementation includes additional refinements to account for the truncation of the distribution at zero (since IBD sharing cannot be negative) and the discrete nature of IBD segments.</p>
+            </div>
+
+            <h3>The Three-Parameter Model</h3>
+            
+            <div class="concept-section">
+                <h4>Relationship Representation as Tuples</h4>
+                <p>Bonsai v3 represents genetic relationships using a compact three-tuple notation: <code>(up, down, num_ancs)</code>. This representation encodes all the necessary information to model the statistical properties of IBD sharing:</p>
+                
+                <ul>
+                    <li><strong>up</strong>: The number of generations from the first individual to the most recent common ancestor (MRCA)</li>
+                    <li><strong>down</strong>: The number of generations from the MRCA to the second individual</li>
+                    <li><strong>num_ancs</strong>: The number of common ancestors (1 for half relationships, 2 for full relationships)</li>
+                </ul>
+                
+                <p>For example:</p>
+                <ul>
+                    <li><code>(0, 1, 1)</code>: Parent-child (parent is individual 1)</li>
+                    <li><code>(1, 1, 2)</code>: Full siblings (sharing both parents)</li>
+                    <li><code>(1, 1, 1)</code>: Half siblings (sharing one parent)</li>
+                    <li><code>(2, 2, 2)</code>: Full first cousins (sharing both grandparents)</li>
+                </ul>
+                
+                <p>This representation is not only efficient computationally but also biologically meaningful, as the meiotic distance <code>up + down</code> directly influences the pattern of IBD sharing. The <code>pedigrees.py</code> module contains functions like <code>get_simple_rel_tuple()</code> that calculate these relationship tuples from pedigree structures:</p>
+                
+                <pre><code>def get_simple_rel_tuple(up_node_dict, id1, id2):
+    """
+    Calculate the relationship tuple (up, down, num_ancs) between two individuals.
+    
+    Args:
+        up_node_dict: Dictionary mapping individuals to their parents
+        id1, id2: IDs of the individuals
+        
+    Returns:
+        Tuple of (up, down, num_ancs) representing the relationship
+    """
+    if id1 == id2:
+        return (0, 0, 2)  # Self relationship
+    
+    # Find common ancestors
+    common_ancs = get_common_ancs(up_node_dict, [id1], [id2])
+    
+    if not common_ancs:
+        return None  # No relationship found
+    
+    # Find minimum distances to common ancestors
+    min_up = float('inf')
+    min_down = float('inf')
+    
+    for anc in common_ancs:
+        up_dist = get_dist_up(up_node_dict, id1, anc)
+        down_dist = get_dist_up(up_node_dict, id2, anc)
+        
+        # Update minimum distances
+        if up_dist + down_dist < min_up + min_down:
+            min_up = up_dist
+            min_down = down_dist
+    
+    # Determine number of common ancestors
+    num_ancs = 1
+    if min_up == 1 and min_down == 1:
+        # Check if they share two parents
+        parents1 = set(up_node_dict.get(id1, {}).keys())
+        parents2 = set(up_node_dict.get(id2, {}).keys())
+        if len(parents1.intersection(parents2)) == 2:
+            num_ancs = 2
+    
+    return (min_up, min_down, num_ancs)</code></pre>
+                
+                <p>This function implements a sophisticated algorithm to identify the closest relationship between two individuals in a pedigree, accounting for complex cases where multiple relationship paths might exist.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>The Three Key Parameters</h4>
+                <p>Bonsai v3 characterizes each relationship type using three key statistical parameters that determine the distribution of IBD sharing:</p>
+                
+                <ol>
+                    <li><strong>Lambda (λ)</strong>: The expected number of IBD segments above the detection threshold</li>
+                    <li><strong>Mean Segment Length</strong>: The expected average length of IBD segments, typically <em>100/d + t</em> centimorgans</li>
+                    <li><strong>IBD2 Proportion</strong>: The expected proportion of the genome shared as IBD2 (both chromosomes identical)</li>
+                </ol>
+                
+                <p>These parameters fully characterize the expected IBD sharing pattern for a given relationship, enabling quantitative comparison between theoretical expectations and observed data. The actual implementation includes a number of refinements to these basic parameters:</p>
+                
+                <ul>
+                    <li><strong>Relationship-Specific Adjustments</strong>: Empirical scaling factors for specific relationships based on observed data</li>
+                    <li><strong>Chromosome-Specific Models</strong>: Separate parameters for each chromosome to account for differences in length and recombination rates</li>
+                    <li><strong>Background IBD Model</strong>: Parameters for population-specific background IBD sharing for unrelated individuals</li>
+                </ul>
+                
+                <p>The <code>moments.py</code> module contains functions that calculate these parameters for any relationship tuple:</p>
+                
+                <pre><code>def get_ibd_moments(rel_tuple, min_seg_len=7.0):
+    """
+    Calculate the IBD moments for a relationship tuple.
+    
+    Args:
+        rel_tuple: Tuple of (up, down, num_ancs)
+        min_seg_len: Minimum segment length threshold
+    
+    Returns:
+        Dictionary of IBD moments (mu, sigma, ibd2_prop)
+    """
+    up, down, num_ancs = rel_tuple
+    g = up + down  # Meiotic distance
+    
+    # Handle special case for self
+    if g == 0 and num_ancs == 2:
+        return {
+            'mu1': 0,     # Expected segment count
+            'sigma1': 0,  # Std dev of segment count
+            'mu2': 3400,  # Expected total IBD (full genome)
+            'sigma2': 0,  # Std dev of total IBD
+            'ibd2_prop': 1.0  # Full IBD2
+        }
+    
+    # Calculate segment count parameters
+    mu1 = get_mu1(g, num_ancs, min_seg_len)
+    sigma1 = get_sigma1(mu1)
+    
+    # Calculate total IBD parameters
+    mu2 = get_mu2(g, num_ancs, min_seg_len)
+    sigma2 = get_sigma2(mu2, g)
+    
+    # Calculate IBD2 proportion
+    ibd2_prop = 0.0
+    if g == 2 and num_ancs == 2:  # Full siblings
+        ibd2_prop = 0.25  # 25% of genome is IBD2 for full siblings
+    
+    return {
+        'mu1': mu1,
+        'sigma1': sigma1,
+        'mu2': mu2,
+        'sigma2': sigma2,
+        'ibd2_prop': ibd2_prop
+    }</code></pre>
+                
+                <p>These parameter calculations form the statistical foundation upon which all of Bonsai's relationship inference is built.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Parameter Variation Across Relationships</h4>
+                <p>The three-parameter model produces distinctive patterns across different relationship types, creating a statistical "fingerprint" that can be used for relationship inference:</p>
+                
+                <table class="data-table">
+                    <tr>
+                        <th>Relationship</th>
+                        <th>Lambda (λ)</th>
+                        <th>Mean Length (cM)</th>
+                        <th>IBD2 Proportion</th>
+                    </tr>
+                    <tr>
+                        <td>Parent-Child</td>
+                        <td>30-37</td>
+                        <td>100</td>
+                        <td>0%</td>
+                    </tr>
+                    <tr>
+                        <td>Full Siblings</td>
+                        <td>35-45</td>
+                        <td>50</td>
+                        <td>25%</td>
+                    </tr>
+                    <tr>
+                        <td>Half Siblings</td>
+                        <td>20-30</td>
+                        <td>50</td>
+                        <td>0%</td>
+                    </tr>
+                    <tr>
+                        <td>First Cousins</td>
+                        <td>15-25</td>
+                        <td>25</td>
+                        <td>0%</td>
+                    </tr>
+                    <tr>
+                        <td>Second Cousins</td>
+                        <td>8-15</td>
+                        <td>16.67</td>
+                        <td>0%</td>
+                    </tr>
+                    <tr>
+                        <td>Third Cousins</td>
+                        <td>3-8</td>
+                        <td>12.5</td>
+                        <td>0%</td>
+                    </tr>
+                </table>
+                
+                <p>These patterns directly reflect the biological mechanisms of genetic inheritance. For example:</p>
+                <ul>
+                    <li>The lambda parameter decreases with increasing relationship distance due to the reduced probability of inheriting segments from more distant ancestors</li>
+                    <li>The mean segment length decreases with relationship distance due to additional meioses introducing more recombination points</li>
+                    <li>The IBD2 proportion is non-zero only for full siblings and duplicate relationships because these are the only relationships where both copies of a chromosome region can be inherited from the same ancestors</li>
+                </ul>
+                
+                <p>The <code>likelihoods.py</code> module implements functions to calculate these parameters for any relationship tuple and to compute the probability of observed IBD patterns given these parameters.</p>
+            </div>
+
+            <h3>Likelihood Functions and Inference</h3>
+            
+            <div class="concept-section">
+                <h4>Likelihood-Based Relationship Inference</h4>
+                <p>Bonsai v3 uses the three-parameter model to implement likelihood functions that quantify how well observed IBD patterns match the expected patterns for different relationships. The core of this approach is the <code>PwLogLike</code> class in the <code>likelihoods.py</code> module:</p>
+                
+                <pre><code>class PwLogLike:
+    """
+    Class for computing pairwise relationship likelihoods.
+    """
+    
+    def __init__(self, ibd_data, bio_info=None, chrom_lengths=None, min_seg_len=7.0):
+        """
+        Initialize with IBD data and optional biological info.
+        
+        Args:
+            ibd_data: IBD segments or precomputed statistics
+            bio_info: Dictionary with age and sex information
+            chrom_lengths: Dictionary of chromosome lengths
+            min_seg_len: Minimum segment length threshold
+        """
+        self.ibd_data = ibd_data
+        self.bio_info = bio_info
+        self.chrom_lengths = chrom_lengths or get_default_chrom_lengths()
+        self.min_seg_len = min_seg_len
+        
+        # Cache for computed likelihoods
+        self._ll_cache = {}
+    
+    def get_relationship_log_like(self, id1, id2, rel_tuple):
+        """
+        Compute log-likelihood of a relationship between two individuals.
+        
+        Args:
+            id1, id2: IDs of the individuals
+            rel_tuple: Tuple of (up, down, num_ancs)
+            
+        Returns:
+            Log-likelihood of the relationship
+        """
+        # Check cache
+        cache_key = (id1, id2, rel_tuple)
+        if cache_key in self._ll_cache:
+            return self._ll_cache[cache_key]
+        
+        # Get observed IBD statistics
+        obs_stats = self.get_observed_stats(id1, id2)
+        
+        # Get expected IBD moments for this relationship
+        exp_moments = get_ibd_moments(rel_tuple, self.min_seg_len)
+        
+        # Compute segment count likelihood
+        count_ll = self.get_log_seg_count_pdf(
+            obs_stats['segment_count'], 
+            exp_moments['mu1'], 
+            exp_moments['sigma1']
+        )
+        
+        # Compute total IBD likelihood
+        total_ll = self.get_log_total_ibd_pdf(
+            obs_stats['total_ibd'], 
+            exp_moments['mu2'], 
+            exp_moments['sigma2']
+        )
+        
+        # Compute IBD2 proportion likelihood
+        ibd2_ll = self.get_log_ibd2_pdf(
+            obs_stats['ibd2_proportion'], 
+            exp_moments['ibd2_prop']
+        )
+        
+        # Combine likelihoods
+        combined_ll = self.combine_log_likes([count_ll, total_ll, ibd2_ll])
+        
+        # Cache and return
+        self._ll_cache[cache_key] = combined_ll
+        return combined_ll</code></pre>
+                
+                <p>This class implements three key likelihood functions:</p>
+                <ol>
+                    <li><strong>Segment Count Likelihood</strong>: Based on the Poisson distribution with parameter λ</li>
+                    <li><strong>Total IBD Likelihood</strong>: Based on a normal approximation with parameters μ and σ</li>
+                    <li><strong>IBD2 Proportion Likelihood</strong>: Based on a beta distribution for the proportion of IBD2 sharing</li>
+                </ol>
+                
+                <p>These functions quantify how well the observed IBD statistics match the expected patterns for each relationship type. By combining these likelihoods, Bonsai can compute an overall likelihood score for each potential relationship.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Combined Likelihood Function</h4>
+                <p>The combined likelihood function in Bonsai v3 integrates evidence from multiple sources to create a comprehensive assessment of relationship probability. The combination is performed in log space to prevent numerical underflow:</p>
+                
+                <pre><code>def combine_log_likes(log_likes, weights=None):
+    """
+    Combine multiple log-likelihoods, optionally with weights.
+    
+    Args:
+        log_likes: List of log-likelihood values
+        weights: Optional list of weights for each likelihood
+        
+    Returns:
+        Combined log-likelihood
+    """
+    if weights is None:
+        weights = [1.0] * len(log_likes)
+    
+    # Filter out invalid likelihoods (-inf)
+    valid_likes = [(ll, w) for ll, w in zip(log_likes, weights) if ll != float('-inf')]
+    
+    if not valid_likes:
+        return float('-inf')
+    
+    # Combine weighted log-likelihoods
+    return sum(ll * w for ll, w in valid_likes) / sum(w for _, w in valid_likes)</code></pre>
+                
+                <p>This function allows for different weights to be assigned to different types of evidence, reflecting their relative reliability. For example, in Bonsai v3's actual implementation:</p>
+                <ul>
+                    <li>IBD2 evidence is given higher weight for close relationships where it's more informative</li>
+                    <li>Segment count evidence is given higher weight for distant relationships where total IBD can be more variable</li>
+                    <li>Age evidence is weighted based on the completeness of the age information</li>
+                </ul>
+                
+                <p>The combined likelihood function implements a form of Bayesian inference, where the likelihood of each relationship hypothesis is updated based on multiple sources of evidence. This approach allows Bonsai to leverage all available information while handling missing or unreliable data gracefully.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship Inference Algorithm</h4>
+                <p>Bonsai v3's relationship inference algorithm uses the likelihood functions to identify the most probable relationship between two individuals. The core algorithm is implemented in the <code>infer_relationship()</code> method of the <code>PwLogLike</code> class:</p>
+                
+                <pre><code>def infer_relationship(self, id1, id2, max_degree=4):
+    """
+    Infer the most likely relationship between two individuals.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        max_degree: Maximum relationship degree to consider
+        
+    Returns:
+        List of (relationship tuple, log-likelihood) sorted by likelihood
+    """
+    # Generate all possible relationship tuples up to max_degree
+    rel_tuples = self.get_relationship_options(max_degree)
+    
+    # Calculate likelihood for each relationship
+    likelihoods = []
+    for rel_tuple in rel_tuples:
+        # Skip invalid relationships based on sex
+        if not self.is_valid_relationship(id1, id2, rel_tuple):
+            continue
+            
+        # Calculate log-likelihood
+        log_ll = self.get_relationship_log_like(id1, id2, rel_tuple)
+        likelihoods.append((rel_tuple, log_ll))
+    
+    # Sort by likelihood (highest first)
+    likelihoods.sort(key=lambda x: x[1], reverse=True)
+    
+    return likelihoods</code></pre>
+                
+                <p>This algorithm involves several key steps:</p>
+                <ol>
+                    <li><strong>Candidate Generation</strong>: Generate all possible relationship tuples up to a specified degree</li>
+                    <li><strong>Validity Filtering</strong>: Filter out relationships that are biologically implausible based on sex and age</li>
+                    <li><strong>Likelihood Calculation</strong>: Calculate the log-likelihood for each valid relationship</li>
+                    <li><strong>Ranking</strong>: Sort relationships by likelihood to identify the most probable ones</li>
+                </ol>
+                
+                <p>The result is a ranked list of relationship hypotheses with their associated likelihoods, which can be used for further analysis or visualization. This approach allows Bonsai to provide not just a single relationship prediction but a complete probabilistic assessment of different possibilities.</p>
+            </div>
+
+            <h3>Stochasticity and Uncertainty</h3>
+            
+            <div class="concept-section">
+                <h4>The Stochastic Nature of Genetic Inheritance</h4>
+                <p>One of the fundamental challenges in genetic genealogy is the inherently stochastic nature of genetic inheritance. Due to the random processes of meiosis and recombination, even the same relationship type can produce widely varying patterns of IBD sharing. Bonsai v3 explicitly models this stochasticity to provide realistic confidence assessments.</p>
+                
+                <p>Key sources of stochasticity in IBD sharing include:</p>
+                <ul>
+                    <li><strong>Random Assortment</strong>: Which chromosomes are inherited from each parent is random</li>
+                    <li><strong>Recombination Variability</strong>: The number and location of recombination events vary randomly</li>
+                    <li><strong>Segment Breakage</strong>: Where segments break during transmission to the next generation is stochastic</li>
+                </ul>
+                
+                <p>The statistical models in Bonsai v3 capture this stochasticity through the variance parameters in the distributions. For example, the variance of segment counts follows the Poisson distribution's property that variance equals mean, while the variance of total IBD is modeled based on the Central Limit Theorem:</p>
+                
+                <pre><code>def get_sigma1(mu1):
+    """
+    Calculate standard deviation of segment count.
+    
+    Args:
+        mu1: Expected number of segments
+        
+    Returns:
+        Standard deviation (sqrt of variance)
+    """
+    return math.sqrt(mu1)  # For Poisson distribution, variance = mean
+
+def get_sigma2(mu2, g):
+    """
+    Calculate standard deviation of total IBD.
+    
+    Args:
+        mu2: Expected total IBD
+        g: Meiotic distance
+        
+    Returns:
+        Standard deviation of total IBD
+    """
+    # Variance increases with expected total and decreases with meiotic distance
+    return max(mu2 * 0.2, math.sqrt(mu2 * (100.0 / g)))</code></pre>
+                
+                <p>These variance models are calibrated based on empirical data from thousands of known relationships, ensuring that they accurately reflect the true biological variability in genetic inheritance.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Uncertainty in Relationship Inference</h4>
+                <p>Due to the stochastic nature of genetic inheritance, there is inherent uncertainty in relationship inference. Some relationships may be difficult to distinguish based on IBD patterns alone. Bonsai v3 explicitly quantifies this uncertainty through likelihood ratios and posterior probabilities.</p>
+                
+                <p>For example, the following relationships often produce similar IBD patterns:</p>
+                <ul>
+                    <li><strong>Half Siblings vs. Grandparent-Grandchild vs. Avuncular</strong>: All share ~25% of DNA through a single common ancestor</li>
+                    <li><strong>First Cousins Once Removed vs. Half First Cousins</strong>: Both share ~6.25% of DNA</li>
+                    <li><strong>Second Cousins vs. First Cousins Twice Removed</strong>: Both share ~3.125% of DNA</li>
+                </ul>
+                
+                <p>To handle this uncertainty, Bonsai v3 implements a technique called "likelihood ratio testing" to determine when the evidence is insufficient to distinguish between competing hypotheses:</p>
+                
+                <pre><code>def is_significantly_better(ll1, ll2, threshold=2.0):
+    """
+    Determine if one likelihood is significantly better than another.
+    
+    Args:
+        ll1, ll2: Log-likelihood values
+        threshold: Log-likelihood difference threshold (2.0 = ~7.4x more likely)
+        
+    Returns:
+        True if ll1 is significantly better than ll2
+    """
+    return ll1 - ll2 > threshold</code></pre>
+                
+                <p>When multiple relationship hypotheses have similar likelihoods, Bonsai reports the uncertainty rather than making an arbitrary choice. This honest assessment of uncertainty is critical for reliable pedigree reconstruction, as it prevents the accumulation of errors in the pedigree structure.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Improving Inference with Additional Evidence</h4>
+                <p>To reduce uncertainty in relationship inference, Bonsai v3 incorporates additional sources of evidence beyond IBD statistics. The most important of these is age information, which can help distinguish relationships with similar genetic sharing patterns.</p>
+                
+                <p>For example, age differences follow distinct distributions for different relationships:</p>
+                <ul>
+                    <li><strong>Parent-Child</strong>: Typically 20-40 years (parent older)</li>
+                    <li><strong>Siblings</strong>: Typically 0-10 years (either direction)</li>
+                    <li><strong>Grandparent-Grandchild</strong>: Typically 40-80 years (grandparent older)</li>
+                    <li><strong>Avuncular</strong>: Typically 10-30 years (aunt/uncle older, but can be reversed)</li>
+                </ul>
+                
+                <p>Bonsai v3 models these age differences as normal distributions with relationship-specific means and variances. The <code>get_age_log_like()</code> function calculates the likelihood of observed age differences under different relationship hypotheses:</p>
+                
+                <pre><code>def get_age_log_like(age1, age2, rel_tuple):
+    """
+    Calculate log-likelihood of age difference for a relationship.
+    
+    Args:
+        age1, age2: Ages of individuals 1 and 2
+        rel_tuple: Relationship tuple (up, down, num_ancs)
+        
+    Returns:
+        Log-likelihood of the age difference
+    """
+    if age1 is None or age2 is None:
+        return 0.0  # No age information
+    
+    up, down, _ = rel_tuple
+    age_diff = age1 - age2
+    
+    # Parent-child relationship
+    if up == 0 and down == 1:  # Parent-child (1 is parent)
+        return stats.norm.logpdf(age_diff, 30, 10)
+    elif up == 1 and down == 0:  # Child-parent (2 is parent)
+        return stats.norm.logpdf(-age_diff, 30, 10)
+    
+    # Sibling relationship
+    elif up == 1 and down == 1:  # Siblings
+        return stats.norm.logpdf(abs(age_diff), 5, 5)
+    
+    # Other relationships...
+    # [Additional cases for other relationship types]
+    
+    # Default - weak constraint for other relationships
+    return stats.norm.logpdf(abs(age_diff), 0, 50)</code></pre>
+                
+                <p>By combining genetic evidence with age information, Bonsai can often resolve ambiguities that would be impossible to address using IBD patterns alone. This multi-evidence approach is a key strength of Bonsai v3's statistical framework.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Theoretical Foundation:</strong> Bonsai v3's statistical models demonstrate how complex biological phenomena can be captured through mathematical abstractions. By reducing the intricate process of genetic inheritance to a set of probability distributions with biologically meaningful parameters, the system creates a bridge between the physical reality of DNA transmission and the computational tools needed to interpret genetic relationships.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab05 notebook provides simplified implementations of the statistical models used in Bonsai v3, while the actual implementation includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Calibrated Parameters:</strong> The production code uses parameters calibrated on large datasets of known relationships</li>
+                <li><strong>Chromosome-Specific Models:</strong> Separate models for each chromosome that account for differences in length and recombination rates</li>
+                <li><strong>Population Background Models:</strong> Adjustments for population-specific background levels of IBD sharing</li>
+                <li><strong>Relationship Priors:</strong> Incorporation of prior probabilities for different relationship types</li>
+                <li><strong>Age Distribution Models:</strong> Sophisticated models of age differences for various relationships</li>
+                <li><strong>Comprehensive Validation:</strong> Extensive validation against known relationships in diverse populations</li>
+            </ul>
+            
+            <p>Despite these differences, the core mathematical principles demonstrated in the notebook directly correspond to those used in the production system, providing an accurate conceptual foundation for understanding how Bonsai transforms genetic data into relationship assessments.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 05 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab05_Statistical_Models.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab05_Statistical_Models.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 05 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore the statistical models in Bonsai v3, consider these broader implications:</p>
+            <ul>
+                <li><strong>Model Selection:</strong> How the choice of probability distributions affects the system's ability to capture biological reality</li>
+                <li><strong>Parameter Estimation:</strong> The challenges of calibrating statistical models using empirical data</li>
+                <li><strong>Uncertainty Quantification:</strong> The importance of honest assessment of confidence in scientific inference</li>
+                <li><strong>Multidisciplinary Integration:</strong> How Bonsai combines insights from genetics, statistics, and computer science</li>
+            </ul>
+            <p>These considerations highlight how Bonsai v3's statistical models represent a sophisticated application of probability theory to a complex biological problem, creating a powerful framework for deriving meaningful insights from genetic data.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab04_ibd_statistics.html" class="prev-lab">IBD Statistics</a>
+                <a href="lab06_probabilistic_relationship_inference.html" class="next-lab">Relationship Inference</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

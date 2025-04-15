@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 01: IBD and Genealogy Introduction | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>IBD and Genealogy Introduction</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab01_ibd_genealogy_intro.html" class="active">Lab 01: IBD and Genealogy Introduction</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 01: Introduction to Genetic Genealogy and IBD Concepts</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Foundational Concepts:</strong> This lab introduces the core biological and computational principles of Identity-by-Descent (IBD) that underpin the Bonsai v3 system. Understanding these foundational concepts is essential for mastering Bonsai's approach to pedigree reconstruction.</p>
+            </div>
+
+            <h3>Biological Foundations</h3>
+            
+            <div class="concept-section">
+                <h4>DNA Inheritance and Genetic Recombination</h4>
+                <p>Genetic genealogy rests on the precise biological mechanisms of DNA inheritance. Each person inherits 50% of their autosomal DNA from each parent, but the specific segments inherited are determined by recombination—the process of genetic exchange during meiosis.</p>
+                
+                <p>Key principles of DNA inheritance in Bonsai:</p>
+                <ul>
+                    <li><strong>Dilution Over Generations:</strong> The amount of DNA shared with an ancestor is approximately halved each generation back, creating a predictable decay pattern</li>
+                    <li><strong>Random Assortment:</strong> Which segments are inherited follows stochastic patterns that create variance in actual sharing</li>
+                    <li><strong>Recombination Hotspots:</strong> Certain genomic regions have higher recombination rates, affecting the distribution of segment lengths</li>
+                    <li><strong>Genetic Distance vs. Physical Distance:</strong> Bonsai works with genetic distance (centiMorgans) rather than physical distance (base pairs) to properly model inheritance</li>
+                </ul>
+                
+                <p>Bonsai v3 implements these biological principles through sophisticated statistical models that account for recombination patterns, inheritance probabilities, and the stochastic nature of genetic transmission.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Identity by Descent (IBD)</h4>
+                <p>Identity by Descent (IBD) is the fundamental unit of genetic relatedness in Bonsai. Two individuals share an IBD segment when they have inherited the exact same chromosomal segment from a common ancestor. IBD segments are the genetic "fingerprints" of relatedness that Bonsai analyzes to reconstruct family relationships.</p>
+                
+                <p>Critical distinctions in IBD analysis:</p>
+                <ul>
+                    <li><strong>IBD1 (Half-Identical Regions):</strong> DNA segments where individuals share one chromosome of a pair—common in all relationships</li>
+                    <li><strong>IBD2 (Fully Identical Regions):</strong> DNA segments where individuals share both chromosomes of a pair—indicative of very close relationships like siblings</li>
+                    <li><strong>IBS (Identity by State):</strong> Segments that appear identical by chance but are not from a recent common ancestor—a source of potential false positives</li>
+                </ul>
+                
+                <p>Bonsai v3's architecture is designed around detecting, processing, and analyzing these IBD segments to extract relationship information. The system processes raw IBD segments from detectors like IBIS, Refined IBD, or HapIBD, applying sophisticated statistical models to distinguish true IBD from potential artifacts.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Measuring IBD: The CentiMorgan Scale</h4>
+                <p>Bonsai quantifies IBD segments using centiMorgans (cM), a unit of genetic distance that accounts for recombination rates across the genome. Unlike physical measures (base pairs), centiMorgans provide a more accurate representation of inheritance patterns.</p>
+                
+                <p>Key properties of the centiMorgan scale in Bonsai v3:</p>
+                <ul>
+                    <li>The human genome is approximately 3400 cM in total length</li>
+                    <li>1 cM represents approximately a 1% chance of recombination in a single generation</li>
+                    <li>cM distances vary across the genome based on recombination hotspots</li>
+                    <li>Segments under ~7 cM are generally considered less reliable for relationship inference</li>
+                </ul>
+                
+                <p>In the Bonsai v3 implementation, IBD segment lengths in cM directly inform statistical models of relationship likelihood. Longer segments generally indicate closer relationships, as they have had fewer generations in which recombination could break them up.</p>
+            </div>
+
+            <h3>IBD Patterns in Relationships</h3>
+            
+            <div class="concept-section">
+                <h4>Relationship-Specific IBD Signatures</h4>
+                <p>Different relationship types exhibit characteristic patterns of IBD sharing that Bonsai v3 uses to distinguish between them. These patterns encompass total shared IBD, distribution of segment lengths, IBD1 vs. IBD2 ratios, and segment locations.</p>
+                
+                <p>Key relationship signatures in Bonsai v3:</p>
+                <ul>
+                    <li><strong>Parent-Child:</strong> ~50% total IBD, exclusively IBD1, typically in very long segments</li>
+                    <li><strong>Full Siblings:</strong> ~50% total IBD, but with IBD2 regions (approximately 25% of the genome) and a more variable distribution</li>
+                    <li><strong>Half-Siblings/Avuncular/Grandparental:</strong> ~25% total IBD, exclusively IBD1, distinguishable by age patterns</li>
+                    <li><strong>First Cousins:</strong> ~12.5% total IBD, exclusively IBD1, with shorter average segment lengths</li>
+                    <li><strong>Second Cousins:</strong> ~3.125% total IBD, exclusively IBD1, with even shorter segments</li>
+                </ul>
+                
+                <p>Bonsai v3 leverages these distinctive patterns not just through the average expected sharing, but by modeling the complete distribution of sharing patterns for each relationship type. This allows it to handle the inherent stochasticity in genetic inheritance.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Statistical Variance in IBD Sharing</h4>
+                <p>Actual IBD sharing between relatives exhibits substantial variance due to the random nature of recombination and inheritance. Bonsai v3 explicitly models this variance to provide accurate relationship probability calculations.</p>
+                
+                <p>Sources of variance handled by Bonsai:</p>
+                <ul>
+                    <li><strong>Mendelian Randomness:</strong> The random assortment of chromosomes during meiosis</li>
+                    <li><strong>Recombination Variance:</strong> The stochastic nature of crossover points</li>
+                    <li><strong>Detection Artifacts:</strong> False positives and false negatives in IBD detection</li>
+                    <li><strong>Population Background:</strong> Baseline levels of sharing in different populations</li>
+                </ul>
+                
+                <p>The Bonsai v3 codebase implements sophisticated statistical models to account for this variance. The <code>likelihoods.py</code> module contains implementations of probability distributions for IBD sharing that accurately reflect the empirical variance observed in real data.</p>
+            </div>
+
+            <h3>Bonsai's Approach to Pedigree Reconstruction</h3>
+            
+            <div class="concept-section">
+                <h4>The Up-Node Dictionary Data Structure</h4>
+                <p>At the heart of Bonsai v3's implementation is the "up-node dictionary"—an efficient data structure for representing and manipulating pedigrees. This structure encodes parent-child relationships in a directed graph format that facilitates rapid computation of genetic relationships.</p>
+                
+                <p>Structure and implementation:</p>
+                <ul>
+                    <li>Each individual is represented by a unique ID (positive for observed individuals, negative for inferred/latent individuals)</li>
+                    <li>Each individual maps to a dictionary of their parents, with values indicating the relationship type</li>
+                    <li>Founders (individuals with no parents in the dataset) map to empty dictionaries</li>
+                    <li>This structure enables efficient traversal, relationship determination, and pedigree operations</li>
+                </ul>
+                
+                <p>The up-node dictionary is implemented in the <code>pedigrees.py</code> module, which provides a comprehensive set of functions for manipulating these structures, calculating relationships between individuals, finding common ancestors, and combining sub-pedigrees.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Pedigree Reconstruction Workflow</h4>
+                <p>Bonsai v3 implements a sophisticated multi-stage workflow for reconstructing pedigrees from raw IBD data:</p>
+                
+                <ol>
+                    <li><strong>IBD Processing:</strong> Raw IBD segments from detectors are loaded, filtered, and normalized</li>
+                    <li><strong>Pairwise Relationship Inference:</strong> The <code>PwLogLike</code> class computes relationship likelihoods between all pairs</li>
+                    <li><strong>Small Pedigree Construction:</strong> High-confidence clusters are assembled into initial sub-pedigrees</li>
+                    <li><strong>Pedigree Merging:</strong> Sub-pedigrees are systematically combined based on IBD evidence</li>
+                    <li><strong>Incremental Addition:</strong> Remaining individuals are added one by one to the growing pedigree</li>
+                    <li><strong>Optimization:</strong> The final pedigree is refined to maximize likelihood and resolve ambiguities</li>
+                </ol>
+                
+                <p>This stepwise approach allows Bonsai to tackle the combinatorial complexity of pedigree reconstruction by breaking it down into more manageable sub-problems. The workflow is primarily implemented in the <code>bonsai.py</code> and <code>connections.py</code> modules.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Statistical Relationship Models</h4>
+                <p>Bonsai v3 employs sophisticated statistical models to evaluate potential relationships based on observed IBD patterns. These models are the mathematical foundation of Bonsai's accuracy in relationship inference.</p>
+                
+                <p>Key statistical components:</p>
+                <ul>
+                    <li><strong>Segment Length Distributions:</strong> Models for the expected distribution of IBD segment lengths for different relationship types</li>
+                    <li><strong>Segment Count Distributions:</strong> Poisson models for the expected number of IBD segments</li>
+                    <li><strong>Age Difference Models:</strong> Probability distributions for age differences in various relationships</li>
+                    <li><strong>Log-Likelihood Calculation:</strong> Combined scoring of genetic and demographic evidence</li>
+                </ul>
+                
+                <p>These statistical models are implemented in the <code>likelihoods.py</code> module, particularly in the <code>PwLogLike</code> class. This class computes log-likelihood scores for different relationship hypotheses, allowing Bonsai to select the most probable relationships.</p>
+            </div>
+
+            <h3>Implementation Details</h3>
+            
+            <div class="concept-section">
+                <h4>The Bonsai v3 Codebase Organization</h4>
+                <p>Bonsai v3 is organized into a modular codebase with distinct components handling different aspects of the pedigree reconstruction process:</p>
+                
+                <ul>
+                    <li><strong><code>bonsai.py</code>:</strong> Core functions for building pedigrees, the main entry points for using the library</li>
+                    <li><strong><code>likelihoods.py</code>:</strong> Statistical models for relationship inference, including the <code>PwLogLike</code> class</li>
+                    <li><strong><code>pedigrees.py</code>:</strong> Data structures and functions for manipulating pedigrees (up-node dictionaries)</li>
+                    <li><strong><code>ibd.py</code>:</strong> Processing and analysis of IBD segments</li>
+                    <li><strong><code>connections.py</code>:</strong> Functions for connecting and merging pedigrees</li>
+                    <li><strong><code>utils.py</code>:</strong> General utility functions used throughout the codebase</li>
+                    <li><strong><code>twins.py</code>:</strong> Specialized handling for twin relationships</li>
+                    <li><strong><code>moments.py</code>:</strong> Calculation of statistical moments for IBD distributions</li>
+                    <li><strong><code>exceptions.py</code>:</strong> Custom exception types for error handling</li>
+                </ul>
+                
+                <p>This modular design enables efficient development, testing, and extension of the Bonsai system, while maintaining a clear separation of concerns between different components.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>IBD Processing</h4>
+                <p>Bonsai v3 includes sophisticated tools for processing raw IBD detection output, implemented primarily in the <code>ibd.py</code> module:</p>
+                
+                <p>Key IBD processing functionalities:</p>
+                <ul>
+                    <li><strong>Loading IBD Segments:</strong> Functions for parsing IBD output from various detectors</li>
+                    <li><strong>Filtering IBD Segments:</strong> Removal of short, unreliable, or artifact segments</li>
+                    <li><strong>Normalizing Phased/Unphased Data:</strong> Handling both phased and unphased IBD formats</li>
+                    <li><strong>Computing Total IBD:</strong> Summation of IBD sharing between individual pairs</li>
+                    <li><strong>IBD Statistics:</strong> Calculation of segment counts, average lengths, and other metrics</li>
+                </ul>
+                
+                <p>The <code>ibd.py</code> module provides essential functionality for transforming raw detector output into the standardized format that Bonsai's statistical models require.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Performance Optimizations</h4>
+                <p>Bonsai v3 incorporates numerous optimizations to handle large datasets efficiently:</p>
+                
+                <ul>
+                    <li><strong>Caching:</strong> Implemented in the <code>caching.py</code> module, provides memoization of expensive calculations</li>
+                    <li><strong>Efficient Data Structures:</strong> The up-node dictionary representation enables O(1) access to parental relationships</li>
+                    <li><strong>Prioritization:</strong> Algorithms focus on high-confidence relationships first, reducing the search space</li>
+                    <li><strong>Incremental Building:</strong> Processing individuals in batches reduces computational complexity</li>
+                    <li><strong>Parallel Processing Support:</strong> Critical components support parallel computation</li>
+                </ul>
+                
+                <p>These optimizations allow Bonsai v3 to scale to datasets with thousands of individuals while maintaining reasonable computational performance.</p>
+            </div>
+
+            <h3>Practical Applications</h3>
+            
+            <div class="concept-section">
+                <h4>Real-World Use Cases</h4>
+                <p>Bonsai v3's architecture is designed to address several real-world genetic genealogy scenarios:</p>
+                
+                <ul>
+                    <li><strong>Unknown Parentage:</strong> Identifying biological parents through genetic connections</li>
+                    <li><strong>Genetic Genealogy Research:</strong> Validating and extending paper-trail genealogy</li>
+                    <li><strong>Population Studies:</strong> Reconstructing pedigrees within genetic databases</li>
+                    <li><strong>Medical Genetics:</strong> Identifying inheritance patterns for genetic traits</li>
+                    <li><strong>Forensic Applications:</strong> Finding genetic relatives for identification purposes</li>
+                </ul>
+                
+                <p>For each of these applications, Bonsai v3 provides not just relationship predictions but confidence estimates and alternative hypotheses, enabling informed decision-making.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Limitations and Challenges</h4>
+                <p>While Bonsai v3 represents a sophisticated approach to pedigree reconstruction, it faces several inherent challenges:</p>
+                
+                <ul>
+                    <li><strong>Genetic Equivalence:</strong> Some relationships produce statistically indistinguishable IBD patterns</li>
+                    <li><strong>Missing Data:</strong> Incomplete sampling of pedigrees creates ambiguity</li>
+                    <li><strong>IBD Detection Quality:</strong> Errors in the underlying IBD data propagate to relationship inference</li>
+                    <li><strong>Endogamy:</strong> Population structures with high rates of consanguinity create complex patterns</li>
+                    <li><strong>Computational Complexity:</strong> Optimal pedigree reconstruction is NP-hard, requiring heuristic approaches</li>
+                </ul>
+                
+                <p>Bonsai v3 addresses these challenges through probability-based approaches rather than deterministic algorithms, explicitly modeling uncertainty and providing confidence scores for inferred relationships.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Principle:</strong> Bonsai v3 approaches genetic genealogy as a statistical inference problem, not a deterministic matching process. This probabilistic foundation allows it to handle the inherent uncertainty in genetic inheritance and produce reliable relationship estimates even with incomplete or noisy data.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab01 notebook provides a learning environment for exploring IBD and genetic genealogy concepts, while the actual Bonsai v3 codebase implements production-ready algorithms. Key differences include:</p>
+            
+            <ul>
+                <li><strong>Simplified Models:</strong> The notebook uses pedagogical models to illustrate concepts, while the actual codebase implements more sophisticated mathematical models based on empirical data</li>
+                <li><strong>Data Scale:</strong> The notebook works with small example datasets, while the production code is optimized for large-scale pedigree reconstruction</li>
+                <li><strong>Error Handling:</strong> The production code includes comprehensive error handling and edge case management not shown in the simplified examples</li>
+                <li><strong>Performance Optimization:</strong> The actual codebase includes numerous optimizations for computational efficiency</li>
+                <li><strong>Parameter Calibration:</strong> The production code uses carefully calibrated parameters derived from large-scale empirical analyses</li>
+            </ul>
+            
+            <p>Despite these differences, the core concepts and approaches introduced in the lab directly correspond to the actual implementation in Bonsai v3, providing a solid foundation for understanding how the system works.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 01 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab01_IBD_and_Genealogy_Intro.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab01_IBD_and_Genealogy_Intro.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 01 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore the Bonsai v3 system, consider these broader implications:</p>
+            <ul>
+                <li><strong>Epistemological Foundations:</strong> How genetic evidence interacts with other forms of genealogical knowledge</li>
+                <li><strong>Ethical Considerations:</strong> Privacy implications of inferring relationships from genetic data</li>
+                <li><strong>Cultural Context:</strong> How biological relationships interact with social and cultural definitions of kinship</li>
+                <li><strong>Algorithmic Transparency:</strong> The importance of explaining relationship inferences in accessible terms</li>
+            </ul>
+            <p>These considerations situate Bonsai v3 within broader scientific, ethical, and social contexts, highlighting the importance of thoughtful application of these powerful computational tools.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step active">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab10_distributions.html" class="prev-lab">Probability Distributions</a>
+                <a href="lab02_bonsai_architecture.html" class="next-lab">Bonsai Architecture</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

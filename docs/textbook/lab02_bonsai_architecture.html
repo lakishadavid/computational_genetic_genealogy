@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 02: Bonsai Architecture | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Bonsai v3 Architecture and Core Data Structures</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab02_bonsai_architecture.html" class="active">Lab 02: Bonsai Architecture</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 02: Bonsai v3 Architecture Overview and Core Data Structures</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>System Design:</strong> This lab examines the architectural design and data structures of Bonsai v3. Understanding how this system is organized is essential for mastering its operation and extending its capabilities.</p>
+            </div>
+
+            <h3>Architectural Overview</h3>
+            
+            <div class="concept-section">
+                <h4>Design Philosophy</h4>
+                <p>Bonsai v3 is built around several key design principles that shape its architecture:</p>
+                
+                <ul>
+                    <li><strong>Modularity:</strong> The system is organized into distinct components with clear responsibilities, enabling easier maintenance and extension</li>
+                    <li><strong>Separation of Concerns:</strong> Different aspects of pedigree reconstruction are handled by specialized modules</li>
+                    <li><strong>Statistical Foundations:</strong> The system represents relationship inference as a probabilistic problem, using likelihood-based approaches</li>
+                    <li><strong>Incremental Construction:</strong> Pedigrees are built progressively, from closely related clusters to more distant connections</li>
+                    <li><strong>Efficient Data Structures:</strong> The system uses specialized data structures optimized for pedigree operations</li>
+                </ul>
+                
+                <p>These principles enable Bonsai v3 to handle the complexities of pedigree reconstruction while maintaining code readability and performance.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Module Organization</h4>
+                <p>Bonsai v3 is organized into several key modules, each with specific responsibilities:</p>
+                
+                <ul>
+                    <li><strong><code>bonsai.py</code>:</strong> Main entry point and orchestration module that coordinates the complete workflow</li>
+                    <li><strong><code>ibd.py</code>:</strong> Handles IBD data processing, conversion, and extraction of genetic sharing statistics</li>
+                    <li><strong><code>likelihoods.py</code>:</strong> Implements statistical models for relationship inference and likelihood calculation</li>
+                    <li><strong><code>pedigrees.py</code>:</strong> Provides data structures and operations for representing and manipulating pedigrees</li>
+                    <li><strong><code>connections.py</code>:</strong> Handles the logic for connecting individuals and merging pedigree fragments</li>
+                    <li><strong><code>utils.py</code>:</strong> Contains utility functions used throughout the codebase</li>
+                    <li><strong><code>constants.py</code>:</strong> Stores system constants and configuration parameters</li>
+                    <li><strong><code>caching.py</code>:</strong> Implements performance optimizations through memoization</li>
+                    <li><strong><code>exceptions.py</code>:</strong> Defines custom exception types for error handling</li>
+                    <li><strong><code>rendering.py</code>:</strong> Provides visualization and rendering capabilities for pedigrees</li>
+                </ul>
+                
+                <p>This modular organization allows each component to focus on its specific responsibility while working together to achieve the overall goal of pedigree reconstruction.</p>
+            </div>
+
+            <div class="concept-section">
+                <h4>Main Workflow</h4>
+                <p>The core workflow in Bonsai v3 is orchestrated by the <code>build_pedigree()</code> function in <code>bonsai.py</code>, which follows these steps:</p>
+                
+                <ol>
+                    <li><strong>Data Preprocessing:</strong> IBD data is loaded, filtered, and normalized for analysis</li>
+                    <li><strong>Relationship Inference:</strong> Pairwise relationships between individuals are computed using likelihood models</li>
+                    <li><strong>Initial Clusters:</strong> Closely related individuals are grouped into small, high-confidence pedigree clusters</li>
+                    <li><strong>Cluster Merging:</strong> Small clusters are progressively merged into larger pedigrees based on genetic evidence</li>
+                    <li><strong>Refinement:</strong> The merged pedigree is optimized to maximize overall likelihood</li>
+                    <li><strong>Output Generation:</strong> The final pedigree is returned along with likelihood scores and statistics</li>
+                </ol>
+                
+                <p>Each step in this workflow involves multiple operations handled by different modules, coordinated by the main <code>build_pedigree()</code> function.</p>
+            </div>
+
+            <h3>The Up-Node Dictionary: Bonsai's Central Data Structure</h3>
+            
+            <div class="concept-section">
+                <h4>Structure and Components</h4>
+                <p>The up-node dictionary is the fundamental data structure used in Bonsai v3 to represent pedigrees. It efficiently encodes parent-child relationships in a dictionary-based representation:</p>
+                
+                <pre><code>{
+    1000: {1001: 1, 1002: 1},  # Individual 1000 has parents 1001 and 1002
+    1003: {1001: 1, 1002: 1},  # Individual 1003 has the same parents (siblings)
+    1004: {-1: 1, -2: 1},      # Individual 1004 has inferred parents -1 and -2
+    1005: {-1: 1, 1002: 1},    # Individual 1005 has one inferred parent and one known parent
+    -1: {1006: 1, 1007: 1},    # Inferred individual -1 has parents 1006 and 1007
+    1001: {},  # Empty dictionaries represent founder individuals with no recorded parents
+    1002: {},
+    1006: {},
+    1007: {},
+    -2: {}
+}</code></pre>
+                
+                <p>Key aspects of this structure include:</p>
+                <ul>
+                    <li>Each individual is identified by a unique ID (key in the outer dictionary)</li>
+                    <li>The value for each individual is another dictionary mapping to their parents</li>
+                    <li>The inner dictionary's values (typically 1) can represent relationship types</li>
+                    <li>Individuals with no parents (founders) map to empty dictionaries</li>
+                    <li>Negative IDs represent inferred (latent) individuals not present in the original data</li>
+                </ul>
+                
+                <p>This structure allows Bonsai to represent arbitrary pedigree configurations while maintaining computational efficiency.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Advantages of the Up-Node Dictionary</h4>
+                <p>The up-node dictionary offers several advantages over alternative pedigree representations:</p>
+                
+                <ul>
+                    <li><strong>Memory Efficiency:</strong> Only stores necessary relationships, making it compact for large pedigrees</li>
+                    <li><strong>Fast Lookup:</strong> Provides O(1) access to an individual's parents</li>
+                    <li><strong>Flexible Structure:</strong> Can represent complex relationships including half-siblings, multiple generations, and missing individuals</li>
+                    <li><strong>Explicit Latent Nodes:</strong> Uses negative IDs to clearly identify inferred individuals not present in the original data</li>
+                    <li><strong>Simple Operations:</strong> Common pedigree operations (finding ancestors, descendants, siblings) can be implemented efficiently</li>
+                    <li><strong>Direct Manipulation:</strong> Allows for straightforward modification of the pedigree structure</li>
+                </ul>
+                
+                <p>These properties make the up-node dictionary ideal for Bonsai's incremental pedigree construction process, which requires frequent pedigree manipulations and relationship queries.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Key Operations</h4>
+                <p>Bonsai v3 implements numerous operations on up-node dictionaries in the <code>pedigrees.py</code> module:</p>
+                
+                <ul>
+                    <li><strong>Relationship Computation:</strong> Functions like <code>get_simple_rel_tuple()</code> determine the relationship between any two individuals</li>
+                    <li><strong>Ancestor Identification:</strong> <code>get_common_ancs()</code> finds common ancestors between individuals</li>
+                    <li><strong>Pedigree Traversal:</strong> Functions for navigating up and down the pedigree structure</li>
+                    <li><strong>Pedigree Joining:</strong> <code>combine_up_dicts()</code> merges separate pedigree fragments</li>
+                    <li><strong>Pedigree Validation:</strong> Functions that check biological consistency (no cycles, appropriate sexes)</li>
+                    <li><strong>Node Addition/Removal:</strong> Operations to modify the pedigree structure</li>
+                </ul>
+                
+                <p>These operations form the foundation for more complex algorithms in the Bonsai system, such as pedigree merging and relationship inference.</p>
+            </div>
+
+            <h3>Core Modules in Depth</h3>
+            
+            <div class="concept-section">
+                <h4>IBD Processing (ibd.py)</h4>
+                <p>The <code>ibd.py</code> module handles all aspects of IBD data management and processing:</p>
+                
+                <ul>
+                    <li><strong>IBD Loading:</strong> Functions for parsing IBD segments from various detector formats</li>
+                    <li><strong>Format Conversion:</strong> Converting between phased and unphased IBD representations</li>
+                    <li><strong>Segment Filtering:</strong> Removing unreliable segments based on length or quality thresholds</li>
+                    <li><strong>IBD Statistics:</strong> Extracting metrics like total sharing, segment counts, and length distributions</li>
+                    <li><strong>Sharing Analysis:</strong> Identifying individuals with significant genetic sharing</li>
+                </ul>
+                
+                <p>Key functions include <code>get_id_to_shared_ibd()</code>, which summarizes genetic sharing between pairs of individuals, and <code>get_closest_pair()</code>, which identifies the most closely related individuals based on IBD patterns.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship Likelihoods (likelihoods.py)</h4>
+                <p>The <code>likelihoods.py</code> module implements the statistical models used for relationship inference:</p>
+                
+                <ul>
+                    <li><strong>PwLogLike Class:</strong> The primary class for computing pairwise relationship likelihoods</li>
+                    <li><strong>Segment Distribution Models:</strong> Statistical models for IBD segment lengths in different relationships</li>
+                    <li><strong>Segment Count Models:</strong> Poisson models for the expected number of IBD segments</li>
+                    <li><strong>Age Models:</strong> Probability distributions for age differences in various relationships</li>
+                    <li><strong>Combined Scoring:</strong> Methods for integrating genetic and demographic evidence</li>
+                </ul>
+                
+                <p>The <code>PwLogLike</code> class is particularly important, as it provides the foundation for all relationship inferences in Bonsai v3, implementing sophisticated statistical models calibrated on empirical data.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Pedigree Connections (connections.py)</h4>
+                <p>The <code>connections.py</code> module handles the logic for connecting pedigree fragments:</p>
+                
+                <ul>
+                    <li><strong>Connection Assessment:</strong> <code>assess_connections()</code> evaluates potential connections between pedigrees</li>
+                    <li><strong>Connection Points:</strong> <code>find_closest_pedigrees()</code> identifies optimal points to join pedigrees</li>
+                    <li><strong>Pedigree Merging:</strong> <code>combine_pedigrees()</code> connects separate pedigrees into larger structures</li>
+                    <li><strong>Connection Validation:</strong> Functions that ensure connections satisfy biological constraints</li>
+                    <li><strong>Age-based Validation:</strong> <code>passes_age_check()</code> verifies that connections are chronologically plausible</li>
+                </ul>
+                
+                <p>This module enables Bonsai's hierarchical construction approach, where small pedigree fragments are progressively combined into larger structures.</p>
+            </div>
+
+            <h3>Data Flow and Tracking Structures</h3>
+            
+            <div class="concept-section">
+                <h4>End-to-End Data Flow</h4>
+                <p>The complete data flow in Bonsai v3 proceeds through several transformations:</p>
+                
+                <ol>
+                    <li><strong>Input:</strong> Raw IBD detector output (segment lists, either phased or unphased)</li>
+                    <li><strong>Preprocessing:</strong> IBD data is normalized, filtered, and converted to a standard format</li>
+                    <li><strong>Pairwise Analysis:</strong> IBD patterns between each pair of individuals are analyzed</li>
+                    <li><strong>Relationship Inference:</strong> Most likely relationships are computed for each pair</li>
+                    <li><strong>Clustering:</strong> Closely related individuals are grouped into initial pedigree fragments</li>
+                    <li><strong>Merging:</strong> Pedigree fragments are progressively combined based on connecting relationships</li>
+                    <li><strong>Refinement:</strong> The merged pedigree is optimized to maximize overall likelihood</li>
+                    <li><strong>Output:</strong> The final pedigree is returned as an up-node dictionary with likelihood scores</li>
+                </ol>
+                
+                <p>This flow is coordinated by the <code>build_pedigree()</code> function in <code>bonsai.py</code>, which orchestrates the entire process.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Pedigree Tracking Structures</h4>
+                <p>During the pedigree construction process, Bonsai v3 maintains several tracking structures to manage pedigree fragments:</p>
+                
+                <ul>
+                    <li><strong>idx_to_up_dict_ll_list:</strong> Maps pedigree indices to lists of (pedigree, log-likelihood) pairs, storing multiple hypothesis pedigrees for each cluster</li>
+                    <li><strong>id_to_idx:</strong> Maps individual IDs to their current pedigree cluster indices</li>
+                    <li><strong>idx_to_id_set:</strong> Maps pedigree indices to sets of contained individual IDs</li>
+                </ul>
+                
+                <p>These structures enable efficient pedigree merging operations by tracking which individuals belong to which pedigree fragments and maintaining multiple hypotheses when ambiguity exists.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Multiple Hypothesis Tracking</h4>
+                <p>A key feature of Bonsai v3 is its ability to track multiple alternative pedigree hypotheses:</p>
+                
+                <ul>
+                    <li>Each pedigree index in <code>idx_to_up_dict_ll_list</code> can map to multiple (pedigree, likelihood) pairs</li>
+                    <li>These alternatives represent different possible structures with varying probabilities</li>
+                    <li>During merging, the system considers combinations of hypotheses from each fragment</li>
+                    <li>The system prunes unlikely hypotheses to maintain computational efficiency</li>
+                </ul>
+                
+                <p>This approach allows Bonsai to handle ambiguity in relationship inference, maintaining multiple possibilities until additional evidence clarifies the correct structure.</p>
+            </div>
+
+            <h3>Performance Optimizations</h3>
+            
+            <div class="concept-section">
+                <h4>Caching and Memoization</h4>
+                <p>Bonsai v3 employs several caching strategies to optimize performance:</p>
+                
+                <ul>
+                    <li><strong>Relationship Caching:</strong> The <code>caching.py</code> module implements memoization for expensive relationship calculations</li>
+                    <li><strong>IBD Statistics Caching:</strong> IBD summary statistics are computed once and reused</li>
+                    <li><strong>Likelihood Caching:</strong> Relationship likelihood scores are cached to avoid redundant computation</li>
+                    <li><strong>Traversal Caching:</strong> Results of pedigree traversal operations are stored for reuse</li>
+                </ul>
+                
+                <p>These caching mechanisms significantly improve performance, especially for large pedigrees where the same relationships and traversal operations are queried repeatedly.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Algorithmic Optimizations</h4>
+                <p>Beyond caching, Bonsai v3 incorporates several algorithmic optimizations:</p>
+                
+                <ul>
+                    <li><strong>Progressive Construction:</strong> Building pedigrees incrementally rather than attempting global optimization</li>
+                    <li><strong>Prioritization:</strong> Focusing on high-confidence relationships first to establish a reliable core structure</li>
+                    <li><strong>Pruning:</strong> Discarding low-likelihood alternative hypotheses to maintain manageable state space</li>
+                    <li><strong>Efficient Data Structures:</strong> Using dictionaries and sets for O(1) lookups in critical operations</li>
+                    <li><strong>Locality-Based Processing:</strong> Organizing computation to maximize cache efficiency</li>
+                </ul>
+                
+                <p>These optimizations enable Bonsai v3 to scale to large datasets while maintaining reasonable computational requirements.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Architectural Insight:</strong> Bonsai v3's architecture embodies an important principle in computational genetics: complex problems can often be decomposed into simpler, more manageable sub-problems. By breaking pedigree reconstruction into a series of localized decisions about relationships and connections, Bonsai transforms an intractable global optimization problem into a series of tractable local optimizations.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab02 notebook provides simplified examples of Bonsai v3's data structures and operations, while the actual implementation includes additional complexity and optimizations:</p>
+            
+            <ul>
+                <li><strong>Error Handling:</strong> The production code includes comprehensive error checking and validation</li>
+                <li><strong>Edge Cases:</strong> The real implementation handles numerous special cases not covered in the educational examples</li>
+                <li><strong>Performance Optimizations:</strong> The production code includes sophisticated caching and optimization strategies</li>
+                <li><strong>Parallel Processing:</strong> Some components support parallel execution for better performance</li>
+                <li><strong>Logging and Diagnostics:</strong> The real system includes detailed logging for troubleshooting</li>
+            </ul>
+            
+            <p>Despite these differences, the core data structures and algorithmic approaches demonstrated in the lab directly correspond to those used in the production system, providing an accurate conceptual foundation.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 02 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab02_Bonsai_Architecture.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab02_Bonsai_Architecture.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 02 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore Bonsai v3's architecture, consider these broader implications:</p>
+            <ul>
+                <li><strong>Design Principles:</strong> How modular design and separation of concerns enable complex system development</li>
+                <li><strong>Balancing Act:</strong> The tradeoffs between computational efficiency, accuracy, and code maintainability</li>
+                <li><strong>Extensibility:</strong> How the architecture facilitates adding new features or supporting new data types</li>
+                <li><strong>Software Engineering Practices:</strong> How testing, documentation, and error handling contribute to robust software</li>
+            </ul>
+            <p>These considerations highlight how Bonsai v3's architecture reflects not just genetic genealogy principles but also software engineering best practices.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab01_ibd_genealogy_intro.html" class="prev-lab">IBD Introduction</a>
+                <a href="lab03_ibd_formats.html" class="next-lab">IBD Formats</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

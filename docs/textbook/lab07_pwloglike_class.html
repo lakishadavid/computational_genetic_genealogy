@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 07: PwLogLike Class | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>The PwLogLike Class and Likelihood Computation</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab07_pwloglike_class.html" class="active">Lab 07: PwLogLike Class</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 07: The PwLogLike Class and Likelihood Computation</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab examines the PwLogLike class, the computational engine at the heart of Bonsai v3's relationship inference capabilities. Understanding this class is essential for grasping how Bonsai quantifies the probability of different relationships from genetic and demographic evidence.</p>
+            </div>
+
+            <h3>Class Architecture and Design</h3>
+            
+            <div class="concept-section">
+                <h4>Design Philosophy</h4>
+                <p>The <code>PwLogLike</code> class embodies a key principle in Bonsai v3's architecture: encapsulation of statistical models into cohesive objects that handle both data and computation. This class is responsible for transforming raw IBD data and demographic information into quantitative assessments of relationship likelihoods.</p>
+                
+                <p>Key design principles include:</p>
+                <ul>
+                    <li><strong>Encapsulation:</strong> The class contains both the data and the methods needed for likelihood computation, promoting modular design</li>
+                    <li><strong>Caching:</strong> Extensive use of internal caching to avoid redundant computation of expensive likelihood calculations</li>
+                    <li><strong>Comprehensive Evidence Integration:</strong> Combining multiple sources of evidence (genetic and demographic) with appropriate weighting</li>
+                    <li><strong>Bayesian Framework:</strong> Implementation of a principled Bayesian approach to relationship inference</li>
+                    <li><strong>Performance Optimization:</strong> Careful attention to computational efficiency for handling large datasets</li>
+                </ul>
+                
+                <p>The class is defined in <code>likelihoods.py</code> and serves as the computational foundation for all relationship inference in Bonsai v3, from pairwise assessments to complete pedigree reconstruction.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Class Initialization and Input Data</h4>
+                <p>The <code>PwLogLike</code> class is initialized with several key data sources:</p>
+                
+                <pre><code>class PwLogLike:
+    def __init__(self, bio_info=None, unphased_ibd_seg_list=None, phased_ibd_seg_list=None,
+                 condition_pair_set=None, mean_bgd_num=None, mean_bgd_len=None,
+                 min_seg_len=7.0):
+        """Initialize with IBD data and demographic information.
+        
+        Args:
+            bio_info: List of dictionaries with biographical information
+                Each dictionary must have 'genotype_id' and can have 'age', 'sex', 'coverage'
+            unphased_ibd_seg_list: List of unphased IBD segments
+                [id1, id2, chromosome, start_pos, end_pos, is_full_ibd, length_cm]
+            phased_ibd_seg_list: Optional list of phased IBD segments
+                [id1, id2, hap1, hap2, chromosome, start_cm, end_cm, length_cm]
+            condition_pair_set: Optional set of pairs to condition on
+            mean_bgd_num: Mean number of background IBD segments
+            mean_bgd_len: Mean length of background IBD segments
+            min_seg_len: Minimum segment length threshold
+        """</code></pre>
+                
+                <p>The bio_info parameter contains demographic information:</p>
+                <ul>
+                    <li><strong>genotype_id:</strong> Unique identifier for an individual</li>
+                    <li><strong>age:</strong> Individual's age, used for age-based likelihood calculation</li>
+                    <li><strong>sex:</strong> Individual's biological sex, used for relationship validation</li>
+                    <li><strong>coverage:</strong> Proportion of the genome that was successfully genotyped</li>
+                </ul>
+                
+                <p>The IBD segment lists come in two formats:</p>
+                <ul>
+                    <li><strong>Unphased format:</strong> [id1, id2, chromosome, start_pos, end_pos, is_full_ibd, length_cm]</li>
+                    <li><strong>Phased format:</strong> [id1, id2, hap1, hap2, chromosome, start_cm, end_cm, length_cm]</li>
+                </ul>
+                
+                <p>During initialization, <code>PwLogLike</code> processes these inputs to create several internal data structures:</p>
+                <ul>
+                    <li><strong>ibd_stat_dict:</strong> Dictionary mapping individual pairs to IBD statistics</li>
+                    <li><strong>id_to_info:</strong> Dictionary mapping individual IDs to biographical information</li>
+                    <li><strong>age_diff_dict:</strong> Dictionary mapping individual pairs to age differences</li>
+                    <li><strong>coverage_dict:</strong> Dictionary mapping individual pairs to coverage information</li>
+                    <li><strong>_ll_cache:</strong> Cache for computed log-likelihoods to avoid redundant computation</li>
+                </ul>
+                
+                <p>The processing of raw IBD segments into statistics involves sophisticated algorithms that handle edge cases like overlapping segments and chromosome boundaries. The <code>_compute_ibd_stats()</code> method implements these algorithms, resulting in a comprehensive set of IBD statistics for each pair of individuals.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Internal Data Structures</h4>
+                <p>The <code>PwLogLike</code> class maintains several sophisticated internal data structures to optimize performance and support its inference capabilities:</p>
+                
+                <p>The <code>ibd_stat_dict</code> maps individual pairs to dictionaries containing key statistics:</p>
+                <pre><code>ibd_stat_dict = {
+    frozenset([id1, id2]): {
+        'total_half': 1250.0,   # Total cM of IBD1 (half-identical) segments
+        'total_full': 350.0,    # Total cM of IBD2 (fully identical) segments
+        'num_half': 25,         # Number of IBD1 segments
+        'num_full': 5,          # Number of IBD2 segments
+        'max_seg_cm': 120.0,    # Length of largest segment
+        'half_seg_lens': [50.0, 45.0, ...],  # List of IBD1 segment lengths
+        'full_seg_lens': [80.0, 75.0, ...]   # List of IBD2 segment lengths
+    },
+    ...
+}</code></pre>
+                
+                <p>These statistics are extracted using a careful process that ensures accurate representation of IBD sharing. The extraction involves several steps:</p>
+                <ol>
+                    <li>Sorting segments by chromosome and position</li>
+                    <li>Handling overlapping segments to avoid double-counting</li>
+                    <li>Classifying segments as IBD1 or IBD2 based on the <code>is_full_ibd</code> flag</li>
+                    <li>Computing aggregate statistics while accounting for coverage differences</li>
+                </ol>
+                
+                <p>The <code>id_to_info</code> dictionary provides efficient access to demographic information:</p>
+                <pre><code>id_to_info = {
+    1001: {'age': 70, 'sex': 'M', 'coverage': 0.95},
+    1002: {'age': 40, 'sex': 'F', 'coverage': 0.90},
+    ...
+}</code></pre>
+                
+                <p>This structure enables rapid lookups of individual attributes without repeatedly parsing the original <code>bio_info</code> list. The implementation includes validation to ensure consistent data and handling of missing values.</p>
+                
+                <p>The likelihood cache is particularly important for performance optimization:</p>
+                <pre><code>_ll_cache = {
+    (id1, id2, (up, down, num_ancs)): -12.34,  # Cached log-likelihood
+    ...
+}</code></pre>
+                
+                <p>This caching mechanism dramatically improves performance when evaluating multiple relationship hypotheses for the same pair of individuals, a common operation during pedigree reconstruction.</p>
+            </div>
+
+            <h3>Genetic Likelihood Computation</h3>
+            
+            <div class="concept-section">
+                <h4>The Core Likelihood Method</h4>
+                <p>The core method for likelihood computation in <code>PwLogLike</code> is <code>get_log_like()</code>, which orchestrates the overall likelihood calculation:</p>
+                
+                <pre><code>def get_log_like(self, id1, id2, relationship_tuple, condition=True):
+    """Calculate the log-likelihood of a relationship between two individuals.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        relationship_tuple: (up, down, num_ancs) tuple
+        condition: Whether to condition on observing IBD
+        
+    Returns:
+        Log-likelihood of the relationship
+    """
+    # Check cache
+    cache_key = (id1, id2, relationship_tuple)
+    if cache_key in self._ll_cache:
+        return self._ll_cache[cache_key]
+    
+    # Get genetic likelihood
+    gen_ll = self.get_pw_gen_ll(id1, id2, relationship_tuple, condition)
+    
+    # Get age-based likelihood if available
+    if id1 in self.id_to_info and id2 in self.id_to_info:
+        age1 = self.id_to_info[id1].get('age')
+        age2 = self.id_to_info[id2].get('age')
+        
+        if age1 is not None and age2 is not None:
+            # Calculate age weight (depends on quality of age information)
+            age_weight = self._get_age_weight(id1, id2)
+            
+            # Get age-based likelihood
+            age_ll = self.get_pw_age_ll(id1, id2, relationship_tuple)
+            
+            # Combine likelihoods
+            ll = gen_ll + age_weight * age_ll
+        else:
+            ll = gen_ll
+    else:
+        ll = gen_ll
+    
+    # Cache and return
+    self._ll_cache[cache_key] = ll
+    return ll</code></pre>
+                
+                <p>This method demonstrates the two-step process at the heart of Bonsai's relationship inference:</p>
+                <ol>
+                    <li>Calculate the genetic likelihood based on IBD statistics</li>
+                    <li>Incorporate age-based likelihood when demographic information is available</li>
+                </ol>
+                
+                <p>The method includes sophisticated caching to avoid redundant computation, dramatically improving performance when evaluating multiple relationship hypotheses for the same pair of individuals.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Genetic Likelihood Components</h4>
+                <p>The genetic likelihood calculation is implemented in the <code>get_pw_gen_ll()</code> method, which combines multiple sources of genetic evidence:</p>
+                
+                <pre><code>def get_pw_gen_ll(self, id1, id2, relationship_tuple, condition=True):
+    """Calculate genetic log-likelihood of a relationship.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        relationship_tuple: (up, down, num_ancs) tuple
+        condition: Whether to condition on observing IBD
+        
+    Returns:
+        Genetic log-likelihood
+    """
+    # Get IBD statistics
+    pair_key = frozenset([id1, id2])
+    if pair_key not in self.ibd_stat_dict:
+        # No IBD observed between these individuals
+        if condition:
+            return -20.0  # Very low but not impossible
+        else:
+            # Calculate probability of no IBD given relationship
+            # [implementation details...]
+    
+    stats = self.ibd_stat_dict[pair_key]
+    
+    # Get relationship parameters
+    up, down, num_ancs = relationship_tuple
+    meiotic_distance = up + down
+    
+    # Calculate likelihood components
+    
+    # 1. Segment count likelihood
+    count_ll = self._get_count_likelihood(stats, relationship_tuple)
+    
+    # 2. Segment length likelihood
+    length_ll = self._get_length_likelihood(stats, relationship_tuple)
+    
+    # 3. IBD2 proportion likelihood
+    ibd2_ll = self._get_ibd2_likelihood(stats, relationship_tuple)
+    
+    # 4. Total IBD likelihood
+    total_ll = self._get_total_ibd_likelihood(stats, relationship_tuple)
+    
+    # Combine components with appropriate weights
+    # [weighting logic...]
+    
+    return combined_ll</code></pre>
+                
+                <p>The genetic likelihood combines four main components:</p>
+                <ol>
+                    <li><strong>Segment Count Likelihood:</strong> How well the observed number of segments matches expectations</li>
+                    <li><strong>Segment Length Likelihood:</strong> How well the distribution of segment lengths matches expectations</li>
+                    <li><strong>IBD2 Proportion Likelihood:</strong> How well the proportion of IBD2 segments matches expectations</li>
+                    <li><strong>Total IBD Likelihood:</strong> How well the total amount of IBD sharing matches expectations</li>
+                </ol>
+                
+                <p>Each component is calculated using statistical models from the <code>moments</code> module, which we explored in earlier labs. For example, the segment count likelihood uses a Poisson distribution with parameters derived from relationship properties:</p>
+                
+                <pre><code>def _get_count_likelihood(self, stats, relationship_tuple):
+    """Calculate likelihood of observed segment count.
+    
+    Args:
+        stats: IBD statistics dictionary
+        relationship_tuple: (up, down, num_ancs) tuple
+        
+    Returns:
+        Log-likelihood of observed segment count
+    """
+    # Extract observed counts
+    num_half = stats['num_half']
+    num_full = stats['num_full']
+    
+    # Get expected counts from moments module
+    up, down, num_ancs = relationship_tuple
+    meiotic_distance = up + down
+    
+    eta_half = moments.get_eta_half(meiotic_distance, num_ancs, self.min_seg_len)
+    eta_full = moments.get_eta_full(meiotic_distance, num_ancs, self.min_seg_len)
+    
+    # Calculate likelihoods using Poisson distribution
+    half_ll = stats.poisson.logpmf(num_half, eta_half)
+    full_ll = stats.poisson.logpmf(num_full, eta_full)
+    
+    # Combine likelihoods
+    return half_ll + full_ll</code></pre>
+                
+                <p>These sophisticated likelihood computations allow Bonsai to accurately assess the probability of different relationships even with noisy and incomplete genetic data. The implementation includes numerous refinements for handling edge cases, background IBD, and detector-specific characteristics.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Handling Background IBD</h4>
+                <p>A critical aspect of <code>PwLogLike</code>'s genetic likelihood calculation is its handling of background IBD—genetic sharing that occurs by chance between supposedly unrelated individuals due to distant common ancestry or technical artifacts.</p>
+                
+                <p>The implementation includes background IBD modeling through parameters <code>mean_bgd_num</code> and <code>mean_bgd_len</code>, which characterize the expected background IBD for a given population:</p>
+                
+                <pre><code>def _get_background_likelihood(self, stats):
+    """Calculate likelihood of observed IBD as background sharing.
+    
+    Args:
+        stats: IBD statistics dictionary
+        
+    Returns:
+        Log-likelihood under background model
+    """
+    # Extract observed statistics
+    num_segs = stats['num_half'] + stats['num_full']
+    total_ibd = stats['total_half'] + stats['total_full']
+    
+    # Calculate likelihood using background model
+    # Segment count follows Poisson distribution
+    count_ll = stats.poisson.logpmf(num_segs, self.mean_bgd_num)
+    
+    # Segment lengths follow exponential distribution
+    if num_segs > 0:
+        mean_len = total_ibd / num_segs
+        length_ll = stats.expon.logpdf(mean_len, scale=self.mean_bgd_len)
+    else:
+        length_ll = 0.0
+    
+    return count_ll + length_ll</code></pre>
+                
+                <p>This background model serves two critical functions:</p>
+                <ol>
+                    <li>It provides a baseline for comparison when evaluating relationships</li>
+                    <li>It helps distinguish true IBD from chance sharing or technical artifacts</li>
+                </ol>
+                
+                <p>The background parameters can be calibrated for different populations, allowing Bonsai to account for population-specific patterns of distant relatedness. This is particularly important for endogamous populations, where background IBD levels may be elevated.</p>
+            </div>
+
+            <h3>Age-Based Likelihood Computation</h3>
+            
+            <div class="concept-section">
+                <h4>Age Difference Models</h4>
+                <p>One of the most powerful features of the <code>PwLogLike</code> class is its ability to incorporate age information into relationship inference. This is implemented in the <code>get_pw_age_ll()</code> method:</p>
+                
+                <pre><code>def get_pw_age_ll(self, id1, id2, relationship_tuple):
+    """Calculate age-based log-likelihood of a relationship.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        relationship_tuple: (up, down, num_ancs) tuple
+        
+    Returns:
+        Age-based log-likelihood
+    """
+    # Get age information
+    age1 = self.id_to_info[id1].get('age')
+    age2 = self.id_to_info[id2].get('age')
+    
+    if age1 is None or age2 is None:
+        return 0.0  # No age information available
+    
+    # Calculate age difference
+    age_diff = age1 - age2
+    
+    # Get relationship-specific age parameters
+    up, down, num_ancs = relationship_tuple
+    
+    # Parent-child relationships
+    if up == 0 and down == 1:  # id1 is parent of id2
+        mean_diff = 30.0
+        std_dev = 8.0
+        # Biological constraint: parent must be older than child
+        if age_diff < 16:  # Minimum age for reproduction
+            return float('-inf')  # Biologically impossible
+    elif up == 1 and down == 0:  # id1 is child of id2
+        mean_diff = -30.0
+        std_dev = 8.0
+        # Biological constraint: child must be younger than parent
+        if age_diff > -16:  # Minimum age for reproduction
+            return float('-inf')  # Biologically impossible
+    
+    # Sibling relationships
+    elif up == 1 and down == 1:
+        mean_diff = 0.0
+        std_dev = 10.0  # Siblings can vary more in age
+    
+    # [additional relationship types...]
+    
+    # Calculate log-likelihood using normal distribution
+    return stats.norm.logpdf(age_diff, mean_diff, std_dev)</code></pre>
+                
+                <p>The method implements a sophisticated statistical model of age differences for different relationship types. Key aspects include:</p>
+                <ul>
+                    <li><strong>Relationship-Specific Distributions:</strong> Different relationships have different expected age differences</li>
+                    <li><strong>Biological Constraints:</strong> Hard constraints for biologically impossible age differences</li>
+                    <li><strong>Variance Models:</strong> Different standard deviations for different relationship types</li>
+                    <li><strong>Directionality:</strong> Accounting for the direction of the age difference (who is older)</li>
+                </ul>
+                
+                <p>These age models have been calibrated using demographic data from real families, ensuring that they accurately reflect typical age patterns in human populations.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Integrating Age with Genetic Evidence</h4>
+                <p>The <code>get_log_like()</code> method integrates age-based and genetic likelihoods using a weighted combination:</p>
+                
+                <pre><code>combined_ll = gen_ll + age_weight * age_ll</code></pre>
+                
+                <p>The <code>age_weight</code> parameter controls the influence of age information and is dynamically determined based on several factors:</p>
+                <ul>
+                    <li><strong>Age Reliability:</strong> How reliable the age information is estimated to be</li>
+                    <li><strong>Relationship Type:</strong> Some relationships are more strongly constrained by age than others</li>
+                    <li><strong>Age Difference Magnitude:</strong> Extreme age differences may be given more weight</li>
+                </ul>
+                
+                <p>The <code>_get_age_weight()</code> method implements this dynamic weighting:</p>
+                
+                <pre><code>def _get_age_weight(self, id1, id2):
+    """Calculate weight for age-based likelihood.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        
+    Returns:
+        Weight for age-based likelihood
+    """
+    # Base weight
+    base_weight = 0.25
+    
+    # Adjust based on age information quality
+    info1 = self.id_to_info[id1]
+    info2 = self.id_to_info[id2]
+    
+    age1_quality = info1.get('age_quality', 1.0)
+    age2_quality = info2.get('age_quality', 1.0)
+    
+    # Reduce weight for less reliable age information
+    quality_factor = min(age1_quality, age2_quality)
+    
+    return base_weight * quality_factor</code></pre>
+                
+                <p>This integration of multiple evidence sources is a key strength of Bonsai v3, allowing it to leverage both genetic and demographic information for more accurate relationship inference.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Biological Constraint Validation</h4>
+                <p>Beyond age-based likelihood calculation, <code>PwLogLike</code> also implements biological constraint validation using sex information. This is handled by the <code>is_valid_relationship()</code> method:</p>
+                
+                <pre><code>def is_valid_relationship(self, id1, id2, relationship_tuple):
+    """Check if a relationship is biologically valid.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        relationship_tuple: (up, down, num_ancs) tuple
+        
+    Returns:
+        True if the relationship is biologically valid
+    """
+    # Get sex information
+    sex1 = self.id_to_info.get(id1, {}).get('sex')
+    sex2 = self.id_to_info.get(id2, {}).get('sex')
+    
+    # If sex information is missing, assume relationship is valid
+    if sex1 is None or sex2 is None:
+        return True
+    
+    up, down, num_ancs = relationship_tuple
+    
+    # Check parent-child constraints
+    if up == 0 and down == 1:  # id1 is parent of id2
+        # For biological parenthood with two parents, need one male and one female
+        if num_ancs == 2:
+            return False  # Can't be both biological parents
+    elif up == 1 and down == 0:  # id1 is child of id2
+        # Similar constraint
+        if num_ancs == 2:
+            return False
+    
+    # [additional constraints for other relationship types...]
+    
+    return True</code></pre>
+                
+                <p>This validation ensures that inferred relationships respect biological constraints, such as:</p>
+                <ul>
+                    <li>A single individual cannot be both biological parents of a child</li>
+                    <li>Two males or two females cannot be the biological parents of a child</li>
+                    <li>Certain relationship combinations are biologically impossible</li>
+                </ul>
+                
+                <p>By combining these biological constraints with the statistical likelihood models, <code>PwLogLike</code> ensures that inferred relationships are both statistically likely and biologically plausible.</p>
+            </div>
+
+            <h3>Relationship Inference Applications</h3>
+            
+            <div class="concept-section">
+                <h4>The Most Likely Relationship</h4>
+                <p>The culmination of <code>PwLogLike</code>'s capabilities is the <code>get_most_likely_rel()</code> method, which infers the most likely relationship between two individuals:</p>
+                
+                <pre><code>def get_most_likely_rel(self, id1, id2, max_degree=4):
+    """Find the most likely relationship between two individuals.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        max_degree: Maximum relationship degree to consider
+        
+    Returns:
+        Tuple of (relationship_tuple, log_likelihood)
+    """
+    # Generate all possible relationship tuples up to max_degree
+    relationship_tuples = []
+    
+    # Add self relationship
+    if id1 == id2:
+        relationship_tuples.append((0, 0, 2))
+    
+    # Add direct lineage relationships
+    for deg in range(1, max_degree + 1):
+        relationship_tuples.append((0, deg, 1))  # id1 is ancestor of id2
+        relationship_tuples.append((deg, 0, 1))  # id1 is descendant of id2
+    
+    # Add collateral relationships
+    for up in range(1, max_degree + 1):
+        for down in range(1, max_degree + 1):
+            if up + down <= max_degree * 2:
+                relationship_tuples.append((up, down, 2))  # Full relationship
+                relationship_tuples.append((up, down, 1))  # Half relationship
+    
+    # Calculate likelihood for each relationship
+    likelihoods = []
+    for rel_tuple in relationship_tuples:
+        # Check if relationship is valid
+        if not self.is_valid_relationship(id1, id2, rel_tuple):
+            continue
+            
+        # Calculate log-likelihood
+        log_ll = self.get_log_like(id1, id2, rel_tuple)
+        likelihoods.append((rel_tuple, log_ll))
+    
+    # If no valid relationships, return None
+    if not likelihoods:
+        return None, float('-inf')
+    
+    # Sort by likelihood (highest first)
+    likelihoods.sort(key=lambda x: x[1], reverse=True)
+    
+    # Return the most likely relationship
+    return likelihoods[0]</code></pre>
+                
+                <p>This method implements a comprehensive search over the space of possible relationships, using several key steps:</p>
+                <ol>
+                    <li>Generate all possible relationship tuples up to a specified degree</li>
+                    <li>Filter out biologically invalid relationships</li>
+                    <li>Calculate the log-likelihood for each valid relationship</li>
+                    <li>Sort relationships by likelihood and return the best one</li>
+                </ol>
+                
+                <p>The method balances comprehensiveness with computational efficiency, considering a wide range of relationships while avoiding an exhaustive search of all possible relationships (which would be computationally prohibitive for distant relationships).</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship Confidence and Ambiguity</h4>
+                <p>In addition to finding the most likely relationship, <code>PwLogLike</code> includes methods for assessing confidence and detecting ambiguity in relationship inference. These are implemented in methods like <code>get_relationship_confidence()</code>:</p>
+                
+                <pre><code>def get_relationship_confidence(self, id1, id2, relationship_tuple, max_degree=4):
+    """Calculate confidence in a relationship hypothesis.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        relationship_tuple: (up, down, num_ancs) tuple
+        max_degree: Maximum relationship degree to consider
+        
+    Returns:
+        Confidence score (0-1)
+    """
+    # Calculate likelihood of the specified relationship
+    target_ll = self.get_log_like(id1, id2, relationship_tuple)
+    
+    # Find the most likely alternative relationship
+    alternative_ll = float('-inf')
+    
+    # Generate all possible relationship tuples
+    # [Similar to get_most_likely_rel, but excluding the target relationship]
+    
+    # Calculate likelihood ratio (Bayes factor)
+    likelihood_ratio = np.exp(target_ll - alternative_ll)
+    
+    # Convert to confidence score
+    confidence = likelihood_ratio / (1 + likelihood_ratio)
+    
+    return confidence</code></pre>
+                
+                <p>This method quantifies the strength of evidence for a relationship by comparing it to alternative hypotheses. High confidence scores indicate strong evidence, while low scores suggest ambiguity or uncertainty.</p>
+                
+                <p>The system also includes methods for identifying ambiguous relationship groups—sets of relationships that are difficult to distinguish based on available evidence:</p>
+                
+                <pre><code>def get_ambiguous_relationships(self, id1, id2, log_ll_threshold=2.0):
+    """Find relationships that cannot be confidently distinguished.
+    
+    Args:
+        id1, id2: IDs of the individuals
+        log_ll_threshold: Threshold for considering relationships ambiguous
+        
+    Returns:
+        List of ambiguous relationship tuples
+    """
+    # Get all relationship likelihoods
+    # [similar to get_most_likely_rel]
+    
+    # Sort by likelihood
+    likelihoods.sort(key=lambda x: x[1], reverse=True)
+    
+    # Get the most likely relationship
+    best_rel, best_ll = likelihoods[0]
+    
+    # Find relationships that are ambiguous (likelihood within threshold)
+    ambiguous_rels = [rel_tuple for rel_tuple, ll in likelihoods 
+                      if best_ll - ll <= log_ll_threshold]
+    
+    return ambiguous_rels</code></pre>
+                
+                <p>This approach to uncertainty quantification is crucial for reliable pedigree reconstruction, as it prevents the system from making overconfident inferences when the evidence is ambiguous.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Applications in Pedigree Construction</h4>
+                <p>The <code>PwLogLike</code> class is used extensively throughout Bonsai v3's pedigree construction process:</p>
+                
+                <ol>
+                    <li><strong>Initial Relationship Assessment:</strong> At the start of pedigree construction, a <code>PwLogLike</code> instance is created to assess all pairwise relationships:</li>
+                </ol>
+                
+                <pre><code>def build_pedigree(bio_info, unphased_ibd_seg_list, ...):
+    """Main entry point for pedigree reconstruction.
+    
+    Args:
+        bio_info: Biographical information
+        unphased_ibd_seg_list: IBD segments
+        ...
+        
+    Returns:
+        Reconstructed pedigree
+    """
+    # Initialize PwLogLike
+    pw_ll = PwLogLike(bio_info, unphased_ibd_seg_list, ...)
+    
+    # Use it for initial relationship assessment
+    all_genotype_ids = [info['genotype_id'] for info in bio_info]
+    all_relationships = {}
+    
+    for i in range(len(all_genotype_ids)):
+        for j in range(i+1, len(all_genotype_ids)):
+            id1 = all_genotype_ids[i]
+            id2 = all_genotype_ids[j]
+            
+            # Get most likely relationship
+            rel_tuple, log_ll = pw_ll.get_most_likely_rel(id1, id2)
+            
+            # Store if sufficiently likely
+            if log_ll > THRESHOLD:
+                all_relationships[(id1, id2)] = (rel_tuple, log_ll)
+    
+    # [Proceed with pedigree construction using these relationships]</code></pre>
+                
+                <ol start="2">
+                    <li><strong>Connection Point Evaluation:</strong> When merging pedigree fragments, <code>PwLogLike</code> is used to evaluate potential connection points:</li>
+                </ol>
+                
+                <pre><code>def find_connection_points(pedigree1, pedigree2, pw_ll):
+    """Find optimal points to connect two pedigrees.
+    
+    Args:
+        pedigree1, pedigree2: Pedigrees to connect
+        pw_ll: PwLogLike instance
+        
+    Returns:
+        List of potential connection points with scores
+    """
+    # Get individuals in each pedigree
+    ids1 = set(pedigree1.keys())
+    ids2 = set(pedigree2.keys())
+    
+    # Evaluate all possible connections
+    connections = []
+    for id1 in ids1:
+        for id2 in ids2:
+            # Get relationship likelihood
+            rel_tuple, log_ll = pw_ll.get_most_likely_rel(id1, id2)
+            
+            # Add to potential connections if sufficiently likely
+            if log_ll > THRESHOLD:
+                connections.append((id1, id2, rel_tuple, log_ll))
+    
+    # Sort by likelihood and return
+    connections.sort(key=lambda x: x[3], reverse=True)
+    return connections</code></pre>
+                
+                <ol start="3">
+                    <li><strong>Pedigree Validation:</strong> After constructing a pedigree, <code>PwLogLike</code> is used to validate the inferred relationships:</li>
+                </ol>
+                
+                <pre><code>def validate_pedigree(pedigree, pw_ll):
+    """Validate a pedigree against observed IBD data.
+    
+    Args:
+        pedigree: Pedigree to validate
+        pw_ll: PwLogLike instance
+        
+    Returns:
+        Dictionary of validation results
+    """
+    # Extract all observed individuals
+    observed_ids = set(pedigree.keys()) - {id for id in pedigree if id < 0}  # Exclude inferred individuals
+    
+    # Check each pair of observed individuals
+    validation_results = {}
+    for id1 in observed_ids:
+        for id2 in observed_ids:
+            if id1 >= id2:
+                continue
+                
+            # Get relationship in pedigree
+            pedigree_rel = pedigrees.get_simple_rel_tuple(pedigree, id1, id2)
+            
+            # Get most likely relationship from IBD
+            inferred_rel, log_ll = pw_ll.get_most_likely_rel(id1, id2)
+            
+            # Check if they match
+            is_consistent = pedigree_rel == inferred_rel
+            
+            # Store result
+            validation_results[(id1, id2)] = {
+                'pedigree_relationship': pedigree_rel,
+                'inferred_relationship': inferred_rel,
+                'log_likelihood': log_ll,
+                'is_consistent': is_consistent
+            }
+    
+    return validation_results</code></pre>
+                
+                <p>These examples illustrate how the <code>PwLogLike</code> class serves as a core component throughout the pedigree reconstruction process, providing the quantitative foundation for relationship inference at every stage.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> The PwLogLike class is the computational engine that powers Bonsai v3's relationship inference capabilities. By encapsulating sophisticated statistical models in a cohesive object-oriented design, it provides a flexible and powerful framework for integrating multiple sources of evidence to infer relationships between individuals, forming the foundation for robust pedigree reconstruction.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab07 notebook provides a simplified exploration of the <code>PwLogLike</code> class, while the actual implementation in Bonsai v3 includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Caching Mechanisms:</strong> The production code includes sophisticated caching strategies to avoid redundant computation</li>
+                <li><strong>Error Handling:</strong> Comprehensive handling of edge cases and error conditions</li>
+                <li><strong>Relationship-Specific Models:</strong> Specialized handling for different relationship types</li>
+                <li><strong>Calibrated Parameters:</strong> Empirically derived parameters for different populations</li>
+                <li><strong>Performance Optimizations:</strong> Careful attention to computational efficiency</li>
+                <li><strong>Population-Specific Adjustments:</strong> The ability to adjust parameters for different population backgrounds</li>
+            </ul>
+            
+            <p>The notebook provides a valuable introduction to the key concepts, but the production implementation represents years of development and refinement to handle the complexities of real-world genetic data and diverse human populations.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 07 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab07_PwLogLike_Class.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab07_PwLogLike_Class.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 07 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore the <code>PwLogLike</code> class, consider these broader implications:</p>
+            <ul>
+                <li><strong>Object-Oriented Design:</strong> How encapsulating data and computation in a cohesive class enables modular and maintainable code</li>
+                <li><strong>Evidence Integration:</strong> The challenges and opportunities of combining multiple sources of evidence for inference</li>
+                <li><strong>Statistical Modeling:</strong> How probabilistic models can handle the inherent uncertainty in biological systems</li>
+                <li><strong>Bayesian Integration:</strong> The effectiveness of Bayesian approaches for combining prior knowledge with observed data</li>
+            </ul>
+            <p>These considerations highlight how the <code>PwLogLike</code> class represents not just a technical solution but a principled approach to inference under uncertainty, with applications beyond genetic genealogy to other domains involving complex network inference.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab06_probabilistic_relationship_inference.html" class="prev-lab">Relationship Inference</a>
+                <a href="lab08_age_based_relationship_modeling.html" class="next-lab">Age Modeling</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

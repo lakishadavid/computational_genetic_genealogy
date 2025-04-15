@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 04: IBD Statistics Extraction | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>IBD Statistics Extraction and Analysis</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab04_ibd_statistics.html" class="active">Lab 04: IBD Statistics</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 04: IBD Statistics Extraction and Analysis</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Data Analysis:</strong> This lab explores how Bonsai v3 extracts and analyzes statistical patterns from IBD segments. Understanding these statistical measures is crucial for relationship inference and pedigree reconstruction.</p>
+            </div>
+
+            <h3>Core IBD Statistics</h3>
+            
+            <div class="concept-section">
+                <h4>The Five Fundamental Metrics</h4>
+                <p>Bonsai v3 extracts five core statistics from IBD segment data, which serve as the foundation for all relationship inference:</p>
+                
+                <ol>
+                    <li><strong>Total Half-IBD (IBD1)</strong>: The total genetic length (in centiMorgans) of segments where individuals share exactly one allele</li>
+                    <li><strong>Total Full-IBD (IBD2)</strong>: The total genetic length (in centiMorgans) of segments where individuals share both alleles</li>
+                    <li><strong>Number of Half-IBD Segments</strong>: Count of distinct IBD1 segments detected</li>
+                    <li><strong>Number of Full-IBD Segments</strong>: Count of distinct IBD2 segments detected</li>
+                    <li><strong>Maximum Segment Length</strong>: Length (in centiMorgans) of the longest shared IBD segment</li>
+                </ol>
+                
+                <p>These statistics are calculated for every pair of individuals who share IBD segments. In the Bonsai v3 codebase, this calculation is performed by the <code>get_ibd_stats_unphased()</code> function in the <code>ibd.py</code> module. This function processes raw IBD segments to compute these summary statistics efficiently, handling edge cases like overlapping segments and chromosome boundaries.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>The IBDIndex Class</h4>
+                <p>Bonsai v3 implements an <code>IBDIndex</code> class to efficiently store and retrieve IBD statistics and segments. This class provides a critical layer of abstraction between raw IBD data and the statistical models used for relationship inference.</p>
+                
+                <p>Key operations supported by the <code>IBDIndex</code> class include:</p>
+                <ul>
+                    <li><strong>get_stats_for_pair(id1, id2)</strong>: Retrieves computed statistics for a specific pair of individuals</li>
+                    <li><strong>get_segments_for_pair(id1, id2)</strong>: Returns all IBD segments shared between two individuals</li>
+                    <li><strong>get_all_pairs()</strong>: Retrieves all pairs of individuals with detected IBD sharing</li>
+                    <li><strong>get_total_ibd_between_id_sets(id_set1, id_set2)</strong>: Calculates total IBD sharing between two sets of individuals</li>
+                </ul>
+                
+                <p>The class employs efficient data structures (hash tables) to ensure O(1) lookup time for most operations, which is essential for processing large datasets with thousands of individuals and millions of IBD segments. The implementation includes sophisticated caching mechanisms to avoid redundant computation, particularly important for operations that are called repeatedly during pedigree construction.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship-Specific IBD Patterns</h4>
+                <p>The five core IBD statistics form distinctive patterns for different relationship types. Bonsai v3 leverages these patterns for relationship inference:</p>
+                
+                <table class="data-table">
+                    <tr>
+                        <th>Relationship</th>
+                        <th>Total IBD1 (cM)</th>
+                        <th>Total IBD2 (cM)</th>
+                        <th>IBD1 Segments</th>
+                        <th>IBD2 Segments</th>
+                        <th>Max Segment (cM)</th>
+                    </tr>
+                    <tr>
+                        <td>Parent-Child</td>
+                        <td>~3400</td>
+                        <td>0</td>
+                        <td>~22-35</td>
+                        <td>0</td>
+                        <td>~180-280</td>
+                    </tr>
+                    <tr>
+                        <td>Full Siblings</td>
+                        <td>~2550</td>
+                        <td>~850</td>
+                        <td>~35-50</td>
+                        <td>~10-20</td>
+                        <td>~120-180</td>
+                    </tr>
+                    <tr>
+                        <td>Half-Siblings</td>
+                        <td>~1700</td>
+                        <td>0</td>
+                        <td>~20-30</td>
+                        <td>0</td>
+                        <td>~100-140</td>
+                    </tr>
+                    <tr>
+                        <td>First Cousins</td>
+                        <td>~850</td>
+                        <td>0</td>
+                        <td>~15-25</td>
+                        <td>0</td>
+                        <td>~70-100</td>
+                    </tr>
+                    <tr>
+                        <td>Second Cousins</td>
+                        <td>~212</td>
+                        <td>0</td>
+                        <td>~8-15</td>
+                        <td>0</td>
+                        <td>~40-70</td>
+                    </tr>
+                </table>
+                
+                <p>These patterns arise from the biological mechanisms of genetic inheritance. For example, parent-child pairs share exactly half of their DNA (one chromosome of each pair), resulting in approximately 3400 cM of IBD1 and no IBD2. Full siblings share on average 50% of their DNA, but unlike parent-child pairs, this includes regions where both chromosomes are shared (IBD2).</p>
+                
+                <p>Critically, Bonsai v3 doesn't just rely on these average values but models the complete statistical distributions of these metrics for each relationship type, accounting for variance due to the stochastic nature of recombination.</p>
+            </div>
+
+            <h3>Segment Length Distributions</h3>
+            
+            <div class="concept-section">
+                <h4>The Importance of Segment Lengths</h4>
+                <p>Beyond the five core statistics, Bonsai v3 analyzes the complete distributions of IBD segment lengths, which provide additional information for relationship inference:</p>
+                
+                <ul>
+                    <li><strong>Close Relationships</strong>: Typically have longer segments due to fewer recombination events separating individuals</li>
+                    <li><strong>Distant Relationships</strong>: Have progressively shorter segments as additional generations introduce more recombination points</li>
+                    <li><strong>Complex Relationships</strong>: Often show bimodal or unusual distributions that can help identify unique family structures</li>
+                </ul>
+                
+                <p>The segment length distribution follows an exponential decay pattern, where the rate parameter is directly related to the meiotic distance between individuals. This mathematical relationship provides a powerful tool for distinguishing relationship types that might have similar total IBD amounts but different ancestral paths.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Mathematical Modeling of Segment Lengths</h4>
+                <p>In Bonsai v3, segment length distributions are modeled mathematically using a modified exponential distribution. For a relationship with meiotic distance <em>d</em> (the total number of meioses separating two individuals through their common ancestor), the probability density function for segment length <em>L</em> is approximately:</p>
+                
+                <p style="text-align:center;"><em>f(L) = d/100 · e<sup>-d·L/100</sup></em></p>
+                
+                <p>This means:</p>
+                <ul>
+                    <li>The expected segment length is inversely proportional to meiotic distance</li>
+                    <li>The probability of finding very long segments decreases exponentially with relationship distance</li>
+                    <li>The segment length distribution is a key parameter in Bonsai's likelihood models</li>
+                </ul>
+                
+                <p>In the actual implementation, Bonsai v3's <code>likelihoods.py</code> module includes sophisticated functions like <code>get_lam_a_m()</code> that implement these mathematical models with empirically calibrated parameters. The models are adjusted for factors like chromosome-specific recombination rates and population background.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Length Distribution Analysis in Practice</h4>
+                <p>The <code>IBDIndex</code> class in Bonsai v3 provides methods to access the complete segment length distributions for analysis:</p>
+                
+                <pre><code>def get_segment_length_distribution(self, id1, id2, ibd_type=None):
+    """Get the distribution of segment lengths for a specific pair.
+    
+    Args:
+        id1, id2: Individual IDs
+        ibd_type: Optional, 1 for IBD1-only, 2 for IBD2-only, None for all
+        
+    Returns:
+        List of segment lengths in cM
+    """</code></pre>
+                
+                <p>This function is used by the likelihood models to compute the probability of observed segment length distributions under different relationship hypotheses. It handles various edge cases like missing or corrupt segment data, and can filter by IBD type to analyze IBD1 and IBD2 patterns separately.</p>
+                
+                <p>When visualized, these distributions reveal characteristic patterns:</p>
+                <ul>
+                    <li>Parent-child relationships show a relatively flat distribution with many long segments</li>
+                    <li>Sibling relationships show a mixture of long and medium segments</li>
+                    <li>Cousin relationships show distributions heavily skewed toward shorter segments</li>
+                    <li>Very distant relationships (3rd cousins and beyond) primarily show segments below 20 cM</li>
+                </ul>
+                
+                <p>These visual patterns provide intuitive confirmation of the mathematical models implemented in Bonsai's codebase.</p>
+            </div>
+
+            <h3>IBD Network Analysis</h3>
+            
+            <div class="concept-section">
+                <h4>Building IBD Networks</h4>
+                <p>Bonsai v3 constructs IBD networks as an intermediate step in pedigree reconstruction. These networks represent individuals as nodes and IBD sharing as weighted edges, providing a powerful visual and computational representation of genetic relatedness.</p>
+                
+                <p>The network construction process in Bonsai includes:</p>
+                <ul>
+                    <li><strong>Node Creation</strong>: Each individual in the dataset becomes a node in the network</li>
+                    <li><strong>Edge Creation</strong>: Edges are created between pairs with IBD sharing above a threshold (typically 7-10 cM)</li>
+                    <li><strong>Edge Weighting</strong>: Each edge is weighted by the total amount of IBD sharing (IBD1 + IBD2)</li>
+                    <li><strong>Edge Annotation</strong>: Additional attributes like IBD statistics are stored on edges for later analysis</li>
+                </ul>
+                
+                <p>The <code>get_id_to_shared_ibd()</code> function in <code>ibd.py</code> is a key component of this process, creating the necessary data structures for efficient network construction. The resulting networks capture the complex patterns of genetic sharing across multiple individuals, allowing for group-level analysis that goes beyond pairwise comparisons.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Community Detection Algorithms</h4>
+                <p>A critical application of IBD networks in Bonsai v3 is the identification of related individuals using community detection algorithms. These algorithms identify clusters of densely connected nodes, which correspond to groups of related individuals.</p>
+                
+                <p>Bonsai implements several community detection approaches:</p>
+                <ul>
+                    <li><strong>Louvain Method</strong>: A hierarchical clustering algorithm that optimizes modularity</li>
+                    <li><strong>Connected Components</strong>: A simple approach for identifying completely separate networks</li>
+                    <li><strong>Edge Filtering</strong>: Progressive removal of weak edges to reveal core family structures</li>
+                </ul>
+                
+                <p>The implementation in <code>get_next_node()</code> and related functions uses these community detection results to prioritize which relationships to analyze first during pedigree reconstruction. This approach provides two major advantages:</p>
+                <ol>
+                    <li>It reduces the computational complexity by processing related groups together</li>
+                    <li>It improves accuracy by ensuring that closely related individuals are placed in consistent positions</li>
+                </ol>
+                
+                <p>The community detection component allows Bonsai to scale efficiently to large datasets with complex family structures, breaking down the global optimization problem into more manageable subproblems.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Within-Community vs. Between-Community Analysis</h4>
+                <p>Bonsai v3 performs sophisticated analysis of IBD sharing patterns within and between detected communities:</p>
+                
+                <ul>
+                    <li><strong>Within-Community Sharing</strong>: Typically higher, representing close family relationships</li>
+                    <li><strong>Between-Community Sharing</strong>: Typically lower, representing more distant connections</li>
+                    <li><strong>Bridge Individuals</strong>: People with significant connections to multiple communities, often representing important cross-family links</li>
+                </ul>
+                
+                <p>The <code>get_total_ibd_between_id_sets()</code> function in the <code>IBDIndex</code> class specifically supports this type of analysis, calculating the aggregate IBD sharing between groups of individuals. This function is used in several contexts:</p>
+                <ul>
+                    <li>Validating community detection results by measuring internal cohesion</li>
+                    <li>Identifying potential merger points between separate pedigrees</li>
+                    <li>Prioritizing which communities to process first during incremental pedigree building</li>
+                </ul>
+                
+                <p>By analyzing both intra- and inter-community IBD patterns, Bonsai can handle complex scenarios like endogamy (marriage within a relatively closed community), which creates unusual patterns of genetic sharing that simpler algorithms would misinterpret.</p>
+            </div>
+
+            <h3>From Statistics to Relationship Inference</h3>
+            
+            <div class="concept-section">
+                <h4>The PwLogLike Class</h4>
+                <p>At the heart of Bonsai v3's relationship inference capability is the <code>PwLogLike</code> class in the <code>likelihoods.py</code> module. This class implements the statistical models that convert IBD statistics into relationship likelihoods:</p>
+                
+                <p>Key methods in this class include:</p>
+                <ul>
+                    <li><strong><code>get_relationship_options()</code></strong>: Generates all possible relationship types up to a specified degree</li>
+                    <li><strong><code>get_relationship_log_like()</code></strong>: Computes the log-likelihood of a specific relationship given observed IBD statistics</li>
+                    <li><strong><code>get_ll_pedigree_tuple()</code></strong>: Calculates the likelihood of a specific up/down relationship configuration</li>
+                    <li><strong><code>get_log_seg_pdf()</code></strong>: Implements the statistical distribution models for segment counts and lengths</li>
+                </ul>
+                
+                <p>The class incorporates sophisticated statistical models for different aspects of IBD sharing:</p>
+                <ul>
+                    <li>Poisson models for the expected number of segments</li>
+                    <li>Exponential distribution models for segment lengths</li>
+                    <li>Beta distribution models for IBD2 proportions</li>
+                    <li>Gaussian approximations for the total amount of sharing</li>
+                </ul>
+                
+                <p>These models are calibrated using empirical data from known relationships, ensuring that the likelihood calculations accurately reflect the biological reality of genetic inheritance.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Relationship Representation with Tuples</h4>
+                <p>Bonsai v3 represents relationships using a compact tuple notation <code>(up, down, num_ancs)</code>:</p>
+                
+                <ul>
+                    <li><strong>up</strong>: Number of generations from individual 1 to the common ancestor</li>
+                    <li><strong>down</strong>: Number of generations from common ancestor to individual 2</li>
+                    <li><strong>num_ancs</strong>: Number of common ancestors (1 for half relationships, 2 for full)</li>
+                </ul>
+                
+                <p>For example:</p>
+                <ul>
+                    <li><code>(0, 1, 1)</code>: Parent-child (parent is individual 1)</li>
+                    <li><code>(1, 1, 2)</code>: Full siblings (shared both parents)</li>
+                    <li><code>(1, 1, 1)</code>: Half siblings (shared one parent)</li>
+                    <li><code>(2, 2, 2)</code>: Full first cousins (shared both grandparents)</li>
+                </ul>
+                
+                <p>This notation provides a computationally efficient way to represent and manipulate relationship hypotheses. It directly connects to the mathematical models of IBD sharing, where the total meiotic distance <code>up + down</code> determines the expected amount and pattern of sharing.</p>
+                
+                <p>The function <code>get_simple_rel_tuple()</code> in <code>pedigrees.py</code> calculates these relationship tuples directly from pedigree structures, providing a critical bridge between the graph-based representation of pedigrees and the statistical models of IBD sharing.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Combining Multiple Sources of Evidence</h4>
+                <p>A key innovation in Bonsai v3 is its ability to combine multiple sources of evidence for relationship inference:</p>
+                
+                <ul>
+                    <li><strong>IBD1 Statistics</strong>: Total amount and segment count of half-identical regions</li>
+                    <li><strong>IBD2 Statistics</strong>: Presence and amount of fully identical regions</li>
+                    <li><strong>Segment Length Distribution</strong>: Pattern of segment lengths, especially for distinguishing relationships with similar total IBD</li>
+                    <li><strong>Age Information</strong>: When available, age differences provide additional constraints on possible relationships</li>
+                    <li><strong>Sex Information</strong>: Constraints on relationship types based on biological sex</li>
+                </ul>
+                
+                <p>The <code>get_relationship_log_like()</code> method combines these different sources into a single log-likelihood score for each relationship hypothesis. The method implements a sophisticated weighting scheme that accounts for the reliability of different evidence types and their correlations.</p>
+                
+                <p>This multi-evidence approach is particularly powerful for resolving ambiguous cases where a single statistic might be consistent with multiple relationship types. For example, half-siblings, grandparent-grandchild, and avuncular relationships all share approximately 25% of their DNA, but they can be distinguished using segment length distributions and age information.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Mathematical Foundation:</strong> Bonsai v3's approach to IBD statistics analysis demonstrates how complex biological processes can be modeled with mathematical precision. By combining population genetics theory with empirical calibration, the system transforms raw genetic data into meaningful relationship assessments that account for the inherent randomness in genetic inheritance.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Production Code</h3>
+            
+            <p>The Lab04 notebook provides simplified implementations of IBD statistics extraction and analysis, while the actual Bonsai v3 implementation includes numerous additional capabilities:</p>
+            
+            <ul>
+                <li><strong>Optimized Algorithms:</strong> The production code includes highly optimized algorithms for processing millions of IBD segments efficiently</li>
+                <li><strong>Caching:</strong> Sophisticated caching mechanisms avoid redundant computation of frequently accessed statistics</li>
+                <li><strong>Error Handling:</strong> Robust handling of edge cases like noisy data, missing segments, and detector artifacts</li>
+                <li><strong>Background IBD:</strong> Adjustments for population-specific background levels of IBD sharing</li>
+                <li><strong>Calibration:</strong> The statistical models are calibrated on large datasets of confirmed relationships for different populations</li>
+                <li><strong>Advanced Network Analysis:</strong> More sophisticated community detection algorithms adapted for genetic data</li>
+            </ul>
+            
+            <p>Despite these differences, the core concepts and approaches demonstrated in the notebook directly correspond to those used in the production system, providing an accurate foundation for understanding how Bonsai extracts and leverages IBD statistics.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 04 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab04_IBD_Statistics_Extraction.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=Lab04_IBD_Statistics_Extraction.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 04 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore IBD statistics extraction and analysis in Bonsai v3, consider these broader implications:</p>
+            <ul>
+                <li><strong>Statistical Thinking:</strong> How probability theory provides a framework for handling uncertainty in biological systems</li>
+                <li><strong>Data Representation:</strong> The importance of choosing appropriate data structures for efficient computation</li>
+                <li><strong>Evidence Integration:</strong> How multiple sources of evidence can be combined to improve inference accuracy</li>
+                <li><strong>Network Science:</strong> The application of graph theory to model complex biological relationships</li>
+            </ul>
+            <p>These considerations highlight how IBD statistics analysis in Bonsai v3 represents a sophisticated application of both computational and statistical principles to a complex biological problem.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab03_ibd_formats.html" class="prev-lab">IBD Formats</a>
+                <a href="lab05_statistical_models.html" class="next-lab">Statistical Models</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

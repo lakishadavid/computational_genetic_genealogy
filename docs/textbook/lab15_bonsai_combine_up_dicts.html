@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 15: The combine_up_dicts() Algorithm | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>The combine_up_dicts() Algorithm: Scaling to Larger Pedigrees</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab15_bonsai_combine_up_dicts.html" class="active">Lab 15: The combine_up_dicts() Algorithm</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 15: The combine_up_dicts() Algorithm</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the <code>combine_up_dicts()</code> algorithm, the central mechanism in Bonsai v3 for scaling from small pedigree structures to larger ones. This algorithm is essential for reconstructing complex family networks by systematically merging smaller pedigree units through an iterative, likelihood-based approach.</p>
+            </div>
+
+            <h3>Scaling from Small to Large Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>The Challenge of Large-Scale Pedigree Reconstruction</h4>
+                <p>Reconstructing large pedigrees presents significant challenges:</p>
+                
+                <ol>
+                    <li><strong>Combinatorial Explosion:</strong> The number of possible pedigree configurations grows exponentially with the number of individuals</li>
+                    <li><strong>Computational Constraints:</strong> Directly optimizing large pedigrees would require prohibitive computational resources</li>
+                    <li><strong>Incomplete Data:</strong> Real-world genetic data often contains missing information and measurement errors</li>
+                    <li><strong>Conflicting Evidence:</strong> Different pieces of genetic evidence might suggest incompatible relationships</li>
+                </ol>
+                
+                <p>To address these challenges, Bonsai v3 implements a bottom-up, incremental approach through the <code>combine_up_dicts()</code> function. This function, found in <code>utils/bonsaitree/bonsaitree/v3/connections.py</code>, lies at the heart of Bonsai's ability to scale from small pedigree structures to more complex family networks.</p>
+                
+                <pre><code>def combine_up_dicts(
+    id_to_up_dct: dict[int, dict[int, dict[int, int]]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    n_keep: int = 5,
+    id_set_to_exclude: set[int] = None,
+):
+    """
+    Combine all pedigrees in id_to_up_dct incrementally.
+    
+    Args:
+        id_to_up_dct: Dictionary mapping IDs to their up-node dictionaries
+        id_to_shared_ibd: Dictionary mapping pairs of IDs to their IBD segments
+        id_to_info: Dictionary with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        n_keep: Number of top pedigrees to keep at each step
+        id_set_to_exclude: Set of IDs to exclude from combination
+        
+    Returns:
+        List of optimized pedigrees with their likelihoods
+    """
+    # Core algorithm implementation...</code></pre>
+                
+                <p>This function orchestrates the pedigree merging process, addressing the scaling challenges through several key strategies:</p>
+                
+                <ul>
+                    <li><strong>Divide and Conquer:</strong> Breaking the large problem into smaller, more manageable subproblems (small pedigrees)</li>
+                    <li><strong>Greedy Merging:</strong> Iteratively combining the pedigrees with the strongest genetic connections first</li>
+                    <li><strong>Hypothesis Tracking:</strong> Maintaining multiple candidate pedigrees to avoid local optima</li>
+                    <li><strong>Intelligent Pruning:</strong> Focusing computational resources on the most promising pedigree configurations</li>
+                </ul>
+                
+                <p>By following this incremental approach, Bonsai v3 can reconstruct large-scale pedigrees that would be computationally infeasible to optimize directly.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>The Iteration Process: Finding and Merging Pedigrees</h4>
+                <p>The core of <code>combine_up_dicts()</code> is an iterative process that repeatedly identifies and merges the most closely related pedigrees until all individuals are connected or no more reliable connections can be made. This process involves several key steps:</p>
+                
+                <pre><code>def combine_up_dicts(...):
+    # ... initialization code ...
+    
+    # Main iteration loop
+    while len(idx_to_up_dict_ll_list) > 1:
+        # Find closest pedigrees to merge based on IBD sharing
+        idx1, idx2 = find_closest_pedigrees(
+            idx_to_id_set=idx_to_id_set,
+            id_to_shared_ibd=id_to_shared_ibd,
+            min_cm=min_cm,
+        )
+        
+        # If no more pedigrees can be connected, break
+        if idx1 is None or idx2 is None:
+            break
+            
+        # Get list of pedigrees to combine
+        up_dict_ll_list1 = idx_to_up_dict_ll_list[idx1]
+        up_dict_ll_list2 = idx_to_up_dict_ll_list[idx2]
+        
+        # Try all combinations of pedigrees
+        all_combined = []
+        for up_dict1, ll1 in up_dict_ll_list1:
+            for up_dict2, ll2 in up_dict_ll_list2:
+                # Find optimal way to connect these pedigrees
+                combined_list = combine_pedigrees(
+                    up_dct1=up_dict1,
+                    up_dct2=up_dict2,
+                    id_to_shared_ibd=id_to_shared_ibd,
+                    id_to_info=id_to_info,
+                    pw_ll=pw_ll,
+                    max_up=max_up,
+                    keep_num=n_keep,
+                    return_many=True,
+                )
+                
+                # Add all combined pedigrees to the list
+                all_combined.extend([(ped, ll1 + ll2 + new_ll) 
+                                     for ped, new_ll in combined_list])
+        
+        # Keep only top n_keep combined pedigrees
+        all_combined.sort(key=lambda x: x[1], reverse=True)
+        kept_combined = all_combined[:n_keep]
+        
+        # Merge pedigree tracking structures
+        # ... update idx_to_up_dict_ll_list, id_to_idx, idx_to_id_set ...
+    
+    # Return the final list of pedigrees with likelihoods
+    return idx_to_up_dict_ll_list[0]</code></pre>
+                
+                <p>The key steps in this iteration process are:</p>
+                
+                <ol>
+                    <li><strong>Finding the Closest Pedigrees:</strong> The <code>find_closest_pedigrees()</code> function identifies which pedigrees share the most IBD and should be merged next. This prioritizes merging the most closely related pedigrees first.</li>
+                    <li><strong>Trying All Combinations:</strong> For each pedigree in the first set and each pedigree in the second set, Bonsai tries to combine them using <code>combine_pedigrees()</code>.</li>
+                    <li><strong>Evaluating Connection Options:</strong> When combining pedigrees, Bonsai explores various connection points and relationship types to find the optimal configuration.</li>
+                    <li><strong>Pruning Hypotheses:</strong> After all combinations are evaluated, only the top <code>n_keep</code> pedigrees with the highest likelihoods are retained for the next iteration.</li>
+                    <li><strong>Updating Tracking Structures:</strong> The pedigree tracking data structures are updated to reflect the merged pedigrees, and the process repeats until all pedigrees are connected or no more connections are possible.</li>
+                </ol>
+                
+                <p>This iterative approach allows Bonsai v3 to build complex pedigrees piece by piece, focusing computational resources on the most promising configurations at each step.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Finding the Optimal Connection Points</h4>
+                <p>A critical component of the <code>combine_up_dicts()</code> algorithm is finding the optimal way to connect two pedigrees. This is handled by the <code>combine_pedigrees()</code> function, which systematically explores different connection options:</p>
+                
+                <pre><code>def combine_pedigrees(
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    keep_num: int = 3,
+    return_many: bool = False,
+):
+    """
+    Combine two pedigrees into one, using IBD sharing to guide the connection.
+    """
+    # Find pairs of individuals that connect the pedigrees
+    con_pairs = find_connecting_pairs(
+        up_dct1=up_dct1,
+        up_dct2=up_dct2,
+        id_to_shared_ibd=id_to_shared_ibd,
+    )
+    
+    if not con_pairs:
+        return None if not return_many else []
+    
+    # Get all possible connection points in each pedigree
+    con_pts1 = get_possible_connection_point_set(up_dct1)
+    con_pts2 = get_possible_connection_point_set(up_dct2)
+    
+    # Restrict to connection points involving individuals with IBD
+    con_pts1 = restrict_connection_point_set(up_dct1, con_pts1, 
+                                          [id1 for id1, _ in con_pairs])
+    con_pts2 = restrict_connection_point_set(up_dct2, con_pts2, 
+                                          [id2 for _, id2 in con_pairs])
+    
+    # Try different ways to connect the pedigrees
+    all_combined = []
+    for (id1, id2) in con_pairs:
+        # Find connection points that involve these IDs
+        rel_pts1 = [pt for pt in con_pts1 if pt[0] == id1]
+        rel_pts2 = [pt for pt in con_pts2 if pt[0] == id2]
+        
+        # Try each pair of connection points
+        for cp1 in rel_pts1:
+            for cp2 in rel_pts2:
+                # Try different relationship configurations
+                for up in range(max_up + 1):
+                    for down in range(max_up + 1):
+                        if up + down > max_up:
+                            continue
+                            
+                        # Try both 1 and 2 ancestors
+                        for num_ancs in [1, 2]:
+                            # Connect the pedigrees
+                            combs = connect_pedigrees_through_points(
+                                id1=cp1[0], 
+                                id2=cp2[0],
+                                pid1=cp1[1], 
+                                pid2=cp2[1],
+                                up_dct1=up_dct1, 
+                                up_dct2=up_dct2,
+                                deg1=up, 
+                                deg2=down,
+                                num_ancs=num_ancs,
+                            )
+                            
+                            # Evaluate each combination
+                            for comb in combs:
+                                ll = get_ped_like(
+                                    up_dct=comb,
+                                    id_to_shared_ibd=id_to_shared_ibd,
+                                    id_to_info=id_to_info,
+                                    pw_ll=pw_ll,
+                                )
+                                
+                                all_combined.append((comb, ll))
+    
+    # Sort by likelihood and return
+    all_combined.sort(key=lambda x: x[1], reverse=True)
+    return all_combined[:keep_num] if return_many else all_combined[0][0]</code></pre>
+                
+                <p>This function systematically explores the space of possible connections between two pedigrees:</p>
+                
+                <ol>
+                    <li><strong>Identifying Connection Candidates:</strong> Bonsai identifies pairs of individuals (one from each pedigree) who share IBD segments, making them candidates for connection.</li>
+                    <li><strong>Finding Connection Points:</strong> Using <code>get_possible_connection_point_set()</code>, Bonsai identifies all possible points in each pedigree where connections can be made.</li>
+                    <li><strong>Restricting to Relevant Points:</strong> Connection points are filtered to focus on those involving individuals who share IBD, reducing the search space.</li>
+                    <li><strong>Systematic Exploration:</strong> Bonsai then systematically tries different connection configurations by varying:
+                        <ul>
+                            <li>The number of generations up from the first individual (<code>up</code>)</li>
+                            <li>The number of generations down from the second individual (<code>down</code>)</li>
+                            <li>The number of common ancestors (<code>num_ancs</code>)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Evaluation:</strong> Each combined pedigree is evaluated using <code>get_ped_like()</code> to calculate its likelihood given the observed IBD data.</li>
+                    <li><strong>Ranking:</strong> Combinations are ranked by likelihood, and the top <code>keep_num</code> are returned.</li>
+                </ol>
+                
+                <p>This systematic approach allows Bonsai v3 to find the most likely way to connect pedigrees, even when there are multiple plausible connection options.</p>
+            </div>
+
+            <h3>Tracking and Merging Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Pedigree Tracking Data Structures</h4>
+                <p>To efficiently manage the pedigree merging process, Bonsai v3 maintains several data structures that track which individuals belong to which pedigrees and how multiple pedigree hypotheses are evaluated:</p>
+                
+                <pre><code>def combine_up_dicts(...):
+    # Initialize pedigree tracking structures
+    idx_to_up_dict_ll_list = {}  # Maps pedigree indices to lists of (pedigree, log-likelihood) pairs
+    id_to_idx = {}               # Maps individual IDs to their pedigree index
+    idx_to_id_set = {}           # Maps pedigree indices to sets of contained individual IDs
+    
+    # Initialize with individual pedigrees
+    for i, (id_val, up_dict) in enumerate(id_to_up_dct.items()):
+        if id_set_to_exclude and id_val in id_set_to_exclude:
+            continue
+            
+        idx_to_up_dict_ll_list[i] = [(up_dict, 0.0)]  # Initial likelihood = 0
+        id_to_idx[id_val] = i
+        idx_to_id_set[i] = {id_val}
+    
+    # Merging operations update these structures
+    # ... main iteration loop ...
+    
+    # After finding closest pedigrees and combining them:
+    
+    # Create new index for merged pedigree
+    new_idx = max(idx_to_up_dict_ll_list.keys()) + 1
+    
+    # Store combined pedigrees under new index
+    idx_to_up_dict_ll_list[new_idx] = kept_combined
+    
+    # Update id_to_idx for all individuals in merged pedigrees
+    id_set1 = idx_to_id_set[idx1]
+    id_set2 = idx_to_id_set[idx2]
+    merged_id_set = id_set1.union(id_set2)
+    
+    for id_val in merged_id_set:
+        id_to_idx[id_val] = new_idx
+        
+    # Update idx_to_id_set with merged set
+    idx_to_id_set[new_idx] = merged_id_set
+    
+    # Remove old pedigree records
+    del idx_to_up_dict_ll_list[idx1]
+    del idx_to_up_dict_ll_list[idx2]
+    del idx_to_id_set[idx1]
+    del idx_to_id_set[idx2]</code></pre>
+                
+                <p>These data structures serve several important purposes:</p>
+                
+                <ul>
+                    <li><strong>Multiple Hypothesis Tracking:</strong> For each pedigree index, <code>idx_to_up_dict_ll_list</code> maintains multiple candidate pedigrees with their likelihoods, allowing Bonsai to consider alternative hypotheses.</li>
+                    <li><strong>Individual-to-Pedigree Mapping:</strong> The <code>id_to_idx</code> dictionary enables efficient lookup of which pedigree contains a given individual.</li>
+                    <li><strong>Pedigree Membership Tracking:</strong> The <code>idx_to_id_set</code> dictionary allows Bonsai to quickly determine which individuals are in a given pedigree.</li>
+                </ul>
+                
+                <p>When pedigrees are merged, these data structures are updated accordingly:</p>
+                
+                <ol>
+                    <li>A new pedigree index is created for the merged pedigree</li>
+                    <li>The combined pedigrees are stored under this new index</li>
+                    <li>Individual-to-pedigree mappings are updated to reflect the merger</li>
+                    <li>The old pedigree records are removed</li>
+                </ol>
+                
+                <p>This efficient tracking system allows Bonsai v3 to manage complex pedigree merging operations while maintaining multiple hypotheses about the optimal pedigree structure.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Merging the Physical Pedigrees</h4>
+                <p>While the tracking data structures manage the logical organization of pedigrees, the actual merging of physical pedigree structures is handled by the <code>connect_pedigrees_through_points()</code> function:</p>
+                
+                <pre><code>def connect_pedigrees_through_points(
+    id1 : int,
+    id2 : int,
+    pid1 : Optional[int],
+    pid2 : Optional[int],
+    up_dct1 : dict[int, dict[int, int]],
+    up_dct2 : dict[int, dict[int, int]],
+    deg1 : int,
+    deg2 : int,
+    num_ancs : int,
+    simple : bool=True,
+):
+    """
+    Connect up_dct1 to up_dct2 through points id1 in up_dct1
+    and id2 in up_dct2. Also connect through partner points
+    pid1 and pid2, if indicated. Connect id1 to id2 through
+    a relationship specified by (deg1, deg2, num_ancs).
+    """
+    # Validate connection parameters
+    if deg1 == deg2 == 0 and (id1 > 0 and id2 > 0) and id1 != id2:
+        return []  # Can't connect directly on different genotyped individuals
+    
+    if deg1 == deg2 == 0 and (pid1 != pid2):
+        if pid1 is None or pid2 is None:
+            return []
+        elif pid1 > 0 and pid2 > 0:
+            return []  # Can't connect on genotyped partners
+    
+    # Make copies to avoid modifying originals
+    up_dct1 = copy.deepcopy(up_dct1)
+    up_dct2 = copy.deepcopy(up_dct2)
+    
+    # Extend lineages upward if needed
+    if deg1 > 0:
+        up_dct1, _, id1, pid1 = extend_up(
+            iid=id1,
+            deg=deg1,
+            num_ancs=num_ancs,
+            up_dct=up_dct1,
+        )
+    
+    if deg2 > 0:
+        up_dct2, _, id2, pid2 = extend_up(
+            iid=id2,
+            deg=deg2,
+            num_ancs=num_ancs,
+            up_dct=up_dct2,
+        )
+    
+    # Shift IDs in up_dct2 to avoid conflicts
+    min_id = get_min_id(up_dct1) - 1
+    up_dct2, id_map = shift_ids(
+        ped=up_dct2,
+        shift=min_id,
+    )
+    id2 = id_map.get(id2, id2)
+    pid2 = id_map.get(pid2, pid2)
+    
+    # Create ID mapping for connection
+    if simple:
+        if (pid1 is not None) and (pid2 is not None):
+            id_map_list = [
+                {id1 : id2, pid1 : pid2}
+            ]
+        else:
+            id_map_list = [
+                {id1 : id2}
+            ]
+    else:
+        id_map_list = get_all_matches(
+            id1=id1,
+            id2=id2,
+            pid1=pid1,
+            pid2=pid2,
+            up_dct1=up_dct1,
+            up_dct2=up_dct2,
+        )
+    
+    # Connect pedigrees using ID mapping
+    connect_dct_list = []
+    for id_map in id_map_list:
+        up_dct = connect_on(
+            id_map=id_map,
+            up_dct1=up_dct1,
+            up_dct2=up_dct2,
+        )
+        connect_dct_list.append(up_dct)
+    
+    return connect_dct_list</code></pre>
+                
+                <p>This function handles the intricate process of physically merging two pedigree structures through specified connection points. The key steps are:</p>
+                
+                <ol>
+                    <li><strong>Validation:</strong> Ensuring the connection is biologically plausible (e.g., can't connect directly on different genotyped individuals).</li>
+                    <li><strong>Lineage Extension:</strong> Using <code>extend_up()</code> to add ancestors if the connection requires multiple generations.</li>
+                    <li><strong>ID Management:</strong> Shifting IDs in the second pedigree to avoid conflicts with the first pedigree.</li>
+                    <li><strong>Connection Mapping:</strong> Creating a mapping between IDs in the two pedigrees that specifies how they should be connected.</li>
+                    <li><strong>Physical Merging:</strong> Using <code>connect_on()</code> to physically merge the pedigrees based on the ID mapping.</li>
+                </ol>
+                
+                <p>The actual connection is performed by <code>connect_on()</code>, which merges two pedigrees based on an ID mapping:</p>
+                
+                <pre><code>def connect_on(
+    id_map: dict[int, int],
+    up_dct1: dict[int, dict[int, int]],
+    up_dct2: dict[int, dict[int, int]],
+):
+    """
+    Connect up_dct1 to up_dct2 based on id_map.
+    Map values in up_dct1 to keys in up_dct2.
+    """
+    # Create result pedigree starting with all of up_dct1
+    result = copy.deepcopy(up_dct1)
+    
+    # Add all nodes from up_dct2 not in the mapping
+    for node2, parents2 in up_dct2.items():
+        # Skip nodes that are values in the mapping
+        if node2 in id_map.values():
+            continue
+            
+        # Add node if not already in result
+        if node2 not in result:
+            result[node2] = {}
+            
+        # Add parents, mapping them if necessary
+        for parent2, deg2 in parents2.items():
+            mapped_parent = next((k for k, v in id_map.items() if v == parent2), parent2)
+            result[node2][mapped_parent] = deg2
+    
+    # Connect nodes that are mapped
+    for node1, node2 in id_map.items():
+        # Transfer parents from node2 to node1
+        for parent2, deg2 in up_dct2.get(node2, {}).items():
+            mapped_parent = next((k for k, v in id_map.items() if v == parent2), parent2)
+            result[node1][mapped_parent] = deg2
+            
+        # Make node1 a parent for all children of node2
+        for child2, parents2 in up_dct2.items():
+            if node2 in parents2 and child2 not in id_map.values():
+                if child2 not in result:
+                    result[child2] = {}
+                result[child2][node1] = parents2[node2]
+    
+    return result</code></pre>
+                
+                <p>This function handles the details of merging pedigrees at the structural level:</p>
+                
+                <ul>
+                    <li>It creates a new pedigree that includes all nodes from the first pedigree</li>
+                    <li>It adds nodes from the second pedigree that aren't part of the connection mapping</li>
+                    <li>It transfers parents and children between the mapped nodes to create the merged structure</li>
+                </ul>
+                
+                <p>Through this process, Bonsai v3 can physically merge pedigree structures in various ways, exploring different connection configurations to find the most likely explanation for the observed genetic data.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Evaluating Merged Pedigrees</h4>
+                <p>After merging pedigrees, Bonsai v3 evaluates the likelihood of the resulting structure to determine if it provides a good explanation for the observed genetic data. This evaluation is performed by the <code>get_ped_like()</code> function:</p>
+                
+                <pre><code>def get_ped_like(
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+):
+    """
+    Calculate the log-likelihood of a pedigree given IBD data.
+    """
+    log_like = 0.0
+    
+    # Get all genotyped individuals in the pedigree
+    all_ids = get_all_id_set(up_dct)
+    gen_ids = [i for i in all_ids if i > 0]  # Genotyped IDs are positive
+    
+    # For each pair of genotyped individuals
+    for i in range(len(gen_ids)):
+        id1 = gen_ids[i]
+        for j in range(i+1, len(gen_ids)):
+            id2 = gen_ids[j]
+            
+            # Skip if no IBD data for this pair
+            pair = (min(id1, id2), max(id1, id2))
+            if pair not in id_to_shared_ibd:
+                continue
+                
+            # Get IBD data for this pair
+            ibd_segs = id_to_shared_ibd[pair]
+            
+            # Get relationship from pedigree
+            rel_tuple = get_simple_rel_tuple(up_dct, id1, id2)
+            
+            # Calculate likelihood of this relationship given IBD
+            pair_ll = pw_ll.get_ibd_log_like(
+                id1=id1,
+                id2=id2,
+                rel_tuple=rel_tuple,
+                ibd_segs=ibd_segs,
+            )
+            
+            # Add to total log-likelihood
+            log_like += pair_ll
+    
+    # Add age-based likelihood component
+    age_ll = get_age_log_like(up_dct, id_to_info)
+    log_like += age_ll
+    
+    # Add structural likelihood component
+    struct_ll = get_structural_log_like(up_dct)
+    log_like += struct_ll
+    
+    return log_like</code></pre>
+                
+                <p>This function calculates the total log-likelihood of a pedigree by:</p>
+                
+                <ol>
+                    <li><strong>Identifying Genotyped Pairs:</strong> Finding all pairs of genotyped individuals in the pedigree.</li>
+                    <li><strong>Determining Relationships:</strong> Using <code>get_simple_rel_tuple()</code> to determine the relationship implied by the pedigree for each pair.</li>
+                    <li><strong>Calculating Genetic Likelihood:</strong> Using <code>pw_ll.get_ibd_log_like()</code> to calculate how well the relationship explains the observed IBD data.</li>
+                    <li><strong>Adding Age Constraints:</strong> Incorporating age-based constraints through <code>get_age_log_like()</code>.</li>
+                    <li><strong>Adding Structural Penalties:</strong> Including penalties for structurally implausible pedigrees through <code>get_structural_log_like()</code>.</li>
+                </ol>
+                
+                <p>The total log-likelihood provides a principled measure of how well a pedigree explains the observed genetic data while respecting biological constraints. This allows Bonsai v3 to compare different pedigree structures and select the most plausible explanation for the observed data.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> The <code>combine_up_dicts()</code> algorithm is fundamental to Bonsai v3's ability to scale from small pedigree structures to larger ones. By systematically merging pedigrees based on IBD sharing and evaluating the likelihood of different connection configurations, this algorithm enables the reconstruction of complex family networks that would be computationally infeasible to optimize directly. The iterative, likelihood-based approach allows Bonsai to build accurate pedigrees even in the presence of noise, missing data, and ambiguous relationships.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Bonsai v3</h3>
+            
+            <p>The Lab15 notebook explores the <code>combine_up_dicts()</code> algorithm through simplified implementations and examples. While the notebook provides an educational introduction to the key concepts, the actual Bonsai v3 implementation includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Parallel Hypothesis Tracking:</strong> The production code maintains multiple candidate pedigrees in parallel, allowing Bonsai to explore multiple hypotheses simultaneously.</li>
+                <li><strong>Sophisticated ID Management:</strong> The real implementation includes robust mechanisms for shifting and mapping IDs to avoid conflicts during pedigree merging.</li>
+                <li><strong>Comprehensive Likelihood Evaluation:</strong> The production code includes more detailed likelihood calculations that account for various types of genetic and non-genetic evidence.</li>
+                <li><strong>Optimization Heuristics:</strong> The real implementation includes various heuristics to efficiently prune the search space and focus on promising configurations.</li>
+                <li><strong>Debug Visualization:</strong> The production code includes optional visualization features for debugging and analysis of the merging process.</li>
+            </ul>
+            
+            <p>The differences reflect the balance between educational clarity and production-ready robustness. The notebook provides a conceptual understanding of the algorithm, while the production implementation handles the full complexity of real-world pedigree reconstruction tasks.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 15 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab15_Combine_Up_Dicts.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                        <p><strong>Important:</strong> This notebook will be available when Lab15 is added to the labs_v2 directory.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab15_Combine_Up_Dicts.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 15 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore the <code>combine_up_dicts()</code> algorithm, consider these broader implications:</p>
+            <ul>
+                <li><strong>Computational Challenges:</strong> The combinatorial explosion in pedigree reconstruction and how divide-and-conquer approaches address these challenges</li>
+                <li><strong>Probabilistic Reasoning:</strong> How likelihood-based methods can navigate uncertainty in genetic data and family relationships</li>
+                <li><strong>Biological Constraints:</strong> The importance of incorporating domain knowledge about biological constraints in pedigree reconstruction</li>
+                <li><strong>Historical Applications:</strong> How these methods can be applied to reconstruct historical family networks from limited genetic data</li>
+                <li><strong>Algorithmic Trade-offs:</strong> The balance between exhaustive search and computational efficiency in large-scale applications</li>
+            </ul>
+            <p>These considerations highlight how the <code>combine_up_dicts()</code> algorithm bridges theoretical computer science, statistical genetics, and practical genealogy applications, making it a fascinating example of interdisciplinary computational methods.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationship Assessment</h5>
+                        <p>Lab 12</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Small Pedigrees</h5>
+                        <p>Lab 13</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Optimizing Pedigrees</h5>
+                        <p>Lab 14</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Combine Up Dicts</h5>
+                        <p>Lab 15</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab14_optimizing_pedigrees.html" class="prev-lab">Optimizing Pedigrees</a>
+                <a href="lab16_merging_pedigrees.html" class="next-lab">Merging Pedigrees</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

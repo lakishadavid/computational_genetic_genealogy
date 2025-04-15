@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 17: Incremental Individual Addition | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Incremental Individual Addition Strategies</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab17_incremental_addition.html" class="active">Lab 17: Incremental Addition</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 17: Incremental Individual Addition Strategies</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 efficiently adds new individuals to existing pedigrees one at a time, rather than rebuilding the entire structure. These incremental addition strategies are critical for performance when working with large datasets and for updating pedigrees as new genetic data becomes available.</p>
+            </div>
+
+            <h3>The Challenge of Incremental Addition</h3>
+            
+            <div class="concept-section">
+                <h4>Why Incremental Addition Matters</h4>
+                <p>In real-world genetic genealogy applications, data often arrives incrementally. New individuals may take DNA tests and need to be placed in an existing family structure without recomputing the entire pedigree. Bonsai v3 addresses this challenge through specialized functions that efficiently find optimal placement for new individuals within existing pedigrees.</p>
+                
+                <p>The key advantages of incremental addition include:</p>
+                
+                <ol>
+                    <li><strong>Computational Efficiency:</strong> Adding one individual is much faster than rebuilding an entire pedigree</li>
+                    <li><strong>Stability:</strong> Existing relationships in the pedigree remain stable as new individuals are added</li>
+                    <li><strong>Scalability:</strong> The approach can handle continuous addition of new individuals over time</li>
+                    <li><strong>Real-time Updates:</strong> Results can be updated promptly as new data becomes available</li>
+                </ol>
+                
+                <p>The core of this functionality in Bonsai v3 is the <code>add_individual_to_pedigree</code> function:</p>
+                
+                <pre><code>def add_individual_to_pedigree(
+    id_val: int,
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    n_keep: int = 5,
+    return_only_best: bool = True,
+):
+    """
+    Add a single individual to an existing pedigree.
+    
+    Args:
+        id_val: ID of the individual to add
+        up_dct: Up-node dictionary representing the existing pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        n_keep: Number of top pedigrees to keep
+        return_only_best: Whether to return only the best pedigree
+        
+    Returns:
+        List of (pedigree, likelihood) pairs or just the best one
+    """
+    # Actual implementation details...</code></pre>
+                
+                <p>This function orchestrates the process of finding the optimal way to add a new individual to an existing pedigree. It evaluates different potential connection points and relationship configurations, much like the pedigree merging process we saw previously, but optimized for the single-individual case.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Finding Potential Connection Points</h4>
+                <p>The first step in adding a new individual to a pedigree is to identify potential connection points. This is handled by the <code>find_potential_connection_points</code> function:</p>
+                
+                <pre><code>def find_potential_connection_points(
+    id_val: int,
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+):
+    """
+    Find potential points for connecting a new individual to a pedigree.
+    
+    Args:
+        id_val: ID of the individual to add
+        up_dct: Up-node dictionary representing the existing pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        
+    Returns:
+        connection_points: List of (existing_id, ibd_amount) tuples
+    """
+    # Find individuals in the pedigree who share IBD with the new individual
+    connection_points = []
+    for id_pair, segments in id_to_shared_ibd.items():
+        # Check if one of the IDs is the new individual
+        if id_val not in id_pair:
+            continue
+            
+        # Get the other ID
+        other_id = id_pair[0] if id_pair[1] == id_val else id_pair[1]
+        
+        # Check if the other ID is in the pedigree
+        if other_id in up_dct:
+            # Calculate total shared IBD
+            total_cm = sum(seg['length_cm'] for seg in segments)
+            
+            # Add to connection points
+            connection_points.append((other_id, total_cm))
+    
+    # Sort by amount of IBD sharing (descending)
+    connection_points.sort(key=lambda x: x[1], reverse=True)
+    
+    return connection_points</code></pre>
+                
+                <p>This function identifies individuals in the existing pedigree who share IBD with the new individual. These individuals form the potential connection points through which the new individual can be added to the pedigree. The function sorts these connection points by the amount of IBD sharing, prioritizing stronger genetic connections.</p>
+                
+                <p>The key insight here is that individuals who share more IBD with the new individual are likely to be more closely related, making them better candidates for connection points. By focusing on these high-IBD connections first, Bonsai can often find the optimal placement more efficiently.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Evaluating Different Placement Options</h4>
+                <p>Once potential connection points are identified, Bonsai v3 evaluates different options for adding the new individual to the pedigree. This involves determining the optimal relationship between the new individual and existing individuals in the pedigree.</p>
+                
+                <p>The <code>evaluate_placement_options</code> function handles this process:</p>
+                
+                <pre><code>def evaluate_placement_options(
+    id_val: int,
+    connection_points: list[tuple[int, float]],
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+):
+    """
+    Evaluate different options for placing a new individual in a pedigree.
+    
+    Args:
+        id_val: ID of the individual to add
+        connection_points: List of (existing_id, ibd_amount) tuples
+        up_dct: Up-node dictionary representing the existing pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        
+    Returns:
+        placement_options: List of (up_dct_new, likelihood) tuples
+    """
+    placement_options = []
+    
+    # Get demographic information for the new individual
+    new_info = id_to_info.get(id_val, {})
+    
+    # For each potential connection point
+    for existing_id, _ in connection_points:
+        # Get demographic information for the existing individual
+        existing_info = id_to_info.get(existing_id, {})
+        
+        # Get IBD segments between the individuals
+        pair = (min(id_val, existing_id), max(id_val, existing_id))
+        ibd_segs = id_to_shared_ibd.get(pair, [])
+        
+        # Get potential relationship configurations
+        rel_configs = get_connection_degs_and_log_likes(
+            id1=id_val,
+            id2=existing_id,
+            id_to_shared_ibd=id_to_shared_ibd,
+            id_to_info=id_to_info,
+            pw_ll=pw_ll,
+            max_up=max_up,
+        )
+        
+        # For each potential relationship configuration
+        for up, down, num_ancs, log_like in rel_configs:
+            # Create a new version of the pedigree with this relationship
+            up_dct_new = add_with_relationship(
+                id_val=id_val,
+                existing_id=existing_id,
+                up_dct=up_dct,
+                up=up,
+                down=down,
+                num_ancs=num_ancs,
+            )
+            
+            # Calculate total likelihood of the new pedigree
+            total_likelihood = calculate_pedigree_likelihood(
+                up_dct_new,
+                id_to_shared_ibd,
+                id_to_info,
+                pw_ll,
+            )
+            
+            # Add to placement options
+            placement_options.append((up_dct_new, total_likelihood))
+    
+    # Sort by likelihood (descending)
+    placement_options.sort(key=lambda x: x[1], reverse=True)
+    
+    return placement_options</code></pre>
+                
+                <p>This function systematically evaluates different ways to add the new individual to the pedigree, considering various relationship configurations with each potential connection point. It calculates the likelihood of each resulting pedigree and ranks them, allowing Bonsai to identify the most probable placement for the new individual.</p>
+                
+                <p>The key steps in this process are:</p>
+                
+                <ol>
+                    <li>For each potential connection point, identify possible relationship configurations</li>
+                    <li>For each relationship configuration, create a new version of the pedigree</li>
+                    <li>Calculate the likelihood of each resulting pedigree</li>
+                    <li>Rank the pedigrees by likelihood</li>
+                </ol>
+                
+                <p>This approach allows Bonsai to efficiently explore the space of possible placements for the new individual and identify the most probable one based on genetic evidence.</p>
+            </div>
+
+            <h3>Implementing the Addition</h3>
+            
+            <div class="concept-section">
+                <h4>Adding Individuals with Different Relationship Types</h4>
+                <p>Once the optimal relationship configuration is identified, Bonsai v3 needs to physically add the new individual to the pedigree with that relationship. The <code>add_with_relationship</code> function handles this:</p>
+                
+                <pre><code>def add_with_relationship(
+    id_val: int,
+    existing_id: int,
+    up_dct: dict[int, dict[int, int]],
+    up: int,
+    down: int,
+    num_ancs: int,
+):
+    """
+    Add a new individual to a pedigree with a specific relationship.
+    
+    Args:
+        id_val: ID of the individual to add
+        existing_id: ID of the existing individual to connect to
+        up_dct: Up-node dictionary representing the existing pedigree
+        up, down, num_ancs: Relationship parameters
+        
+    Returns:
+        up_dct_new: Updated pedigree with the new individual
+    """
+    # Create a copy of the existing pedigree
+    up_dct_new = copy.deepcopy(up_dct)
+    
+    # Ensure the new individual exists in the pedigree
+    if id_val not in up_dct_new:
+        up_dct_new[id_val] = {}
+    
+    # Handle different relationship types
+    if up == 0 and down == 1:  # id_val is parent of existing_id
+        # Add id_val as parent of existing_id
+        up_dct_new[existing_id][id_val] = 1
+        
+    elif up == 1 and down == 0:  # existing_id is parent of id_val
+        # Add existing_id as parent of id_val
+        up_dct_new[id_val][existing_id] = 1
+        
+    elif up == 1 and down == 1:  # Siblings
+        # Get existing parents of existing_id
+        existing_parents = list(up_dct_new.get(existing_id, {}).keys())
+        
+        if num_ancs == 1:  # Half siblings
+            # Need at least one parent to create half siblings
+            if existing_parents:
+                shared_parent = existing_parents[0]
+                up_dct_new[id_val][shared_parent] = 1
+            else:
+                # Create a new ungenotyped parent
+                new_parent_id = get_min_id(up_dct_new) - 1
+                up_dct_new[existing_id][new_parent_id] = 1
+                up_dct_new[id_val][new_parent_id] = 1
+                up_dct_new[new_parent_id] = {}
+                
+        elif num_ancs == 2:  # Full siblings
+            # Need two parents to create full siblings
+            if len(existing_parents) >= 2:
+                parent1, parent2 = existing_parents[:2]
+                up_dct_new[id_val][parent1] = 1
+                up_dct_new[id_val][parent2] = 1
+            elif len(existing_parents) == 1:
+                # Use the existing parent and create a new one
+                shared_parent = existing_parents[0]
+                new_parent_id = get_min_id(up_dct_new) - 1
+                up_dct_new[existing_id][new_parent_id] = 1
+                up_dct_new[id_val][shared_parent] = 1
+                up_dct_new[id_val][new_parent_id] = 1
+                up_dct_new[new_parent_id] = {}
+            else:
+                # Create two new ungenotyped parents
+                parent1_id = get_min_id(up_dct_new) - 1
+                parent2_id = parent1_id - 1
+                up_dct_new[existing_id][parent1_id] = 1
+                up_dct_new[existing_id][parent2_id] = 1
+                up_dct_new[id_val][parent1_id] = 1
+                up_dct_new[id_val][parent2_id] = 1
+                up_dct_new[parent1_id] = {}
+                up_dct_new[parent2_id] = {}
+                
+    else:  # More distant relationships
+        # Handle more complex relationships through common ancestors
+        # Create ancestry chains as needed
+        # ... (implementation details for more distant relationships)
+    
+    return up_dct_new</code></pre>
+                
+                <p>This function implements the physical addition of a new individual to the pedigree with a specific relationship to an existing individual. It handles various relationship types, including:</p>
+                
+                <ul>
+                    <li><strong>Parent-Child:</strong> Adding the new individual as a parent or child of an existing individual</li>
+                    <li><strong>Siblings:</strong> Adding the new individual as a half or full sibling of an existing individual</li>
+                    <li><strong>More Distant Relationships:</strong> Adding the new individual with more complex relationships that involve common ancestors</li>
+                </ul>
+                
+                <p>For sibling relationships, the function attempts to reuse existing parents when available, or creates new ungenotyped parents as needed. This approach ensures that the resulting pedigree remains consistent with all previously established relationships while properly incorporating the new individual.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Maintaining Multiple Hypotheses</h4>
+                <p>An important aspect of Bonsai v3's incremental addition strategy is the maintenance of multiple hypotheses about how a new individual might fit into the pedigree. This approach allows Bonsai to avoid getting stuck in local optima and explore different placement possibilities.</p>
+                
+                <p>The <code>select_best_placements</code> function handles this aspect:</p>
+                
+                <pre><code>def select_best_placements(
+    placement_options: list[tuple[dict, float]],
+    n_keep: int = 5,
+):
+    """
+    Select the top placement options to keep.
+    
+    Args:
+        placement_options: List of (pedigree, likelihood) pairs
+        n_keep: Number of top options to keep
+        
+    Returns:
+        best_placements: List of top (pedigree, likelihood) pairs
+    """
+    # Filter out any invalid pedigrees
+    valid_options = [(ped, ll) for ped, ll in placement_options if is_valid_pedigree(ped)]
+    
+    # Sort by likelihood (descending)
+    valid_options.sort(key=lambda x: x[1], reverse=True)
+    
+    # Keep only the top n_keep options
+    best_placements = valid_options[:n_keep]
+    
+    return best_placements</code></pre>
+                
+                <p>This function selects the top <code>n_keep</code> placement options from all the evaluated possibilities. By maintaining multiple hypotheses, Bonsai can:</p>
+                
+                <ol>
+                    <li>Explore different possible placements for the new individual</li>
+                    <li>Compare these placements based on their likelihoods</li>
+                    <li>Select the most probable placement while keeping alternative possibilities</li>
+                </ol>
+                
+                <p>This approach is particularly valuable when the genetic evidence is ambiguous or when there are multiple plausible ways to fit the new individual into the pedigree.</p>
+                
+                <p>The function also includes a validation step (<code>is_valid_pedigree</code>) to ensure that the resulting pedigrees are biologically and structurally valid. This helps prevent invalid configurations, such as cycles in the pedigree or other inconsistencies.</p>
+            </div>
+
+            <h3>Optimizing the Addition Process</h3>
+            
+            <div class="concept-section">
+                <h4>Efficient Addition Strategies</h4>
+                <p>Bonsai v3 includes several optimizations to make the incremental addition process more efficient, especially for large pedigrees. These optimizations include:</p>
+                
+                <pre><code>def optimize_addition(
+    id_val: int,
+    up_dct: dict[int, dict[int, int]],
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+):
+    """
+    Apply optimizations to make the addition process more efficient.
+    
+    Args:
+        id_val: ID of the individual to add
+        up_dct: Up-node dictionary representing the existing pedigree
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        
+    Returns:
+        optimized_data: Tuple of optimized parameters for addition
+    """
+    # Calculate IBD threshold based on pedigree size
+    pedigree_size = len(up_dct)
+    ibd_threshold = max(20, 10 * math.log(pedigree_size))
+    
+    # Filter connection points by IBD threshold
+    connection_points = find_potential_connection_points(id_val, up_dct, id_to_shared_ibd)
+    filtered_points = [(id_i, ibd) for id_i, ibd in connection_points if ibd >= ibd_threshold]
+    
+    # Limit the number of connection points to evaluate
+    max_points = min(len(filtered_points), 10)
+    top_points = filtered_points[:max_points]
+    
+    # Determine optimal max_up parameter based on IBD amounts
+    if top_points:
+        max_ibd = top_points[0][1]
+        if max_ibd > 1700:  # Parent-child level
+            suggested_max_up = 1
+        elif max_ibd > 700:  # Sibling level
+            suggested_max_up = 2
+        elif max_ibd > 200:  # First cousin level
+            suggested_max_up = 3
+        elif max_ibd > 50:   # Second cousin level
+            suggested_max_up = 4
+        else:
+            suggested_max_up = 5
+    else:
+        suggested_max_up = 3  # Default
+    
+    # Filter id_to_shared_ibd to include only relevant pairs
+    relevant_ids = set([id_val])
+    relevant_ids.update([id_i for id_i, _ in top_points])
+    
+    filtered_ibd = {}
+    for (id1, id2), segments in id_to_shared_ibd.items():
+        if id1 in relevant_ids or id2 in relevant_ids:
+            filtered_ibd[(id1, id2)] = segments
+    
+    return (top_points, suggested_max_up, filtered_ibd)</code></pre>
+                
+                <p>This function applies several key optimizations to make the addition process more efficient:</p>
+                
+                <ol>
+                    <li><strong>Dynamic IBD Threshold:</strong> Adjusts the minimum IBD threshold based on pedigree size</li>
+                    <li><strong>Connection Point Filtering:</strong> Limits the number of connection points to evaluate</li>
+                    <li><strong>Adaptive max_up Parameter:</strong> Determines the optimal maximum number of generations to consider based on IBD amounts</li>
+                    <li><strong>IBD Data Filtering:</strong> Restricts the IBD data to only the relevant pairs</li>
+                </ol>
+                
+                <p>These optimizations significantly reduce the computational cost of adding new individuals to large pedigrees while maintaining accuracy. By focusing on the most promising connection points and using adaptive parameters, Bonsai can efficiently find optimal placements even in complex scenarios.</p>
+            </div>
+            
+            <div class="concept-section">
+                <h4>Integration with the Overall Pedigree Building Process</h4>
+                <p>The incremental addition strategy is integrated into Bonsai v3's overall pedigree building process through the <code>build_pedigree_incremental</code> function:</p>
+                
+                <pre><code>def build_pedigree_incremental(
+    id_to_shared_ibd: dict[tuple[int, int], list[dict]],
+    id_to_info: dict[int, dict],
+    pw_ll: Any,
+    max_up: int = 3,
+    n_keep: int = 5,
+    id_order: list[int] = None,
+):
+    """
+    Build a pedigree incrementally by adding individuals one at a time.
+    
+    Args:
+        id_to_shared_ibd: Dict mapping ID pairs to their IBD segments
+        id_to_info: Dict with demographic information for individuals
+        pw_ll: PwLogLike instance for likelihood calculation
+        max_up: Maximum number of generations to extend upward
+        n_keep: Number of top pedigrees to keep
+        id_order: Order in which to add individuals (if None, determined automatically)
+        
+    Returns:
+        best_pedigree: The final best pedigree
+    """
+    # Get all individuals from the IBD data
+    all_ids = set()
+    for id1, id2 in id_to_shared_ibd:
+        all_ids.add(id1)
+        all_ids.add(id2)
+    
+    # If no specific order provided, order by IBD connectivity
+    if id_order is None:
+        id_order = order_by_connectivity(all_ids, id_to_shared_ibd)
+    
+    # Start with the first individual
+    first_id = id_order[0]
+    up_dct = {first_id: {}}  # Single individual pedigree
+    
+    # Add remaining individuals one at a time
+    for id_val in id_order[1:]:
+        # Add this individual to the current pedigree
+        result = add_individual_to_pedigree(
+            id_val=id_val,
+            up_dct=up_dct,
+            id_to_shared_ibd=id_to_shared_ibd,
+            id_to_info=id_to_info,
+            pw_ll=pw_ll,
+            max_up=max_up,
+            n_keep=n_keep,
+            return_only_best=True,
+        )
+        
+        # Update the current pedigree
+        if result:
+            up_dct = result[0]
+    
+    return up_dct</code></pre>
+                
+                <p>This function builds a pedigree incrementally by adding individuals one at a time in a specific order. The key steps are:</p>
+                
+                <ol>
+                    <li>Identifying all individuals from the IBD data</li>
+                    <li>Determining an optimal order for adding individuals (if not specified)</li>
+                    <li>Starting with a single individual</li>
+                    <li>Adding the remaining individuals one at a time</li>
+                </ol>
+                
+                <p>The order in which individuals are added can significantly impact the quality of the resulting pedigree. Bonsai typically orders individuals by their IBD connectivity — adding highly connected individuals first to establish a stable core pedigree, and then adding less connected individuals around this core.</p>
+                
+                <p>This incremental approach allows Bonsai to efficiently build large pedigrees that would be computationally infeasible to optimize directly. By breaking the problem into a series of simpler incremental additions, Bonsai can scale to much larger datasets while maintaining accuracy.</p>
+            </div>
+
+            <div class="alert alert-success">
+                <p><strong>Core Component:</strong> Incremental individual addition is a critical optimization in Bonsai v3 that enables efficient pedigree reconstruction at scale. By adding individuals one at a time to an existing pedigree, rather than rebuilding the entire structure, Bonsai can handle large datasets and continuous updates with new genetic data. The sophisticated algorithms for finding optimal placements and efficiently evaluating different options allow Bonsai to maintain accuracy while dramatically reducing computational costs.</p>
+            </div>
+            
+            <h3>Comparing Notebook and Bonsai v3</h3>
+            
+            <p>The Lab17 notebook explores incremental individual addition strategies through simplified implementations and examples. While the notebook provides an educational introduction to the key concepts, the actual Bonsai v3 implementation includes additional sophistication:</p>
+            
+            <ul>
+                <li><strong>Sophisticated Ordering Strategies:</strong> The production code includes advanced algorithms for determining the optimal order in which to add individuals.</li>
+                <li><strong>Parallel Evaluation:</strong> The real implementation can evaluate multiple placement options in parallel for better performance.</li>
+                <li><strong>Metadata Integration:</strong> More comprehensive integration of non-genetic information (age, sex, etc.) in the placement process.</li>
+                <li><strong>Caching and Memoization:</strong> The production code includes sophisticated caching mechanisms to avoid redundant computations.</li>
+                <li><strong>Error Recovery:</strong> More robust handling of edge cases and ability to recover from sub-optimal placements.</li>
+            </ul>
+            
+            <p>These differences allow the production implementation to handle the full complexity of real-world pedigree reconstruction tasks, while the notebook provides a more accessible introduction to the core concepts.</p>
+
+            <h3>Interactive Lab Environment</h3>
+            
+            <div class="jupyter-integration">
+                <p>Click the button below to open the interactive Lab 17 notebook directly in your browser using JupyterLite. No installation required!</p>
+                
+                <div class="jupyterlite-container">
+                    <div class="jupyterlite-info">
+                        <h4>Browser-Based Analysis</h4>
+                        <p>This link will open the <strong>Lab17_Incremental_Addition.ipynb</strong> notebook in a browser-based Jupyter environment.</p>
+                        <p>You can run the code cells by clicking on them and pressing Shift+Enter.</p>
+                        <p><strong>Note:</strong> Your work is automatically saved in your browser's storage. If you clear your browser data, your progress may be lost. Be sure to download your notebook periodically ('File' -> 'Download') to save your work locally.</p>
+                        <p><strong>Important:</strong> This notebook will be available when Lab17 is added to the labs_v2 directory.</p>
+                    </div>
+                    
+                    <!-- This is now a link styled as a button -->
+                    <a href="https://lakishadavid.github.io/computational_genetic_genealogy/jupyterlite_app/lab/index.html?path=labs_v2/Lab17_Incremental_Addition.ipynb"
+                       class="open-jupyterlite-link"
+                       target="_blank"
+                       role="button">
+                        Open Lab 17 Notebook in JupyterLite
+                    </a>
+                </div>
+            </div>
+
+            <h3>Beyond the Code</h3>
+            <p>As you explore incremental individual addition strategies, consider these broader implications:</p>
+            <ul>
+                <li><strong>Growing Datasets:</strong> How these techniques enable analysis of ever-growing genetic genealogy databases</li>
+                <li><strong>Adaptive Pedigree Building:</strong> The potential for continuously updating pedigrees as new data becomes available</li>
+                <li><strong>Ordering Strategies:</strong> The impact of different individual addition orders on the resulting pedigree structure</li>
+                <li><strong>Balancing Accuracy and Performance:</strong> The trade-offs involved in optimizing for efficient additions</li>
+                <li><strong>Adaptability:</strong> How incremental approaches can adjust to new evidence without requiring complete recomputation</li>
+            </ul>
+            <p>These considerations highlight how incremental individual addition strategies are not just technical optimizations but fundamental enablers of large-scale pedigree reconstruction from genetic data.</p>
+            
+            <div class="learning-pathway">
+                <p>This lab is part of the Bonsai v3 Deep Dive track:</p>
+                <div class="pathway-steps">
+                    <div class="pathway-step">
+                        <h5>Introduction</h5>
+                        <p>Lab 01</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Architecture</h5>
+                        <p>Lab 02</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>IBD Formats</h5>
+                        <p>Lab 03</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Statistics</h5>
+                        <p>Lab 04</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Models</h5>
+                        <p>Lab 05</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationships</h5>
+                        <p>Lab 06</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>PwLogLike</h5>
+                        <p>Lab 07</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Age Modeling</h5>
+                        <p>Lab 08</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Data Structures</h5>
+                        <p>Lab 09</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Up-Node Dict</h5>
+                        <p>Lab 10</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Connection Points</h5>
+                        <p>Lab 11</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Relationship Assessment</h5>
+                        <p>Lab 12</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Small Pedigrees</h5>
+                        <p>Lab 13</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Optimizing Pedigrees</h5>
+                        <p>Lab 14</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Combine Up Dicts</h5>
+                        <p>Lab 15</p>
+                    </div>
+                    <div class="pathway-step">
+                        <h5>Merging Pedigrees</h5>
+                        <p>Lab 16</p>
+                    </div>
+                    <div class="pathway-step active">
+                        <h5>Incremental Addition</h5>
+                        <p>Lab 17</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lab-navigation">
+                <a href="lab16_merging_pedigrees.html" class="prev-lab">Merging Pedigrees</a>
+                <a href="lab18_optimization_techniques.html" class="next-lab">Optimization Techniques</a>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

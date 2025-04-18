@@ -1,0 +1,1621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 29: End-to-End Pedigree Reconstruction Implementation | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>End-to-End Pedigree Reconstruction Implementation</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab29_end_to_end_implementation.html" class="active">Lab 29: End-to-End Implementation</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 29: End-to-End Pedigree Reconstruction Implementation</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab serves as a capstone experience, bringing together all components of Bonsai v3 into a comprehensive end-to-end pedigree reconstruction implementation. Here, we'll integrate the various modules, algorithms, and techniques covered throughout the course to build a complete pipeline from raw genetic data to visualized, interpretable pedigrees.</p>
+            </div>
+
+            <h3>The Capstone Project</h3>
+            
+            <div class="concept-section">
+                <h4>Building a Complete Reconstruction Pipeline</h4>
+                <p>The goal of this capstone project is to implement a complete pedigree reconstruction pipeline using Bonsai v3, integrating all components from data preparation through visualization, with a focus on handling real-world data challenges while producing interpretable, confidence-scored results.</p>
+                
+                <h5>Project Objectives</h5>
+                <ul>
+                    <li><strong>Integration:</strong> Combine all major Bonsai v3 components into a cohesive system</li>
+                    <li><strong>Robustness:</strong> Handle real-world data challenges including missing data and quality issues</li>
+                    <li><strong>Usability:</strong> Create clear inputs, outputs, and visualizations for end users</li>
+                    <li><strong>Reproducibility:</strong> Ensure consistent results across multiple runs</li>
+                    <li><strong>Performance:</strong> Optimize for practical use with reasonably sized datasets</li>
+                </ul>
+                
+                <h5>Implementation Strategy</h5>
+                <ol>
+                    <li><strong>Modular Architecture:</strong> Organize code into distinct components with clear interfaces</li>
+                    <li><strong>Staged Processing:</strong> Implement sequential processing stages with well-defined inputs/outputs</li>
+                    <li><strong>Configuration System:</strong> Support flexible parameter configuration for different use cases</li>
+                    <li><strong>Quality Assurance:</strong> Include validation checks at each processing stage</li>
+                    <li><strong>Logging and Monitoring:</strong> Implement comprehensive logging for process tracking</li>
+                </ol>
+                
+                <div class="note-box">
+                    <h5>Project Requirements</h5>
+                    <p>The implementation must meet these core requirements:</p>
+                    <ul>
+                        <li><strong>Input Flexibility:</strong> Accept various formats of genetic and genealogical data</li>
+                        <li><strong>Complete Processing:</strong> Transform raw data into validated pedigree structures</li>
+                        <li><strong>Evidence Tracking:</strong> Maintain connections between conclusions and supporting evidence</li>
+                        <li><strong>Confidence Assessment:</strong> Provide clear confidence measures for all inferences</li>
+                        <li><strong>Visual Output:</strong> Generate interpretable visualizations of results</li>
+                        <li><strong>Documentation:</strong> Include clear documentation for all components and workflows</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>End-to-End Workflow Design</h3>
+            
+            <div class="concept-section">
+                <h4>Architecting the Complete Pipeline</h4>
+                <p>The end-to-end pedigree reconstruction pipeline consists of several key stages, each building on the previous one:</p>
+                
+                <div class="diagram-box">
+                    <h5>Pipeline Architecture</h5>
+                    <pre class="ascii-diagram">
+┌─────────────────┐     ┌───────────────┐     ┌────────────────────┐
+│ Data Preparation│────▶│ IBD Detection  │────▶│ Relationship       │
+│ & Validation    │     │ & Processing   │     │ Inference          │
+└─────────────────┘     └───────────────┘     └────────────────────┘
+                                                        │
+                                                        ▼
+┌─────────────────┐     ┌───────────────┐     ┌────────────────────┐
+│ Visualization   │◀────│ Validation &   │◀────│ Pedigree           │
+│ & Reporting     │     │ Analysis       │     │ Construction       │
+└─────────────────┘     └───────────────┘     └────────────────────┘</pre>
+                </div>
+                
+                <h5>Stage 1: Data Preparation and Validation</h5>
+                <p>This initial stage focuses on preparing and validating the input data:</p>
+                <ul>
+                    <li><strong>Format Detection:</strong> Automatically identifying input data formats</li>
+                    <li><strong>Data Conversion:</strong> Converting various formats to Bonsai's internal format</li>
+                    <li><strong>Quality Control:</strong> Filtering low-quality data and identifying issues</li>
+                    <li><strong>Metadata Integration:</strong> Incorporating age information, known relationships, etc.</li>
+                    <li><strong>Data Normalization:</strong> Standardizing identifiers, coordinates, and measurements</li>
+                </ul>
+                
+                <h5>Stage 2: IBD Detection and Processing</h5>
+                <p>This stage handles the detection and processing of IBD segments:</p>
+                <ul>
+                    <li><strong>IBD Detection:</strong> Using appropriate algorithms to identify shared DNA segments</li>
+                    <li><strong>Segment Filtering:</strong> Removing false positives and low-confidence segments</li>
+                    <li><strong>Segment Merging:</strong> Combining adjacent or overlapping segments when appropriate</li>
+                    <li><strong>Statistics Calculation:</strong> Computing key IBD statistics for relationship inference</li>
+                    <li><strong>Quality Assessment:</strong> Evaluating the reliability of detected segments</li>
+                </ul>
+                
+                <h5>Stage 3: Relationship Inference</h5>
+                <p>This stage focuses on inferring relationships from IBD patterns:</p>
+                <ul>
+                    <li><strong>Pairwise Analysis:</strong> Computing pairwise relationship likelihoods</li>
+                    <li><strong>Age Integration:</strong> Incorporating age-based constraints</li>
+                    <li><strong>Prior Application:</strong> Applying prior probability models</li>
+                    <li><strong>Relationship Ranking:</strong> Ranking possible relationships by likelihood</li>
+                    <li><strong>Confidence Assessment:</strong> Calculating confidence measures for each inference</li>
+                </ul>
+                
+                <h5>Stage 4: Pedigree Construction</h5>
+                <p>This stage builds pedigree structures from inferred relationships:</p>
+                <ul>
+                    <li><strong>Small Structure Building:</strong> Creating trios, quartets, and other small structures</li>
+                    <li><strong>Structure Merging:</strong> Combining small structures into larger pedigrees</li>
+                    <li><strong>Conflict Resolution:</strong> Resolving contradictions between different evidence sources</li>
+                    <li><strong>Optimization:</strong> Finding maximum likelihood pedigree configurations</li>
+                    <li><strong>Incremental Addition:</strong> Adding individuals to the pedigree one by one</li>
+                </ul>
+                
+                <h5>Stage 5: Validation and Analysis</h5>
+                <p>This stage validates and analyzes the constructed pedigrees:</p>
+                <ul>
+                    <li><strong>Consistency Checking:</strong> Verifying the logical consistency of the pedigree</li>
+                    <li><strong>Evidence Validation:</strong> Confirming that the pedigree explains the genetic evidence</li>
+                    <li><strong>Statistical Analysis:</strong> Computing summary statistics for the pedigree</li>
+                    <li><strong>Quality Assessment:</strong> Evaluating the overall quality and reliability of the reconstruction</li>
+                    <li><strong>Alternative Evaluation:</strong> Assessing alternative pedigree configurations</li>
+                </ul>
+                
+                <h5>Stage 6: Visualization and Reporting</h5>
+                <p>This final stage focuses on presenting the results:</p>
+                <ul>
+                    <li><strong>Pedigree Visualization:</strong> Creating graphical representations of the pedigree</li>
+                    <li><strong>Confidence Visualization:</strong> Representing confidence levels visually</li>
+                    <li><strong>Report Generation:</strong> Creating detailed reports of the analysis process and results</li>
+                    <li><strong>Result Export:</strong> Exporting results in various formats for further use</li>
+                    <li><strong>Interactive Exploration:</strong> Enabling interactive exploration of the results</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Pipeline Configuration Example</h5>
+                    <pre class="code-block">
+# Example pipeline configuration
+PIPELINE_CONFIG = {
+    "data_preparation": {
+        "input_formats": ["vcf", "23andme", "ancestry", "ftdna", "gedcom"],
+        "quality_filters": {
+            "min_snp_count": 500,
+            "min_segment_cm": 7.0,
+            "max_gap_cm": 2.0
+        },
+        "normalization": {
+            "coordinate_build": "GRCh38",
+            "genetic_map": "eagle_2017_chr{chromosome}.txt"
+        }
+    },
+    "ibd_detection": {
+        "algorithm": "refined_ibd",
+        "parameters": {
+            "min_cm": 7.0,
+            "min_snp": 500,
+            "window_size": 64
+        },
+        "post_processing": {
+            "merge_segments": True,
+            "gap_threshold_cm": 2.0
+        }
+    },
+    "relationship_inference": {
+        "models": ["standard", "age_based", "population_specific"],
+        "parameters": {
+            "min_confidence": 0.8,
+            "use_priors": True,
+            "population": "european"
+        }
+    },
+    "pedigree_construction": {
+        "strategy": "incremental",
+        "prioritization": "confidence",
+        "conflict_resolution": "maximum_likelihood",
+        "optimization_iterations": 5
+    },
+    "validation": {
+        "consistency_checks": ["logical", "genetic", "demographic"],
+        "confidence_threshold": 0.85,
+        "alternative_count": 3
+    },
+    "visualization": {
+        "format": "png",
+        "show_confidence": True,
+        "highlight_focus_individuals": True,
+        "style": "family_tree",
+        "max_generations": 5
+    }
+}</pre>
+                </div>
+            </div>
+
+            <h3>Data Preparation Implementation</h3>
+            
+            <div class="concept-section">
+                <h4>Building the Data Preparation Module</h4>
+                <p>The data preparation module is responsible for processing raw genetic data and preparing it for IBD detection and analysis. This module must handle various data formats, perform quality control, and create standardized inputs for the next stages.</p>
+                
+                <h5>Component Structure</h5>
+                <pre class="code-block">
+# Data preparation module structure
+class DataPreparation:
+    def __init__(self, config):
+        """
+        Initialize data preparation module.
+        
+        Args:
+            config: Configuration dictionary for data preparation
+        """
+        self.config = config
+        self.format_handlers = {
+            "vcf": self._process_vcf,
+            "23andme": self._process_23andme,
+            "ancestry": self._process_ancestry,
+            "ftdna": self._process_ftdna,
+            "gedcom": self._process_gedcom
+        }
+        
+    def process_input_files(self, input_files):
+        """
+        Process input files and prepare data for IBD detection.
+        
+        Args:
+            input_files: List of input file paths
+            
+        Returns:
+            Processed data ready for IBD detection
+        """
+        processed_data = []
+        
+        for file_path in input_files:
+            # Detect file format
+            file_format = self._detect_format(file_path)
+            
+            # Process file using appropriate handler
+            if file_format in self.format_handlers:
+                processor = self.format_handlers[file_format]
+                processed_file = processor(file_path)
+                processed_data.append(processed_file)
+            else:
+                raise ValueError(f"Unsupported file format: {file_format}")
+        
+        # Perform quality control on processed data
+        filtered_data = self._apply_quality_filters(processed_data)
+        
+        # Normalize data to standard format
+        normalized_data = self._normalize_data(filtered_data)
+        
+        return normalized_data
+        
+    def _detect_format(self, file_path):
+        """Detect file format based on content and extension."""
+        # Implementation details...
+        
+    def _process_vcf(self, file_path):
+        """Process VCF format files."""
+        # Implementation details...
+        
+    def _process_23andme(self, file_path):
+        """Process 23andMe format files."""
+        # Implementation details...
+        
+    # Other format handlers...
+        
+    def _apply_quality_filters(self, data):
+        """Apply quality filters to processed data."""
+        # Implementation details...
+        
+    def _normalize_data(self, data):
+        """Normalize data to standard format."""
+        # Implementation details...</pre>
+                
+                <h5>Format Handling Implementation</h5>
+                <p>Each format handler must parse the specific format and convert it to Bonsai's internal representation:</p>
+                
+                <pre class="code-block">
+def _process_vcf(self, file_path):
+    """
+    Process VCF format files.
+    
+    Args:
+        file_path: Path to VCF file
+        
+    Returns:
+        Processed genetic data in internal format
+    """
+    # Initialize VCF parser
+    vcf_reader = VCFParser(file_path)
+    
+    # Extract samples and variants
+    samples = vcf_reader.get_samples()
+    variants = vcf_reader.get_variants()
+    
+    # Convert to internal representation
+    processed_data = {
+        "samples": samples,
+        "variants": self._convert_variants(variants),
+        "metadata": vcf_reader.get_metadata(),
+        "format": "vcf",
+        "original_path": file_path
+    }
+    
+    return processed_data</pre>
+                
+                <h5>Quality Control Implementation</h5>
+                <p>The quality control methods filter data based on configurable criteria:</p>
+                
+                <pre class="code-block">
+def _apply_quality_filters(self, data):
+    """
+    Apply quality filters to processed data.
+    
+    Args:
+        data: List of processed data dictionaries
+        
+    Returns:
+        Filtered data meeting quality criteria
+    """
+    filtered_data = []
+    
+    for dataset in data:
+        # Apply variant-level filters
+        if "variants" in dataset:
+            dataset["variants"] = self._filter_variants(
+                dataset["variants"],
+                min_quality=self.config["quality_filters"].get("min_variant_quality", 30),
+                max_missing=self.config["quality_filters"].get("max_missing_rate", 0.1)
+            )
+        
+        # Apply sample-level filters
+        if "samples" in dataset:
+            dataset["samples"] = self._filter_samples(
+                dataset["samples"],
+                min_call_rate=self.config["quality_filters"].get("min_call_rate", 0.9)
+            )
+        
+        # Add quality metrics to metadata
+        dataset["metadata"]["quality_metrics"] = self._calculate_quality_metrics(dataset)
+        
+        filtered_data.append(dataset)
+    
+    return filtered_data</pre>
+                
+                <div class="note-box">
+                    <h5>Key Challenges in Data Preparation</h5>
+                    <p>The data preparation stage addresses several key challenges:</p>
+                    <ul>
+                        <li><strong>Format Diversity:</strong> Consumer DNA testing companies use different file formats</li>
+                        <li><strong>Coordinate Systems:</strong> Different genomic builds use different coordinate systems</li>
+                        <li><strong>Data Quality:</strong> Raw data often contains errors, missing values, and artifacts</li>
+                        <li><strong>Identifier Reconciliation:</strong> Matching identifiers across different data sources</li>
+                        <li><strong>Metadata Integration:</strong> Incorporating age, sex, and other metadata</li>
+                    </ul>
+                    <p>Addressing these challenges requires flexible, robust data processing implementations.</p>
+                </div>
+            </div>
+
+            <h3>IBD Detection and Processing Implementation</h3>
+            
+            <div class="concept-section">
+                <h4>Implementing the IBD Processing Stage</h4>
+                <p>The IBD detection and processing stage identifies shared DNA segments between individuals and prepares them for relationship inference. This stage might use external IBD detection tools and then process the results within Bonsai.</p>
+                
+                <h5>Component Structure</h5>
+                <pre class="code-block">
+# IBD detection and processing module structure
+class IBDProcessor:
+    def __init__(self, config):
+        """
+        Initialize IBD processor module.
+        
+        Args:
+            config: Configuration dictionary for IBD processing
+        """
+        self.config = config
+        self.detection_algorithms = {
+            "refined_ibd": self._run_refined_ibd,
+            "ibis": self._run_ibis,
+            "germline": self._run_germline,
+            "hapibd": self._run_hapibd
+        }
+        
+    def process_genetic_data(self, genetic_data):
+        """
+        Process genetic data to identify IBD segments.
+        
+        Args:
+            genetic_data: Processed genetic data from data preparation stage
+            
+        Returns:
+            Detected and processed IBD segments
+        """
+        # Prepare data for IBD detection
+        prepared_data = self._prepare_for_detection(genetic_data)
+        
+        # Run selected IBD detection algorithm
+        algorithm = self.config["algorithm"]
+        if algorithm in self.detection_algorithms:
+            detector = self.detection_algorithms[algorithm]
+            raw_segments = detector(prepared_data)
+        else:
+            raise ValueError(f"Unsupported IBD detection algorithm: {algorithm}")
+        
+        # Post-process detected segments
+        processed_segments = self._post_process_segments(raw_segments)
+        
+        # Calculate IBD statistics
+        ibd_statistics = self._calculate_ibd_statistics(processed_segments)
+        
+        return {
+            "segments": processed_segments,
+            "statistics": ibd_statistics,
+            "metadata": {
+                "algorithm": algorithm,
+                "parameters": self.config["parameters"],
+                "quality_metrics": self._calculate_quality_metrics(processed_segments)
+            }
+        }
+        
+    def _prepare_for_detection(self, genetic_data):
+        """Prepare genetic data for IBD detection."""
+        # Implementation details...
+        
+    def _run_refined_ibd(self, prepared_data):
+        """Run Refined-IBD algorithm."""
+        # Implementation details...
+        
+    # Other algorithm implementations...
+        
+    def _post_process_segments(self, raw_segments):
+        """Post-process detected IBD segments."""
+        # Implementation details...
+        
+    def _calculate_ibd_statistics(self, segments):
+        """Calculate IBD statistics for relationship inference."""
+        # Implementation details...</pre>
+                
+                <h5>Algorithm Integration Implementation</h5>
+                <p>Example implementation for integrating with an external IBD detection tool:</p>
+                
+                <pre class="code-block">
+def _run_refined_ibd(self, prepared_data):
+    """
+    Run the Refined-IBD algorithm for IBD detection.
+    
+    Args:
+        prepared_data: Prepared genetic data in format required by Refined-IBD
+        
+    Returns:
+        Raw IBD segments detected by Refined-IBD
+    """
+    # Generate command-line parameters
+    parameters = [
+        "-min", str(self.config["parameters"]["min_cm"]),
+        "-length", str(self.config["parameters"]["min_snp"]),
+        "-window", str(self.config["parameters"]["window_size"])
+    ]
+    
+    # Create temporary files for input/output
+    input_file = self._create_temporary_input(prepared_data)
+    output_file = tempfile.NamedTemporaryFile(delete=False).name
+    
+    # Build command for external process
+    command = ["refined-ibd", input_file, output_file] + parameters
+    
+    # Execute external process
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Refined-IBD execution failed: {e}")
+    
+    # Parse output file
+    raw_segments = self._parse_refined_ibd_output(output_file)
+    
+    # Clean up temporary files
+    os.unlink(input_file)
+    os.unlink(output_file)
+    
+    return raw_segments</pre>
+                
+                <h5>Post-Processing Implementation</h5>
+                <p>The post-processing methods refine raw IBD segments:</p>
+                
+                <pre class="code-block">
+def _post_process_segments(self, raw_segments):
+    """
+    Post-process detected IBD segments.
+    
+    Args:
+        raw_segments: Raw IBD segments from detection algorithm
+        
+    Returns:
+        Processed IBD segments ready for relationship inference
+    """
+    processed_segments = raw_segments.copy()
+    
+    # Filter segments based on quality criteria
+    processed_segments = self._filter_segments(
+        processed_segments,
+        min_cm=self.config["parameters"]["min_cm"],
+        min_snp=self.config["parameters"]["min_snp"]
+    )
+    
+    # Merge adjacent segments if configured
+    if self.config["post_processing"]["merge_segments"]:
+        processed_segments = self._merge_adjacent_segments(
+            processed_segments,
+            gap_threshold=self.config["post_processing"]["gap_threshold_cm"]
+        )
+    
+    # Convert coordinates if needed
+    processed_segments = self._standardize_coordinates(processed_segments)
+    
+    # Remove known false positives
+    processed_segments = self._remove_false_positives(processed_segments)
+    
+    return processed_segments</pre>
+                
+                <div class="example-box">
+                    <h5>IBD Statistics Calculation Example</h5>
+                    <pre class="code-block">
+def _calculate_ibd_statistics(self, segments):
+    """
+    Calculate IBD statistics for relationship inference.
+    
+    Args:
+        segments: Processed IBD segments
+        
+    Returns:
+        Dictionary of IBD statistics by individual pair
+    """
+    statistics = {}
+    
+    # Group segments by individual pair
+    paired_segments = self._group_by_individual_pair(segments)
+    
+    # Calculate statistics for each pair
+    for pair_id, pair_segments in paired_segments.items():
+        id1, id2 = pair_id.split("-")
+        
+        # Calculate total IBD sharing
+        total_ibd = sum(segment["cm_length"] for segment in pair_segments)
+        
+        # Calculate segment count
+        segment_count = len(pair_segments)
+        
+        # Find longest segment
+        longest_segment = max(segment["cm_length"] for segment in pair_segments) if pair_segments else 0
+        
+        # Calculate chromosome-specific statistics
+        chromosomes = {}
+        for segment in pair_segments:
+            chr_num = segment["chromosome"]
+            if chr_num not in chromosomes:
+                chromosomes[chr_num] = {
+                    "total_ibd": 0,
+                    "segment_count": 0,
+                    "longest_segment": 0
+                }
+            
+            chromosomes[chr_num]["total_ibd"] += segment["cm_length"]
+            chromosomes[chr_num]["segment_count"] += 1
+            chromosomes[chr_num]["longest_segment"] = max(
+                chromosomes[chr_num]["longest_segment"],
+                segment["cm_length"]
+            )
+        
+        # Store pair statistics
+        statistics[pair_id] = {
+            "id1": id1,
+            "id2": id2,
+            "total_ibd": total_ibd,
+            "segment_count": segment_count,
+            "longest_segment": longest_segment,
+            "chromosomes": chromosomes
+        }
+    
+    return statistics</pre>
+                </div>
+            </div>
+
+            <h3>Core Bonsai Integration</h3>
+            
+            <div class="concept-section">
+                <h4>Using Bonsai's Relationship Inference Module</h4>
+                <p>The core of the pipeline leverages Bonsai v3's sophisticated relationship inference capabilities to analyze IBD patterns and predict relationships between individuals. This stage maps directly to the core modules we've studied throughout this course.</p>
+                
+                <h5>Relationship Inference Module</h5>
+                <pre class="code-block">
+# Relationship inference module structure
+class RelationshipInference:
+    def __init__(self, config):
+        """
+        Initialize relationship inference module.
+        
+        Args:
+            config: Configuration dictionary for relationship inference
+        """
+        self.config = config
+        
+        # Initialize Bonsai components
+        self.pw_log_like = PwLogLike()
+        
+        # Configure models
+        self._configure_models()
+        
+    def infer_relationships(self, ibd_data):
+        """
+        Infer relationships from IBD data.
+        
+        Args:
+            ibd_data: Processed IBD data from IBD processing stage
+            
+        Returns:
+            Inferred relationships with confidence scores
+        """
+        # Extract IBD statistics
+        ibd_stats = ibd_data["statistics"]
+        
+        # Infer pairwise relationships
+        pairwise_relationships = self._infer_pairwise_relationships(ibd_stats)
+        
+        # Apply age constraints if available
+        if "age_based" in self.config["models"]:
+            pairwise_relationships = self._apply_age_constraints(pairwise_relationships, ibd_data["metadata"])
+        
+        # Apply population-specific adjustments if configured
+        if "population_specific" in self.config["models"]:
+            pairwise_relationships = self._apply_population_adjustments(
+                pairwise_relationships,
+                population=self.config["parameters"]["population"]
+            )
+        
+        # Apply prior probabilities if configured
+        if self.config["parameters"]["use_priors"]:
+            pairwise_relationships = self._apply_priors(pairwise_relationships)
+        
+        # Filter by confidence threshold
+        filtered_relationships = self._filter_by_confidence(
+            pairwise_relationships,
+            min_confidence=self.config["parameters"]["min_confidence"]
+        )
+        
+        return filtered_relationships
+        
+    def _configure_models(self):
+        """Configure relationship inference models."""
+        # Implementation details...
+        
+    def _infer_pairwise_relationships(self, ibd_stats):
+        """Infer pairwise relationships from IBD statistics."""
+        # Implementation details...
+        
+    def _apply_age_constraints(self, relationships, metadata):
+        """Apply age-based constraints to relationship inferences."""
+        # Implementation details...
+        
+    def _apply_population_adjustments(self, relationships, population):
+        """Apply population-specific adjustments."""
+        # Implementation details...
+        
+    def _apply_priors(self, relationships):
+        """Apply prior probabilities to relationship inferences."""
+        # Implementation details...
+        
+    def _filter_by_confidence(self, relationships, min_confidence):
+        """Filter relationships by confidence threshold."""
+        # Implementation details...</pre>
+                
+                <h5>Pairwise Relationship Inference Implementation</h5>
+                <p>Example implementation for inferring pairwise relationships:</p>
+                
+                <pre class="code-block">
+def _infer_pairwise_relationships(self, ibd_stats):
+    """
+    Infer pairwise relationships from IBD statistics.
+    
+    Args:
+        ibd_stats: Dictionary of IBD statistics by individual pair
+        
+    Returns:
+        Dictionary of inferred relationships by individual pair
+    """
+    relationships = {}
+    
+    for pair_id, stats in ibd_stats.items():
+        id1, id2 = stats["id1"], stats["id2"]
+        
+        # Calculate relationship likelihoods
+        likelihoods = self.pw_log_like.get_likelihoods(
+            total_ibd=stats["total_ibd"],
+            num_segments=stats["segment_count"],
+            longest_segment=stats["longest_segment"]
+        )
+        
+        # Rank relationships by likelihood
+        ranked_relationships = sorted(
+            likelihoods.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        # Calculate confidence scores
+        confidence_scores = self._calculate_confidence_scores(likelihoods)
+        
+        # Store results
+        relationships[pair_id] = {
+            "id1": id1,
+            "id2": id2,
+            "most_likely": ranked_relationships[0][0],
+            "likelihood": ranked_relationships[0][1],
+            "confidence": confidence_scores[ranked_relationships[0][0]],
+            "alternatives": [
+                {
+                    "relationship": rel,
+                    "likelihood": lik,
+                    "confidence": confidence_scores[rel]
+                }
+                for rel, lik in ranked_relationships[1:5]  # Store top 5 alternatives
+            ],
+            "all_likelihoods": likelihoods
+        }
+    
+    return relationships</pre>
+                
+                <h5>Age Constraint Implementation</h5>
+                <p>Example implementation for applying age-based constraints:</p>
+                
+                <pre class="code-block">
+def _apply_age_constraints(self, relationships, metadata):
+    """
+    Apply age-based constraints to relationship inferences.
+    
+    Args:
+        relationships: Dictionary of inferred relationships
+        metadata: Dictionary containing age information
+        
+    Returns:
+        Relationships with age constraints applied
+    """
+    constrained_relationships = {}
+    
+    # Extract age information
+    ages = self._extract_ages(metadata)
+    
+    for pair_id, rel_data in relationships.items():
+        id1, id2 = rel_data["id1"], rel_data["id2"]
+        
+        # Skip if age information is missing
+        if id1 not in ages or id2 not in ages:
+            constrained_relationships[pair_id] = rel_data
+            continue
+        
+        age1, age2 = ages[id1], ages[id2]
+        
+        # Calculate age-based log likelihoods
+        age_log_likes = {}
+        for rel, genetic_ll in rel_data["all_likelihoods"].items():
+            # Get expected age difference for relationship
+            age_mean, age_std = get_age_mean_std_for_rel_tuple(rel)
+            
+            # Calculate age difference
+            age_diff = abs(age1 - age2)
+            
+            # Calculate age log likelihood
+            age_ll = get_age_log_like(age_diff, age_mean, age_std)
+            
+            # Combine genetic and age likelihoods
+            combined_ll = genetic_ll + age_ll
+            
+            age_log_likes[rel] = combined_ll
+        
+        # Recalculate rankings with combined likelihoods
+        ranked_combined = sorted(
+            age_log_likes.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        # Calculate new confidence scores
+        combined_confidence = self._calculate_confidence_scores(age_log_likes)
+        
+        # Update relationship data
+        constrained_relationships[pair_id] = {
+            "id1": id1,
+            "id2": id2,
+            "most_likely": ranked_combined[0][0],
+            "likelihood": ranked_combined[0][1],
+            "confidence": combined_confidence[ranked_combined[0][0]],
+            "alternatives": [
+                {
+                    "relationship": rel,
+                    "likelihood": lik,
+                    "confidence": combined_confidence[rel]
+                }
+                for rel, lik in ranked_combined[1:5]
+            ],
+            "all_likelihoods": age_log_likes,
+            "age_constrained": True
+        }
+    
+    return constrained_relationships</pre>
+                
+                <div class="note-box">
+                    <h5>Integration with Bonsai Core</h5>
+                    <p>This module directly integrates with Bonsai v3's core classes:</p>
+                    <ul>
+                        <li><strong>PwLogLike:</strong> For calculating pairwise log likelihoods</li>
+                        <li><strong>get_age_mean_std_for_rel_tuple():</strong> For retrieving age relationship parameters</li>
+                        <li><strong>get_age_log_like():</strong> For calculating age-based log likelihoods</li>
+                        <li><strong>InferDegree:</strong> For inferring relationship degrees</li>
+                        <li><strong>Prior:</strong> For applying prior probability models</li>
+                    </ul>
+                    <p>This integration brings together the mathematical models and calibrated parameters we've studied throughout the course.</p>
+                </div>
+            </div>
+
+            <h3>Pedigree Construction Implementation</h3>
+            
+            <div class="concept-section">
+                <h4>Building the Pedigree Structure</h4>
+                <p>The pedigree construction module transforms pairwise relationship inferences into coherent pedigree structures, leveraging Bonsai v3's pedigree representation and merging algorithms.</p>
+                
+                <h5>Component Structure</h5>
+                <pre class="code-block">
+# Pedigree construction module structure
+class PedigreeConstructor:
+    def __init__(self, config):
+        """
+        Initialize pedigree construction module.
+        
+        Args:
+            config: Configuration dictionary for pedigree construction
+        """
+        self.config = config
+        
+    def construct_pedigree(self, relationship_data):
+        """
+        Construct pedigree from relationship inferences.
+        
+        Args:
+            relationship_data: Inferred relationships from relationship inference stage
+            
+        Returns:
+            Constructed pedigree with confidence information
+        """
+        # Prioritize relationships by confidence
+        prioritized_relationships = self._prioritize_relationships(relationship_data)
+        
+        # Initialize empty pedigree
+        pedigree = self._initialize_pedigree()
+        
+        # Build small structures first
+        small_structures = self._build_small_structures(prioritized_relationships)
+        
+        # Merge small structures
+        if self.config["strategy"] == "incremental":
+            # Incremental addition strategy
+            for structure in small_structures:
+                pedigree = self._add_structure_incremental(pedigree, structure)
+        else:
+            # Combine structures strategy
+            pedigree = self._combine_structures(small_structures)
+        
+        # Optimize pedigree
+        optimized_pedigree = self._optimize_pedigree(
+            pedigree,
+            iterations=self.config["optimization_iterations"]
+        )
+        
+        # Add confidence annotations
+        annotated_pedigree = self._annotate_confidence(optimized_pedigree, relationship_data)
+        
+        return annotated_pedigree
+        
+    def _prioritize_relationships(self, relationship_data):
+        """Prioritize relationships for pedigree construction."""
+        # Implementation details...
+        
+    def _initialize_pedigree(self):
+        """Initialize empty pedigree structure."""
+        # Implementation details...
+        
+    def _build_small_structures(self, prioritized_relationships):
+        """Build small pedigree structures from prioritized relationships."""
+        # Implementation details...
+        
+    def _add_structure_incremental(self, pedigree, structure):
+        """Add small structure to pedigree incrementally."""
+        # Implementation details...
+        
+    def _combine_structures(self, structures):
+        """Combine multiple small structures into a pedigree."""
+        # Implementation details...
+        
+    def _optimize_pedigree(self, pedigree, iterations):
+        """Optimize pedigree structure."""
+        # Implementation details...
+        
+    def _annotate_confidence(self, pedigree, relationship_data):
+        """Annotate pedigree with confidence information."""
+        # Implementation details...</pre>
+                
+                <h5>Building Small Structures Implementation</h5>
+                <p>Example implementation for building small pedigree structures:</p>
+                
+                <pre class="code-block">
+def _build_small_structures(self, prioritized_relationships):
+    """
+    Build small pedigree structures from prioritized relationships.
+    
+    Args:
+        prioritized_relationships: Prioritized list of relationship inferences
+        
+    Returns:
+        List of small pedigree structures
+    """
+    small_structures = []
+    used_pairs = set()
+    
+    # First pass: build parent-child pairs (direct connections)
+    for rel_data in prioritized_relationships:
+        pair_id = f"{rel_data['id1']}-{rel_data['id2']}"
+        
+        # Skip if already used
+        if pair_id in used_pairs:
+            continue
+        
+        # Check if parent-child relationship
+        if rel_data["most_likely"] in ["PC", "GP", "PO"]:
+            # Create up-node dict for parent-child structure
+            if rel_data["most_likely"] in ["PC", "PO"]:
+                # Parent-child
+                parent, child = self._determine_parent_child(
+                    rel_data["id1"], 
+                    rel_data["id2"], 
+                    rel_data["most_likely"]
+                )
+                up_dict = {child: parent}
+            else:
+                # Grandparent relationship - create placeholder parent
+                gp, gc = self._determine_parent_child(
+                    rel_data["id1"], 
+                    rel_data["id2"], 
+                    rel_data["most_likely"]
+                )
+                placeholder = f"placeholder_{len(small_structures)}"
+                up_dict = {gc: placeholder, placeholder: gp}
+            
+            # Create small structure
+            structure = {
+                "up_dict": up_dict,
+                "confidence": rel_data["confidence"],
+                "relationship_type": rel_data["most_likely"]
+            }
+            
+            small_structures.append(structure)
+            used_pairs.add(pair_id)
+    
+    # Second pass: build sibling pairs
+    for rel_data in prioritized_relationships:
+        pair_id = f"{rel_data['id1']}-{rel_data['id2']}"
+        
+        # Skip if already used
+        if pair_id in used_pairs:
+            continue
+        
+        # Check if sibling relationship
+        if rel_data["most_likely"] in ["FS", "HS"]:
+            id1, id2 = rel_data["id1"], rel_data["id2"]
+            
+            # Create placeholder parents
+            father = f"placeholder_father_{len(small_structures)}"
+            mother = f"placeholder_mother_{len(small_structures)}"
+            
+            # Create up-node dict based on relationship type
+            if rel_data["most_likely"] == "FS":
+                # Full siblings
+                up_dict = {id1: [father, mother], id2: [father, mother]}
+            else:
+                # Half siblings - create just one shared parent
+                shared_parent = father  # Arbitrary choice, could be mother
+                up_dict = {id1: shared_parent, id2: shared_parent}
+            
+            # Create small structure
+            structure = {
+                "up_dict": up_dict,
+                "confidence": rel_data["confidence"],
+                "relationship_type": rel_data["most_likely"]
+            }
+            
+            small_structures.append(structure)
+            used_pairs.add(pair_id)
+    
+    # Additional passes for other relationship types...
+    
+    return small_structures</pre>
+                
+                <h5>Incremental Structure Addition Implementation</h5>
+                <p>Example implementation for adding structures incrementally:</p>
+                
+                <pre class="code-block">
+def _add_structure_incremental(self, pedigree, structure):
+    """
+    Add small structure to pedigree incrementally.
+    
+    Args:
+        pedigree: Current pedigree structure
+        structure: Small structure to add
+        
+    Returns:
+        Updated pedigree with structure integrated
+    """
+    # Extract up-node dictionaries
+    pedigree_up_dict = pedigree.get("up_dict", {})
+    structure_up_dict = structure["up_dict"]
+    
+    # Find overlapping individuals
+    pedigree_ids = set(pedigree_up_dict.keys()).union(set(pedigree_up_dict.values()))
+    structure_ids = set(structure_up_dict.keys()).union(set(structure_up_dict.values()))
+    overlapping_ids = pedigree_ids.intersection(structure_ids)
+    
+    # If no overlap, simply combine dictionaries
+    if not overlapping_ids:
+        combined_up_dict = {**pedigree_up_dict, **structure_up_dict}
+        return {
+            "up_dict": combined_up_dict,
+            "confidence": pedigree.get("confidence", {}),
+            "additions": pedigree.get("additions", []) + [structure]
+        }
+    
+    # With overlap, use Bonsai's combine_up_dicts algorithm
+    combined_up_dict = combine_up_dicts(
+        pedigree_up_dict,
+        structure_up_dict,
+        resolve_conflicts=self.config["conflict_resolution"]
+    )
+    
+    # Update confidence information
+    combined_confidence = self._combine_confidence(
+        pedigree.get("confidence", {}),
+        {k: structure["confidence"] for k in structure_up_dict.keys()}
+    )
+    
+    return {
+        "up_dict": combined_up_dict,
+        "confidence": combined_confidence,
+        "additions": pedigree.get("additions", []) + [structure]
+    }</pre>
+                
+                <div class="example-box">
+                    <h5>Pedigree Optimization Example</h5>
+                    <pre class="code-block">
+def _optimize_pedigree(self, pedigree, iterations):
+    """
+    Optimize pedigree structure through iterative refinement.
+    
+    Args:
+        pedigree: Current pedigree structure
+        iterations: Number of optimization iterations
+        
+    Returns:
+        Optimized pedigree structure
+    """
+    current_pedigree = pedigree
+    
+    for i in range(iterations):
+        # Calculate current likelihood
+        current_likelihood = self._calculate_pedigree_likelihood(current_pedigree)
+        
+        # Generate alternative configurations
+        alternatives = self._generate_alternative_configurations(current_pedigree)
+        
+        # Evaluate alternatives
+        best_alternative = current_pedigree
+        best_likelihood = current_likelihood
+        
+        for alt in alternatives:
+            alt_likelihood = self._calculate_pedigree_likelihood(alt)
+            if alt_likelihood > best_likelihood:
+                best_alternative = alt
+                best_likelihood = alt_likelihood
+        
+        # Update current pedigree if improvement found
+        if best_likelihood > current_likelihood:
+            current_pedigree = best_alternative
+        else:
+            # No improvement - stop early
+            break
+        
+        # Log optimization progress
+        logging.info(f"Optimization iteration {i+1}: likelihood = {best_likelihood}")
+    
+    # Set optimization metadata
+    current_pedigree["optimization"] = {
+        "iterations": i + 1,
+        "final_likelihood": best_likelihood,
+        "converged": (i + 1 < iterations)
+    }
+    
+    return current_pedigree</pre>
+                </div>
+            </div>
+
+            <h3>Validation and Visualization Implementation</h3>
+            
+            <div class="concept-section">
+                <h4>Validating and Presenting Results</h4>
+                <p>The final stages of the pipeline focus on validating the constructed pedigree and creating interpretable visualizations of the results. These components ensure that the pedigree is reliable and accessible to users.</p>
+                
+                <h5>Validation Module</h5>
+                <pre class="code-block">
+# Pedigree validation module structure
+class PedigreeValidator:
+    def __init__(self, config):
+        """
+        Initialize pedigree validator module.
+        
+        Args:
+            config: Configuration dictionary for validation
+        """
+        self.config = config
+        
+    def validate_pedigree(self, pedigree, ibd_data, relationship_data):
+        """
+        Validate pedigree against genetic evidence and logical constraints.
+        
+        Args:
+            pedigree: Constructed pedigree
+            ibd_data: IBD data used for construction
+            relationship_data: Relationship inferences used for construction
+            
+        Returns:
+            Validated pedigree with quality metrics
+        """
+        # Perform logical consistency checks
+        consistency_results = self._check_logical_consistency(pedigree)
+        
+        # Validate against genetic evidence
+        genetic_results = self._validate_against_genetic_evidence(
+            pedigree,
+            ibd_data,
+            relationship_data
+        )
+        
+        # Check demographic plausibility
+        demographic_results = self._check_demographic_plausibility(pedigree)
+        
+        # Calculate overall quality score
+        quality_score = self._calculate_quality_score(
+            consistency_results,
+            genetic_results,
+            demographic_results
+        )
+        
+        # Generate alternative pedigrees
+        alternatives = self._generate_alternatives(
+            pedigree,
+            relationship_data,
+            count=self.config["alternative_count"]
+        )
+        
+        # Add validation results to pedigree
+        validated_pedigree = pedigree.copy()
+        validated_pedigree["validation"] = {
+            "logical_consistency": consistency_results,
+            "genetic_validation": genetic_results,
+            "demographic_plausibility": demographic_results,
+            "quality_score": quality_score,
+            "alternatives": alternatives
+        }
+        
+        return validated_pedigree
+        
+    def _check_logical_consistency(self, pedigree):
+        """Check pedigree for logical consistency."""
+        # Implementation details...
+        
+    def _validate_against_genetic_evidence(self, pedigree, ibd_data, relationship_data):
+        """Validate pedigree against genetic evidence."""
+        # Implementation details...
+        
+    def _check_demographic_plausibility(self, pedigree):
+        """Check demographic plausibility of pedigree."""
+        # Implementation details...
+        
+    def _calculate_quality_score(self, consistency_results, genetic_results, demographic_results):
+        """Calculate overall quality score for pedigree."""
+        # Implementation details...
+        
+    def _generate_alternatives(self, pedigree, relationship_data, count):
+        """Generate alternative pedigree configurations."""
+        # Implementation details...</pre>
+                
+                <h5>Visualization Module</h5>
+                <pre class="code-block">
+# Pedigree visualization module structure
+class PedigreeVisualizer:
+    def __init__(self, config):
+        """
+        Initialize pedigree visualizer module.
+        
+        Args:
+            config: Configuration dictionary for visualization
+        """
+        self.config = config
+        
+    def create_visualizations(self, pedigree):
+        """
+        Create visualizations of pedigree structure.
+        
+        Args:
+            pedigree: Validated pedigree structure
+            
+        Returns:
+            Dictionary of visualization outputs
+        """
+        # Create main pedigree visualization
+        main_viz = self._create_main_visualization(pedigree)
+        
+        # Create focused sub-pedigree visualizations if configured
+        focused_vizs = {}
+        if self.config["highlight_focus_individuals"]:
+            for focus_id in self._identify_focus_individuals(pedigree):
+                focused_vizs[focus_id] = self._create_focused_visualization(
+                    pedigree,
+                    focus_id,
+                    max_generations=self.config["max_generations"]
+                )
+        
+        # Create alternative visualizations if available
+        alternative_vizs = {}
+        if "validation" in pedigree and "alternatives" in pedigree["validation"]:
+            for i, alt in enumerate(pedigree["validation"]["alternatives"]):
+                alternative_vizs[f"alternative_{i+1}"] = self._create_main_visualization(alt)
+        
+        # Generate comparison visualization
+        if alternative_vizs:
+            comparison_viz = self._create_comparison_visualization(
+                pedigree,
+                pedigree["validation"]["alternatives"]
+            )
+        else:
+            comparison_viz = None
+        
+        return {
+            "main": main_viz,
+            "focused": focused_vizs,
+            "alternatives": alternative_vizs,
+            "comparison": comparison_viz,
+            "format": self.config["format"]
+        }
+        
+    def _create_main_visualization(self, pedigree):
+        """Create main pedigree visualization."""
+        # Implementation details...
+        
+    def _identify_focus_individuals(self, pedigree):
+        """Identify focus individuals for sub-pedigree visualization."""
+        # Implementation details...
+        
+    def _create_focused_visualization(self, pedigree, focus_id, max_generations):
+        """Create focused sub-pedigree visualization around focus individual."""
+        # Implementation details...
+        
+    def _create_comparison_visualization(self, main_pedigree, alternative_pedigrees):
+        """Create visualization comparing main pedigree with alternatives."""
+        # Implementation details...</pre>
+                
+                <h5>Main Visualization Implementation</h5>
+                <p>Example implementation for creating the main pedigree visualization:</p>
+                
+                <pre class="code-block">
+def _create_main_visualization(self, pedigree):
+    """
+    Create main pedigree visualization.
+    
+    Args:
+        pedigree: Pedigree structure to visualize
+        
+    Returns:
+        Visualization data in specified format
+    """
+    # Extract up-node dictionary
+    up_dict = pedigree["up_dict"]
+    
+    # Convert to Graphviz DOT format
+    dot_graph = self._convert_to_graphviz(
+        up_dict,
+        confidence=pedigree.get("confidence", {}),
+        style=self.config["style"]
+    )
+    
+    # Set graph attributes
+    dot_graph.graph_attr.update({
+        'rankdir': 'TB',
+        'splines': 'ortho',
+        'nodesep': '0.8',
+        'ranksep': '1.0',
+        'fontname': 'Arial',
+        'bgcolor': 'white'
+    })
+    
+    # Set node attributes
+    dot_graph.node_attr.update({
+        'shape': 'box',
+        'style': 'filled',
+        'fillcolor': 'lightblue',
+        'fontname': 'Arial',
+        'margin': '0.2,0.1'
+    })
+    
+    # Set edge attributes
+    dot_graph.edge_attr.update({
+        'color': 'darkblue',
+        'penwidth': '1.5',
+        'arrowsize': '0.8'
+    })
+    
+    # Apply confidence coloring if configured
+    if self.config["show_confidence"]:
+        self._apply_confidence_styling(dot_graph, pedigree.get("confidence", {}))
+    
+    # Render to specified format
+    output_format = self.config["format"]
+    output_data = dot_graph.pipe(format=output_format)
+    
+    return {
+        "data": output_data,
+        "format": output_format,
+        "dot": dot_graph.source
+    }</pre>
+                
+                <div class="example-box">
+                    <h5>Pipeline Integration Example</h5>
+                    <pre class="code-block">
+# Complete end-to-end pipeline example
+def run_end_to_end_pipeline(input_files, config_file=None):
+    """
+    Run complete end-to-end pedigree reconstruction pipeline.
+    
+    Args:
+        input_files: List of input file paths
+        config_file: Optional path to configuration file
+        
+    Returns:
+        Complete pipeline results
+    """
+    # Load configuration
+    if config_file:
+        with open(config_file, 'r') as f:
+            config = json.load(f)
+    else:
+        config = DEFAULT_PIPELINE_CONFIG
+    
+    # Initialize pipeline modules
+    data_prep = DataPreparation(config["data_preparation"])
+    ibd_processor = IBDProcessor(config["ibd_detection"])
+    rel_inference = RelationshipInference(config["relationship_inference"])
+    ped_constructor = PedigreeConstructor(config["pedigree_construction"])
+    validator = PedigreeValidator(config["validation"])
+    visualizer = PedigreeVisualizer(config["visualization"])
+    
+    # Run data preparation stage
+    logging.info("Stage 1: Data Preparation")
+    processed_data = data_prep.process_input_files(input_files)
+    
+    # Run IBD detection stage
+    logging.info("Stage 2: IBD Detection")
+    ibd_data = ibd_processor.process_genetic_data(processed_data)
+    
+    # Run relationship inference stage
+    logging.info("Stage 3: Relationship Inference")
+    relationship_data = rel_inference.infer_relationships(ibd_data)
+    
+    # Run pedigree construction stage
+    logging.info("Stage 4: Pedigree Construction")
+    pedigree = ped_constructor.construct_pedigree(relationship_data)
+    
+    # Run validation stage
+    logging.info("Stage 5: Validation and Analysis")
+    validated_pedigree = validator.validate_pedigree(
+        pedigree,
+        ibd_data,
+        relationship_data
+    )
+    
+    # Run visualization stage
+    logging.info("Stage 6: Visualization and Reporting")
+    visualizations = visualizer.create_visualizations(validated_pedigree)
+    
+    # Generate final report
+    report = generate_pipeline_report(
+        processed_data,
+        ibd_data,
+        relationship_data,
+        validated_pedigree,
+        visualizations
+    )
+    
+    return {
+        "pedigree": validated_pedigree,
+        "visualizations": visualizations,
+        "report": report,
+        "metadata": {
+            "config": config,
+            "input_files": input_files,
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+    }</pre>
+                </div>
+            </div>
+
+            <h3>Project Documentation and Reporting</h3>
+            
+            <div class="concept-section">
+                <h4>Communicating Results Effectively</h4>
+                <p>The final component of the end-to-end implementation is the documentation and reporting system, which ensures that the pipeline's results are understandable and actionable for end users.</p>
+                
+                <h5>Report Generation Implementation</h5>
+                <pre class="code-block">
+def generate_pipeline_report(processed_data, ibd_data, relationship_data, pedigree, visualizations):
+    """
+    Generate comprehensive report on pipeline results.
+    
+    Args:
+        processed_data: Results from data preparation stage
+        ibd_data: Results from IBD detection stage
+        relationship_data: Results from relationship inference stage
+        pedigree: Validated pedigree structure
+        visualizations: Visualization outputs
+        
+    Returns:
+        Structured report on pipeline results
+    """
+    report = {
+        "summary": {
+            "title": "Pedigree Reconstruction Report",
+            "timestamp": datetime.datetime.now().isoformat(),
+            "individuals": len(set(pedigree["up_dict"].keys()).union(set(pedigree["up_dict"].values()))),
+            "relationships": len(relationship_data),
+            "quality_score": pedigree["validation"]["quality_score"],
+            "main_findings": summarize_main_findings(pedigree, relationship_data)
+        },
+        
+        "data_preparation": {
+            "input_files": len(processed_data),
+            "individual_count": count_unique_individuals(processed_data),
+            "quality_metrics": extract_quality_metrics(processed_data)
+        },
+        
+        "ibd_detection": {
+            "algorithm": ibd_data["metadata"]["algorithm"],
+            "segment_count": len(ibd_data["segments"]),
+            "quality_metrics": ibd_data["metadata"]["quality_metrics"],
+            "statistics": summarize_ibd_statistics(ibd_data["statistics"])
+        },
+        
+        "relationship_inference": {
+            "relationship_count": len(relationship_data),
+            "relationship_types": count_relationship_types(relationship_data),
+            "confidence_distribution": analyze_confidence_distribution(relationship_data),
+            "key_relationships": identify_key_relationships(relationship_data)
+        },
+        
+        "pedigree_structure": {
+            "structure_summary": summarize_pedigree_structure(pedigree),
+            "validation_results": summarize_validation_results(pedigree["validation"]),
+            "confidence_assessment": assess_overall_confidence(pedigree),
+            "alternatives_summary": summarize_alternatives(pedigree["validation"]["alternatives"])
+        },
+        
+        "visualizations": {
+            "main_visualization": {"format": visualizations["format"]},
+            "focused_visualizations": len(visualizations["focused"]),
+            "alternative_visualizations": len(visualizations["alternatives"])
+        }
+    }
+    
+    # Generate detailed sections
+    report["detailed_sections"] = {
+        "relationship_details": generate_relationship_details(relationship_data),
+        "pedigree_structure_details": generate_structure_details(pedigree),
+        "validation_details": generate_validation_details(pedigree["validation"]),
+        "technical_details": generate_technical_details(
+            processed_data,
+            ibd_data,
+            relationship_data,
+            pedigree
+        )
+    }
+    
+    return report</pre>
+                
+                <h5>Documentation Structure</h5>
+                <p>The end-to-end implementation includes comprehensive documentation at multiple levels:</p>
+                <ol>
+                    <li><strong>Code Documentation:</strong> Detailed docstrings for all classes, methods, and functions</li>
+                    <li><strong>Architecture Documentation:</strong> Descriptions of the pipeline components and their interactions</li>
+                    <li><strong>Configuration Documentation:</strong> Detailed explanation of all configuration options</li>
+                    <li><strong>User Guide:</strong> Instructions for using the pipeline for different use cases</li>
+                    <li><strong>Result Interpretation Guide:</strong> Guidance on interpreting pipeline outputs</li>
+                </ol>
+                
+                <pre class="code-block">
+# Example docstring for the main pipeline function
+def run_end_to_end_pipeline(input_files, config_file=None):
+    """
+    Run complete end-to-end pedigree reconstruction pipeline.
+    
+    This function orchestrates the entire pedigree reconstruction process,
+    from raw data preparation through visualization. It executes each pipeline
+    stage in sequence, passing the outputs of each stage to the next.
+    
+    The pipeline consists of the following stages:
+    1. Data Preparation: Convert input files to internal format and validate
+    2. IBD Detection: Identify shared DNA segments between individuals
+    3. Relationship Inference: Infer relationships from IBD patterns
+    4. Pedigree Construction: Build pedigree structure from relationships
+    5. Validation: Validate pedigree against evidence and constraints
+    6. Visualization: Create visual representations of the pedigree
+    
+    Args:
+        input_files: List of paths to input files. Supported formats include:
+                     VCF, 23andMe, AncestryDNA, FTDNA, and GEDCOM.
+        config_file: Optional path to JSON configuration file. If not provided,
+                     default configuration will be used.
+    
+    Returns:
+        Dictionary containing:
+            pedigree: The validated pedigree structure
+            visualizations: Generated visualizations in specified format
+            report: Comprehensive report on pipeline results
+            metadata: Configuration and execution metadata
+    
+    Raises:
+        ValueError: If input files are invalid or missing
+        ConfigurationError: If configuration is invalid
+        ProcessingError: If any pipeline stage fails
+    
+    Examples:
+        >>> results = run_end_to_end_pipeline(
+        ...     ["sample1.vcf", "sample2.ancestry.txt"],
+        ...     "custom_config.json"
+        ... )
+        >>> pedigree = results["pedigree"]
+        >>> main_viz = results["visualizations"]["main"]["data"]
+        >>> quality_score = results["report"]["summary"]["quality_score"]
+    """</pre>
+                
+                <div class="note-box">
+                    <h5>Key Documentation Components</h5>
+                    <p>Comprehensive documentation for the end-to-end implementation should include:</p>
+                    <ul>
+                        <li><strong>Installation Guide:</strong> Instructions for installing the pipeline and dependencies</li>
+                        <li><strong>Configuration Guide:</strong> Detailed explanation of all configuration options</li>
+                        <li><strong>Input Format Guide:</strong> Specifications for all supported input formats</li>
+                        <li><strong>Output Format Guide:</strong> Descriptions of all output formats and structures</li>
+                        <li><strong>API Reference:</strong> Complete reference for programmatic integration</li>
+                        <li><strong>Example Workflows:</strong> Step-by-step examples for common use cases</li>
+                        <li><strong>Troubleshooting Guide:</strong> Solutions for common issues and errors</li>
+                        <li><strong>Performance Optimization:</strong> Guidelines for optimizing performance</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>In this lab, we've explored the implementation of a complete end-to-end pedigree reconstruction pipeline using Bonsai v3. We've seen how the various components we've studied throughout this course come together to form a cohesive system capable of transforming raw genetic data into interpretable pedigree structures.</p>
+                
+                <p>By implementing this pipeline, we've demonstrated the practical application of Bonsai v3's sophisticated algorithms and data structures, and we've created a framework that can be adapted to various genetic genealogy contexts and challenges.</p>
+                
+                <p>In our final lab, we'll explore advanced applications of this pipeline in various domains, as well as future directions for research and development in computational pedigree reconstruction.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab28_integration_tools.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 28: Integration with Other Tools</span>
+                        </a>
+                        <a href="lab30_advanced_applications.html" class="path-item next">
+                            <span>Lab 30: Advanced Applications and Future Directions</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

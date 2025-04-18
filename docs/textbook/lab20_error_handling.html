@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 20: Error Handling and Data Validation | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Error Handling and Data Validation</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab20_error_handling.html" class="active">Lab 20: Error Handling</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 20: Error Handling and Data Validation</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the error handling and data validation techniques used in Bonsai v3 to ensure robust performance even with imperfect input data. Effective error handling is critical for genetic genealogy applications, where data quality can vary significantly and consistent results are essential.</p>
+            </div>
+
+            <h3>The Importance of Robust Error Handling</h3>
+            
+            <div class="concept-section">
+                <h4>Why Error Handling Matters in Genetic Genealogy</h4>
+                <p>Genetic genealogy applications deal with complex, often imperfect data from various sources. Robust error handling is essential to:</p>
+                
+                <ul>
+                    <li><strong>Maintain Data Integrity:</strong> Ensure that invalid data doesn't compromise analysis results</li>
+                    <li><strong>Provide Actionable Feedback:</strong> Help users understand and address data issues</li>
+                    <li><strong>Enable Graceful Degradation:</strong> Continue operation despite partial failures</li>
+                    <li><strong>Support Debugging:</strong> Facilitate efficient troubleshooting of issues</li>
+                </ul>
+                
+                <p>Without proper error handling, genetic genealogy tools can produce misleading results or fail entirely when encountering unexpected data patterns, significantly reducing their usefulness in real-world scenarios.</p>
+            </div>
+
+            <h3>Custom Exception Hierarchy</h3>
+            
+            <div class="concept-section">
+                <h4>Specialized Exceptions for Clear Error Communication</h4>
+                <p>Bonsai v3 implements a custom exception hierarchy that enables more targeted error handling and clearer error messages. This hierarchical approach allows catching specific types of errors or broader categories as needed.</p>
+                
+                <div class="example-box">
+                    <h5>Bonsai's Exception Hierarchy</h5>
+                    <pre class="code-block">
+class BonsaiException(Exception):
+    """Base exception class for all Bonsai-specific exceptions."""
+    
+    def __init__(self, message, details=None):
+        self.message = message
+        self.details = details or {}
+        super().__init__(self.message)
+    
+# Input-related exceptions
+class InputError(BonsaiException):
+    """Base class for input-related errors."""
+    pass
+
+class ValidationError(InputError):
+    """Raised when input data fails validation."""
+    pass
+
+class DataFormatError(InputError):
+    """Raised when input data has incorrect format."""
+    pass
+
+class MissingDataError(InputError):
+    """Raised when required data is missing."""
+    pass
+
+# Processing-related exceptions
+class ProcessingError(BonsaiException):
+    """Base class for processing-related errors."""
+    pass
+
+# Configuration-related exceptions
+class ConfigurationError(BonsaiException):
+    """Raised when there's an issue with the configuration."""
+    pass
+
+# Resource-related exceptions
+class ResourceError(BonsaiException):
+    """Base class for resource-related errors."""
+    pass</pre>
+                </div>
+                
+                <p>This hierarchy allows for more granular error handling. For example, code can catch specific types of input errors (like ValidationError) while letting other types of errors propagate, or catch all Bonsai-specific errors (BonsaiException) while letting system errors propagate.</p>
+                
+                <div class="note-box">
+                    <h5>Benefits of Custom Exceptions</h5>
+                    <p>Custom exceptions provide several key advantages:</p>
+                    <ul>
+                        <li>More informative error messages with context</li>
+                        <li>Ability to include structured details about the error</li>
+                        <li>Clearer distinction between different error types</li>
+                        <li>More targeted error recovery strategies</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Input Validation Techniques</h3>
+            
+            <div class="concept-section">
+                <h4>Ensuring Data Quality at the Entry Point</h4>
+                <p>Input validation is a critical first line of defense against data errors. Bonsai v3 uses several complementary techniques for thorough input validation:</p>
+                
+                <h5>Data Classes with Built-in Validation</h5>
+                <p>Core data structures like IBDSegment use Python's dataclass with custom validation in the __post_init__ method:</p>
+                
+                <pre class="code-block">
+@dataclass
+class IBDSegment:
+    """A data class representing an IBD segment with built-in validation."""
+    start_pos: int
+    end_pos: int
+    cm: float
+    snps: int
+    chromosome: str = "1"  # Default to chromosome 1
+    
+    def __post_init__(self):
+        """Validate the segment after initialization."""
+        # Check types
+        if not isinstance(self.start_pos, int):
+            raise ValidationError(
+                "start_pos must be an integer",
+                details={"start_pos": self.start_pos}
+            )
+        
+        # Check values
+        if self.start_pos < 0:
+            raise ValidationError(
+                "start_pos must be non-negative",
+                details={"start_pos": self.start_pos}
+            )
+        
+        if self.end_pos <= self.start_pos:
+            raise ValidationError(
+                "end_pos must be greater than start_pos",
+                details={"start_pos": self.start_pos, "end_pos": self.end_pos}
+            )
+        
+        # Additional validations...</pre>
+                
+                <h5>Validator Functions for Reusable Validation</h5>
+                <p>For more flexible validation across different contexts, Bonsai v3 uses dedicated validator functions:</p>
+                
+                <pre class="code-block">
+class Validator:
+    """A collection of validation functions for genetic data."""
+    
+    @staticmethod
+    def validate_chromosome(chrom):
+        """Validate a chromosome identifier."""
+        valid_chromosomes = [str(i) for i in range(1, 23)] + ["X", "Y"]
+        
+        if not isinstance(chrom, str):
+            raise ValidationError(
+                "Chromosome must be a string",
+                details={"chromosome": chrom, "type": type(chrom).__name__}
+            )
+        
+        # Normalize the chromosome format
+        normalized = chrom.replace("chr", "").upper()
+        
+        if normalized not in valid_chromosomes:
+            raise ValidationError(
+                "Chromosome must be 1-22, X, or Y",
+                details={"chromosome": chrom, "normalized": normalized}
+            )
+        
+        return normalized
+        
+    # Additional validators...</pre>
+                
+                <p>These validator functions can be used across the codebase to ensure consistent validation rules and reduce duplication of validation logic.</p>
+                
+                <div class="note-box">
+                    <h5>Validation Best Practices</h5>
+                    <p>Bonsai v3 follows these validation best practices:</p>
+                    <ul>
+                        <li>Validate early to catch errors at their source</li>
+                        <li>Provide detailed error messages that explain the issue</li>
+                        <li>Include context (such as variable names and values) in error messages</li>
+                        <li>Return normalized values to ensure consistent data format</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Defensive Programming</h3>
+            
+            <div class="concept-section">
+                <h4>Anticipating and Preventing Problems</h4>
+                <p>Defensive programming is a technique that anticipates potential problems and handles them gracefully before they can cause failures. Bonsai v3 uses several defensive programming techniques:</p>
+                
+                <h5>Precondition and Postcondition Checks</h5>
+                <p>Critical functions verify that their inputs meet required conditions (preconditions) and that their outputs satisfy expected properties (postconditions):</p>
+                
+                <pre class="code-block">
+def get_common_ancestors(id1, id2, up_dict):
+    """Find common ancestors of two individuals in a pedigree."""
+    # Precondition checks
+    if up_dict is None:
+        raise MissingDataError("Pedigree data is missing (up_dict is None)")
+    
+    if not isinstance(up_dict, dict):
+        raise ValidationError(
+            "Pedigree data must be a dictionary",
+            details={"actual_type": type(up_dict).__name__}
+        )
+    
+    # Validate individual IDs
+    for id_val, label in [(id1, "id1"), (id2, "id2")]:
+        if id_val is None:
+            raise MissingDataError(f"Individual ID is missing ({label} is None)")
+        
+        if not id_val in up_dict:
+            raise ValidationError(
+                f"Individual not found in pedigree",
+                details={"id": id_val, "label": label}
+            )
+    
+    # Function implementation...
+    
+    # Postcondition checks
+    if id1 in ancestors2:
+        # id1 is an ancestor of id2
+        assert id1 in common_ancestors, "id1 should be in common ancestors if it's an ancestor of id2"
+    
+    return common_ancestors</pre>
+                
+                <h5>Check for Cycles in Pedigrees</h5>
+                <p>Bonsai v3 performs specific checks for common data integrity issues, such as cycles in pedigree structures:</p>
+                
+                <pre class="code-block">
+def check_for_cycles(iid, visited=None, path=None):
+    """Check if there are cycles in the ancestry path."""
+    if visited is None:
+        visited = set()
+    if path is None:
+        path = []
+    
+    if iid in path:
+        # Found a cycle
+        cycle_path = path[path.index(iid):] + [iid]
+        raise ValidationError(
+            "Cycle detected in pedigree",
+            details={"cycle": "->".join(str(i) for i in cycle_path)}
+        )
+    
+    # Continue checking...</pre>
+                
+                <div class="example-box">
+                    <h5>Defensive Programming in Action</h5>
+                    <p>Consider how Bonsai v3 handles complex pedigree operations defensively:</p>
+                    <ol>
+                        <li>First, validate all input parameters thoroughly</li>
+                        <li>Check for structural issues like cycles in the pedigree</li>
+                        <li>Verify relationships for biological plausibility</li>
+                        <li>Apply constraints based on known demographic patterns</li>
+                        <li>Validate the final output against expected properties</li>
+                    </ol>
+                    <p>This multi-layered approach prevents incorrect pedigree structures from being created or processed, ensuring reliable results.</p>
+                </div>
+            </div>
+
+            <h3>Graceful Degradation</h3>
+            
+            <div class="concept-section">
+                <h4>Continuing Operation Despite Partial Failures</h4>
+                <p>In complex genetic genealogy applications, it's important to continue operating even when parts of the system fail. Bonsai v3 implements graceful degradation strategies to maintain functionality with reduced capabilities when faced with errors.</p>
+                
+                <h5>Fallback Mechanisms</h5>
+                <p>When a preferred operation fails, Bonsai v3 often provides fallback mechanisms:</p>
+                
+                <pre class="code-block">
+def get_segments(self, chromosome=None, min_cm=None, min_snps=None):
+    """Get segments with optional filtering."""
+    # Start with all segments
+    result = self.segments
+    
+    # Apply filters if provided
+    if chromosome is not None:
+        try:
+            chrom = Validator.validate_chromosome(chromosome)
+            result = [s for s in result if s["chromosome"] == chrom]
+        except ValidationError as e:
+            # Fallback: Log the error but return empty list
+            self.logger.warning(f"Invalid chromosome filter: {e}")
+            return []
+    
+    if min_cm is not None:
+        try:
+            cm_threshold = Validator.validate_centimorgans(min_cm)
+            result = [s for s in result if s["cm"] >= cm_threshold]
+        except ValidationError as e:
+            # Fallback: Use the configured threshold instead
+            self.logger.warning(
+                f"Invalid min_cm filter ({min_cm}), using default: {self.config['min_cm']}"
+            )
+            result = [s for s in result if s["cm"] >= self.config["min_cm"]]
+    
+    return result</pre>
+                
+                <h5>Component Isolation</h5>
+                <p>Bonsai v3 isolates different analysis components so that failures in one don't necessarily compromise the entire system:</p>
+                
+                <pre class="code-block">
+def analyze(self, data):
+    """Analyze genetic data with graceful degradation."""
+    # Track all analysis results and errors
+    results = {}
+    errors = {}
+    
+    # Try each analyzer and gracefully handle failures
+    for name, analyzer in self.analyzers.items():
+        if name not in self.available_analyzers:
+            self.logger.debug(f"Skipping unavailable analyzer: {name}")
+            continue
+        
+        try:
+            self.logger.debug(f"Running {name} analyzer")
+            results[name] = analyzer(data)
+        except MissingDataError as e:
+            self.logger.info(f"{name} analyzer skipped: {e}")
+            errors[name] = {"error": "missing_data", "message": str(e)}
+        except ValidationError as e:
+            self.logger.info(f"{name} analyzer failed validation: {e}")
+            errors[name] = {"error": "validation", "message": str(e)}
+        except Exception as e:
+            self.logger.warning(f"{name} analyzer failed unexpectedly: {e}")
+            errors[name] = {"error": "unexpected", "message": str(e)}
+            
+            # Mark this analyzer as unavailable for future calls
+            self.available_analyzers.remove(name)
+    
+    # If all analyzers failed, raise an error
+    if not results and errors:
+        raise ProcessingError(
+            "All analyzers failed",
+            details={"errors": errors}
+        )
+    
+    # Try to combine results for a final assessment
+    final_assessment = self._combine_results(results, errors)
+    
+    # Return the complete analysis with partial results if needed
+    return {
+        "individual_results": results,
+        "errors": errors,
+        "final_assessment": final_assessment,
+        "available_analyzers": list(self.available_analyzers),
+        "status": "partial" if errors else "complete"
+    }</pre>
+                
+                <div class="note-box">
+                    <h5>Gradual Degradation Principle</h5>
+                    <p>Bonsai v3 follows the principle of gradual degradation—as more components or data elements become unavailable, the system's capabilities reduce proportionally rather than failing completely. This allows it to extract maximum value from available data even in suboptimal conditions.</p>
+                </div>
+            </div>
+
+            <h3>Logging and Debugging</h3>
+            
+            <div class="concept-section">
+                <h4>Comprehensive Visibility into System Operation</h4>
+                <p>Effective logging and debugging facilities are essential for diagnosing and resolving issues in complex genetic genealogy applications. Bonsai v3 implements a sophisticated logging framework that provides comprehensive visibility into system operation.</p>
+                
+                <h5>Structured Logging</h5>
+                <p>Bonsai v3 uses structured logging to include relevant context with each log message:</p>
+                
+                <pre class="code-block">
+def _log(self, level, message, **kwargs):
+    """Internal method to format and log messages with structured data."""
+    # Add timestamp and structured data if provided
+    if kwargs:
+        # Format structured data for readability
+        data_str = ", ".join(f"{k}={self._format_value(v)}" for k, v in kwargs.items())
+        full_message = f"{message} [{data_str}]"
+    else:
+        full_message = message
+    
+    # Log the message
+    self.logger.log(level, full_message)</pre>
+                
+                <h5>Performance Tracking</h5>
+                <p>To diagnose performance issues, Bonsai v3 includes checkpoint logging for timing critical operations:</p>
+                
+                <pre class="code-block">
+def checkpoint(self, name):
+    """Log a performance checkpoint."""
+    now = time.time()
+    elapsed = now - self.last_checkpoint
+    total_elapsed = now - self.start_time
+    
+    self.info(
+        f"Checkpoint: {name}",
+        elapsed_seconds=f"{elapsed:.3f}",
+        total_elapsed=f"{total_elapsed:.3f}"
+    )
+    
+    self.last_checkpoint = now
+    return elapsed</pre>
+                
+                <h5>Exception Logging</h5>
+                <p>Bonsai v3 provides specialized functions for logging exceptions with context:</p>
+                
+                <pre class="code-block">
+def log_exception(self, e, context=None):
+    """Log an exception with context."""
+    tb = traceback.format_exc()
+    context_dict = context or {}
+    
+    # Extract exception details
+    exc_type = type(e).__name__
+    exc_message = str(e)
+    
+    # Make a clean traceback for logging
+    tb_lines = tb.split('\n')
+    if len(tb_lines) > 10:
+        # Truncate if too long
+        tb_summary = '\n'.join(tb_lines[:3] + ["..."] + tb_lines[-5:])
+    else:
+        tb_summary = tb
+    
+    # Log the exception
+    self.error(
+        f"Exception: {exc_type}: {exc_message}",
+        exception_type=exc_type,
+        **context_dict
+    )
+    
+    # Log the traceback at debug level
+    self.debug(f"Traceback:\n{tb_summary}")</pre>
+                
+                <div class="example-box">
+                    <h5>Logging in a Multi-Step Process</h5>
+                    <p>Here's how Bonsai v3 might log a typical pedigree reconstruction process:</p>
+                    <ol>
+                        <li><strong>INFO</strong>: "Starting pedigree reconstruction for 120 individuals"</li>
+                        <li><strong>DEBUG</strong>: "Loading IBD data from file: data.seg"</li>
+                        <li><strong>INFO</strong>: "Loaded 1,523 IBD segments between 87 pairs of individuals"</li>
+                        <li><strong>DEBUG</strong>: "Checkpoint: Data preparation completed [elapsed_seconds=2.342, total_elapsed=2.342]"</li>
+                        <li><strong>INFO</strong>: "Validated segments [valid=1498, invalid=25]"</li>
+                        <li><strong>WARNING</strong>: "25 segments failed validation [reason=end_before_start]"</li>
+                        <li><strong>DEBUG</strong>: "Checkpoint: Relationship inference started [elapsed_seconds=0.128, total_elapsed=2.470]"</li>
+                        <li><strong>INFO</strong>: "Completed relationship inference for 87 pairs"</li>
+                        <li><strong>DEBUG</strong>: "Checkpoint: Pedigree construction [elapsed_seconds=5.231, total_elapsed=7.701]"</li>
+                        <li><strong>INFO</strong>: "Constructed pedigree with 112 individuals in 14 family groups"</li>
+                    </ol>
+                    <p>This comprehensive logging provides clear visibility into each step of the process, making it easier to identify and address any issues that arise.</p>
+                </div>
+            </div>
+
+            <h3>Practical Implementation in Bonsai v3</h3>
+            
+            <div class="concept-section">
+                <h4>Integrating Error Handling Throughout the Codebase</h4>
+                <p>In Bonsai v3, error handling is not an afterthought but an integral part of every component. This comprehensive approach ensures that errors are caught and handled appropriately at every level of the system.</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Error Handling Approach</th>
+                            <th>Key Techniques</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>IBD Processing (ibd.py)</td>
+                            <td>Strict validation with fallbacks</td>
+                            <td>Data structure validation, threshold-based filtering</td>
+                        </tr>
+                        <tr>
+                            <td>Relationship Inference (likelihoods.py)</td>
+                            <td>Graceful degradation</td>
+                            <td>Multiple evidence sources, confidence scoring</td>
+                        </tr>
+                        <tr>
+                            <td>Pedigree Construction (pedigree.py)</td>
+                            <td>Defensive programming</td>
+                            <td>Cycle detection, consistency checking</td>
+                        </tr>
+                        <tr>
+                            <td>Data Loading (loaders.py)</td>
+                            <td>Progressive enhancement</td>
+                            <td>Format detection, partial parsing</td>
+                        </tr>
+                        <tr>
+                            <td>User Interface (ui.py)</td>
+                            <td>User-friendly error reporting</td>
+                            <td>Actionable error messages, suggested fixes</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p>This strategic application of different error handling techniques ensures that Bonsai v3 is robust in real-world usage scenarios with imperfect data.</p>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Error handling and data validation are critical components of Bonsai v3's architecture, ensuring reliable operation even with imperfect data inputs. By implementing a comprehensive error handling strategy—including custom exceptions, thorough validation, defensive programming, graceful degradation, and detailed logging—Bonsai v3 achieves the robustness required for real-world genetic genealogy applications.</p>
+                
+                <p>These techniques allow Bonsai v3 to focus on extracting maximum value from available data while clearly communicating any limitations or issues to users, leading to more trustworthy and actionable results.</p>
+                
+                <p>In the next lab, we'll explore pedigree rendering and visualization techniques in Bonsai v3, which help users interpret and understand the complex pedigree structures inferred from genetic data.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab19_caching_mechanisms.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 19: Caching Mechanisms</span>
+                        </a>
+                        <a href="lab21_pedigree_rendering.html" class="path-item next">
+                            <span>Lab 21: Pedigree Rendering</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

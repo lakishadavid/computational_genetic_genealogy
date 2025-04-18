@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 19: Caching Mechanisms for Computational Efficiency | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Caching Mechanisms for Computational Efficiency</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab19_caching_mechanisms.html" class="active">Lab 19: Caching Mechanisms</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 19: Caching Mechanisms for Computational Efficiency</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the sophisticated caching mechanisms used in Bonsai v3 to significantly improve computational performance for large-scale pedigree reconstruction. Through effective caching strategies, Bonsai v3 avoids redundant calculations and enables faster processing of genetic genealogy data.</p>
+            </div>
+
+            <h3>The Challenge of Computational Efficiency</h3>
+            
+            <div class="concept-section">
+                <h4>Why Caching Matters in Pedigree Reconstruction</h4>
+                <p>Pedigree reconstruction is a computationally intensive process, involving numerous repetitive calculations. Without proper caching, these calculations would be performed repeatedly, leading to significant performance bottlenecks, especially when dealing with large datasets.</p>
+                
+                <p>The key computational challenges that caching addresses include:</p>
+                
+                <ol>
+                    <li><strong>Repeated Likelihood Calculations:</strong> Computing the same relationship likelihoods multiple times</li>
+                    <li><strong>Redundant Ancestry Traversals:</strong> Finding ancestors or descendants of the same individual repeatedly</li>
+                    <li><strong>Multiple IBD Evaluations:</strong> Analyzing the same IBD segments in different contexts</li>
+                    <li><strong>Resource Constraints:</strong> Managing memory usage while maintaining computational speed</li>
+                </ol>
+            </div>
+
+            <h3>Memoization: The Foundation of Caching</h3>
+            
+            <div class="concept-section">
+                <h4>Principles of Memoization</h4>
+                <p>Memoization is a fundamental caching technique that stores the results of expensive function calls and returns the cached result when the same inputs occur again. In Bonsai v3, memoization is extensively used to optimize recursive and repetitive operations.</p>
+                
+                <p>The general pattern for memoization in Bonsai v3 follows this structure:</p>
+                
+                <pre class="code-block">
+def memoize(func):
+    """Caches function results based on input arguments."""
+    cache = {}
+    
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        # Create a key from the arguments
+        key = str(args) + str(sorted(kwargs.items()))
+        
+        # Return cached result if available
+        if key in cache:
+            return cache[key]
+        
+        # Compute and cache the result
+        result = func(*args, **kwargs)
+        cache[key] = result
+        return result
+    
+    return wrapper</pre>
+                
+                <p>This simple yet powerful technique can dramatically improve performance for functions that are called repeatedly with the same arguments, such as computing relationships between the same pairs of individuals or finding ancestors in a pedigree.</p>
+                
+                <div class="note-box">
+                    <h5>Performance Impact of Memoization</h5>
+                    <p>For recursive functions like calculating Fibonacci numbers or traversing a pedigree structure, memoization can reduce the time complexity from exponential to linear, often resulting in speedups of 100x or more for moderately sized inputs.</p>
+                </div>
+            </div>
+
+            <h3>LRU Caching: Managing Memory Constraints</h3>
+            
+            <div class="concept-section">
+                <h4>Least Recently Used (LRU) Caching</h4>
+                <p>While basic memoization is effective, it can lead to unbounded memory usage as the cache grows over time. Least Recently Used (LRU) caching addresses this by maintaining a fixed-size cache, evicting the least recently used items when the cache is full.</p>
+                
+                <p>Bonsai v3 implements LRU caching for memory-intensive operations, ensuring that the most frequently accessed results remain in memory while older, less frequently used results are discarded to conserve resources.</p>
+                
+                <div class="example-box">
+                    <h5>Example: Finding Lowest Common Ancestors</h5>
+                    <p>When constructing pedigrees, finding the lowest common ancestor of two individuals is a common operation. By applying LRU caching to this function, Bonsai v3 can efficiently handle repeated queries even with limited memory:</p>
+                    <pre class="code-block">
+@lru_cache(maxsize=1000)
+def find_lowest_common_ancestor(iid1, iid2, pedigree):
+    # Implementation details...
+    return lca</pre>
+                    <p>This caching strategy is particularly effective for operations that are called frequently but with a limited set of unique inputs, ensuring that the most commonly used results remain in memory.</p>
+                </div>
+            </div>
+
+            <h3>Persistent Caching: Maintaining Results Between Sessions</h3>
+            
+            <div class="concept-section">
+                <h4>Disk-Based Persistent Caching</h4>
+                <p>For long-running or multi-stage pedigree reconstruction tasks, it's valuable to persist computed results between program executions. Bonsai v3 implements disk-based caching to store computationally expensive results that can be reused across different sessions.</p>
+                
+                <p>This is particularly important for iterative development processes where users may want to experiment with different parameters without recalculating unchanged components.</p>
+                
+                <div class="note-box">
+                    <h5>Implementation in Bonsai v3</h5>
+                    <p>Bonsai's persistent caching uses a combination of hashing and serialization to efficiently store and retrieve complex data structures. Results are typically stored in a structured format like JSON or pickle files, with keys derived from function names and input arguments to ensure correct retrieval.</p>
+                </div>
+                
+                <p>Persistent caching is especially valuable for:</p>
+                <ul>
+                    <li>Relationship likelihood calculations that depend on complex statistical models</li>
+                    <li>Genetic segment analyses that require significant computational resources</li>
+                    <li>Intermediate results in multi-stage pedigree reconstruction</li>
+                </ul>
+            </div>
+
+            <h3>Hierarchical Caching: Optimizing for Different Access Patterns</h3>
+            
+            <div class="concept-section">
+                <h4>Multi-Level Caching Architecture</h4>
+                <p>The most sophisticated caching strategy in Bonsai v3 is hierarchical caching, which combines multiple caching mechanisms to optimize for different types of operations and access patterns.</p>
+                
+                <p>This approach uses multiple cache levels with different characteristics:</p>
+                <ol>
+                    <li><strong>Level 1:</strong> In-memory LRU cache for the most frequently accessed items (fast access, limited size)</li>
+                    <li><strong>Level 2:</strong> Disk-based persistent cache for less frequently accessed items (slower access, larger size)</li>
+                </ol>
+                
+                <p>When a value is requested, the system checks each cache level in order, starting with the fastest. If the value is found in a slower cache, it's also stored in faster caches for future access, implementing a traditional hierarchical memory model.</p>
+                
+                <div class="example-box">
+                    <h5>Hierarchical Caching Architecture</h5>
+                    <pre class="code-block">
+class HierarchicalCache:
+    def __init__(self, caches):
+        self.caches = caches  # List of caches from fastest to slowest
+    
+    def get(self, key):
+        # Check each cache level
+        for i, cache in enumerate(self.caches):
+            value = cache.get(key)
+            if value is not None:
+                # Store the value in all faster caches
+                for j in range(i):
+                    self.caches[j].put(key, value)
+                return value
+        
+        return None</pre>
+                </div>
+            </div>
+
+            <h3>Strategic Implementation in Bonsai v3</h3>
+            
+            <div class="concept-section">
+                <h4>Where and How Caching is Applied</h4>
+                <p>In Bonsai v3, caching mechanisms are strategically applied to maximize performance benefits while managing resource usage:</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Operation Type</th>
+                            <th>Caching Strategy</th>
+                            <th>Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Ancestry traversal (finding ancestors/descendants)</td>
+                            <td>Basic Memoization</td>
+                            <td>Simple inputs, frequently repeated</td>
+                        </tr>
+                        <tr>
+                            <td>Relationship likelihood calculations</td>
+                            <td>LRU Cache</td>
+                            <td>Complex calculations, memory-intensive</td>
+                        </tr>
+                        <tr>
+                            <td>Statistical model parameters</td>
+                            <td>Persistent Disk Cache</td>
+                            <td>Expensive to compute, rarely changes</td>
+                        </tr>
+                        <tr>
+                            <td>Pedigree topology operations</td>
+                            <td>Hierarchical Cache</td>
+                            <td>Mix of frequent and infrequent access patterns</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <p>This strategic application of different caching mechanisms ensures that Bonsai v3 achieves optimal performance across a wide range of use cases and dataset sizes.</p>
+            </div>
+
+            <h3>Performance Impact and Optimization Techniques</h3>
+            
+            <div class="concept-section">
+                <h4>Measuring and Maximizing Cache Effectiveness</h4>
+                <p>The effectiveness of caching in Bonsai v3 is continuously monitored and optimized through several key metrics:</p>
+                
+                <ul>
+                    <li><strong>Hit Ratio:</strong> The percentage of cache lookups that result in a hit (found in cache)</li>
+                    <li><strong>Memory Usage:</strong> The amount of memory consumed by the cache</li>
+                    <li><strong>Cache Turnover:</strong> How frequently items are evicted from the cache</li>
+                </ul>
+                
+                <p>To maximize cache effectiveness, Bonsai v3 employs several optimization techniques:</p>
+                
+                <ol>
+                    <li><strong>Key Normalization:</strong> Ensuring that functionally equivalent inputs produce the same cache key</li>
+                    <li><strong>Selective Caching:</strong> Only caching results that are expensive to compute or likely to be reused</li>
+                    <li><strong>Cache Warming:</strong> Precomputing commonly used results to populate the cache</li>
+                    <li><strong>Adaptive Sizing:</strong> Dynamically adjusting cache sizes based on available resources and access patterns</li>
+                </ol>
+                
+                <div class="note-box">
+                    <h5>Real-World Performance Gains</h5>
+                    <p>When applied to large pedigree reconstruction tasks with hundreds of individuals, Bonsai v3's caching mechanisms typically reduce computation time by 70-95%, turning hours-long computations into minutes.</p>
+                </div>
+            </div>
+
+            <h3>Practical Considerations and Limitations</h3>
+            
+            <div class="concept-section">
+                <h4>When Caching May Not Help</h4>
+                <p>While caching significantly improves performance in many scenarios, there are situations where its benefits may be limited:</p>
+                
+                <ul>
+                    <li><strong>Unique Inputs:</strong> When most function calls have unique inputs, caching provides minimal benefit</li>
+                    <li><strong>Memory Constraints:</strong> On systems with very limited memory, aggressive caching may lead to increased paging and reduced performance</li>
+                    <li><strong>Simple Operations:</strong> For operations that are already very fast, the overhead of cache management may outweigh the benefits</li>
+                </ul>
+                
+                <p>Bonsai v3 addresses these limitations through adaptive caching strategies that adjust based on the specific characteristics of the dataset and available system resources.</p>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Caching mechanisms are a critical component of Bonsai v3's performance optimization strategy, enabling efficient pedigree reconstruction even with large and complex datasets. By intelligently combining different caching approaches—from simple memoization to sophisticated hierarchical caching—Bonsai v3 achieves dramatic performance improvements while managing resource usage effectively.</p>
+                
+                <p>In the next lab, we'll explore error handling and data validation mechanisms in Bonsai v3, which ensure robust performance even with imperfect data inputs.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab18_optimization_techniques.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 18: Optimization Techniques</span>
+                        </a>
+                        <a href="lab20_error_handling.html" class="path-item next">
+                            <span>Lab 20: Error Handling</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

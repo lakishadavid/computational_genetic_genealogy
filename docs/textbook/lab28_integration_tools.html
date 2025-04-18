@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 28: Integration with Other Genealogical Tools | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Integration with Other Genealogical Tools</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab28_integration_tools.html" class="active">Lab 28: Integration with Other Tools</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 28: Integration with Other Genealogical Tools</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 integrates with other genealogical tools and systems, particularly through the DRUID algorithm and other integration mechanisms. Understanding these integration capabilities is essential for creating comprehensive genetic genealogy workflows that leverage multiple data sources and analytical approaches.</p>
+            </div>
+
+            <h3>Beyond Standalone Analysis</h3>
+            
+            <div class="concept-section">
+                <h4>The Integration Imperative</h4>
+                <p>While Bonsai v3 provides powerful genetic relationship inference capabilities, real-world genetic genealogy typically involves multiple tools and data sources. Effective integration with other systems enables more comprehensive analysis and better results:</p>
+                
+                <h5>Key Integration Benefits</h5>
+                <ul>
+                    <li><strong>Complementary Capabilities:</strong> Different tools excel at different aspects of genetic genealogy</li>
+                    <li><strong>Multiple Data Sources:</strong> Incorporating DNA, documentary, and contextual information</li>
+                    <li><strong>Workflow Continuity:</strong> Supporting end-to-end genetic genealogy processes</li>
+                    <li><strong>Expertise Leverage:</strong> Utilizing specialized algorithms from various domains</li>
+                    <li><strong>Ecosystem Compatibility:</strong> Fitting into existing user workflows and tool chains</li>
+                </ul>
+                
+                <p>Bonsai v3's integration capabilities enable it to function both as a standalone analysis tool and as a component within larger genetic genealogy workflows.</p>
+                
+                <div class="note-box">
+                    <h5>The Genetic Genealogy Ecosystem</h5>
+                    <p>Bonsai integrates with several categories of external tools and systems:</p>
+                    <ul>
+                        <li><strong>DNA Testing Platforms:</strong> Direct-to-consumer testing companies and research databases</li>
+                        <li><strong>Family Tree Systems:</strong> Genealogical record management tools</li>
+                        <li><strong>IBD Detection Tools:</strong> Specialized algorithms for identifying IBD segments</li>
+                        <li><strong>Population Genetics Software:</strong> Tools for analyzing population structure and admixture</li>
+                        <li><strong>Visualization Systems:</strong> Specialized tools for representing genetic relationships</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>The DRUID Algorithm</h3>
+            
+            <div class="concept-section">
+                <h4>Degree Relationship Using IBD Data</h4>
+                <p>One of Bonsai v3's key integration mechanisms is the DRUID (Degree Relationship Using IBD Data) algorithm, implemented in the <code>druid.py</code> module. This algorithm provides standardized relationship inference that can integrate with external systems:</p>
+                
+                <h5>DRUID Core Functionality</h5>
+                <p>The DRUID algorithm uses a generalized approach to infer relationship degrees from IBD sharing data:</p>
+                
+                <pre class="code-block">
+def infer_degree_generalized_druid(
+    total_ibd: float,
+    num_segments: int = None,
+    longest_segment: float = None,
+    total_full_ibd: float = None,
+):
+    """
+    Infer relationship degree using the generalized DRUID algorithm.
+    
+    This algorithm estimates the degree of relationship based on
+    total IBD sharing and optional segment characteristics.
+    
+    Args:
+        total_ibd: Total IBD sharing in centiMorgans
+        num_segments: Optional number of IBD segments
+        longest_segment: Optional length of longest segment in cM
+        total_full_ibd: Optional total fully identical region length
+        
+    Returns:
+        Estimated relationship degree (1.0 = first degree, etc.)
+    """
+    # Implementation uses model-based prediction of relationship degree
+    # based on IBD statistics, calibrated with known relationships</pre>
+                
+                <p>This function provides a standardized interface for relationship inference that external systems can easily incorporate, without needing to understand Bonsai's more complex internal mechanisms.</p>
+                
+                <div class="example-box">
+                    <h5>DRUID Integration Example</h5>
+                    <pre class="code-block">
+# Example of how an external tool might use DRUID
+def analyze_match_with_druid(match_data):
+    """
+    Analyze a DNA match using the DRUID algorithm.
+    
+    Args:
+        match_data: Dictionary with match statistics
+        
+    Returns:
+        Dictionary with relationship prediction
+    """
+    # Extract IBD statistics from match data
+    total_ibd = match_data['shared_cm']
+    num_segments = match_data.get('num_segments')
+    longest_segment = match_data.get('longest_segment')
+    
+    # Call DRUID algorithm
+    degree = infer_degree_generalized_druid(
+        total_ibd=total_ibd,
+        num_segments=num_segments,
+        longest_segment=longest_segment
+    )
+    
+    # Convert degree to relationship description
+    relationship = degree_to_relationship(degree)
+    
+    return {
+        'predicted_degree': degree,
+        'relationship_description': relationship,
+        'confidence': calculate_confidence(total_ibd, degree)
+    }</pre>
+                </div>
+                
+                <h5>Key DRUID Advantages</h5>
+                <ul>
+                    <li><strong>Simplicity:</strong> Straightforward interface requiring minimal data</li>
+                    <li><strong>Standardization:</strong> Consistent relationship degree scale</li>
+                    <li><strong>Robustness:</strong> Works with varied input quality and completeness</li>
+                    <li><strong>Calibration:</strong> Empirically calibrated with known relationships</li>
+                    <li><strong>Extensibility:</strong> Can incorporate additional evidence when available</li>
+                </ul>
+            </div>
+
+            <h3>Data Exchange Formats</h3>
+            
+            <div class="concept-section">
+                <h4>Standardized Information Transfer</h4>
+                <p>Effective integration requires standardized data exchange formats. Bonsai v3 supports several key formats for importing and exporting genetic and relationship data:</p>
+                
+                <h5>IBD Data Formats</h5>
+                <p>Bonsai supports several common IBD data formats:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Format</th>
+                            <th>Description</th>
+                            <th>Common Sources</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Phased IBD Format</td>
+                            <td>Detailed segment data with phase information</td>
+                            <td>Research tools like IBIS, Refined-IBD</td>
+                        </tr>
+                        <tr>
+                            <td>Unphased Segment Format</td>
+                            <td>Simpler format without phase information</td>
+                            <td>Consumer testing companies, GERMLINE</td>
+                        </tr>
+                        <tr>
+                            <td>Summary Statistics Format</td>
+                            <td>Aggregated IBD metrics without segment details</td>
+                            <td>Consumer websites, limited data sharing</td>
+                        </tr>
+                        <tr>
+                            <td>Match List Format</td>
+                            <td>Simple listing of genetic matches and basic metrics</td>
+                            <td>Consumer testing platforms, simple exports</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h5>Pedigree Data Formats</h5>
+                <p>For exchanging pedigree information, Bonsai supports:</p>
+                <ul>
+                    <li><strong>GEDCOM:</strong> Standard genealogical data exchange format</li>
+                    <li><strong>CSV Relationship Format:</strong> Simple tabular relationship data</li>
+                    <li><strong>JSON Pedigree Format:</strong> Hierarchical pedigree representation</li>
+                    <li><strong>Graph Exchange Format (GXF):</strong> Standard format for network structures</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Format Conversion Example</h5>
+                    <pre class="code-block">
+# Example of converting between IBD formats
+def convert_to_bonsai_format(external_segment_data, format_type):
+    """
+    Convert external IBD data to Bonsai's internal format.
+    
+    Args:
+        external_segment_data: IBD data in external format
+        format_type: String identifying the external format
+        
+    Returns:
+        IBD segments in Bonsai's internal format
+    """
+    bonsai_segments = []
+    
+    if format_type == "23andme":
+        # Convert 23andMe format
+        for segment in external_segment_data:
+            bonsai_segments.append({
+                "chromosome": segment["chromosome"],
+                "start_pos": int(segment["start_point"]),
+                "end_pos": int(segment["end_point"]),
+                "cm_length": float(segment["centimorgans"]),
+                "snp_count": int(segment["snps"])
+            })
+    
+    elif format_type == "ancestry":
+        # Convert Ancestry.com format
+        for segment in external_segment_data:
+            bonsai_segments.append({
+                "chromosome": segment["Chr"],
+                "start_pos": int(segment["Start"]),
+                "end_pos": int(segment["End"]),
+                "cm_length": float(segment["cM"]),
+                "snp_count": int(segment.get("SNPs", 0))
+            })
+    
+    # More format conversions...
+    
+    return bonsai_segments</pre>
+                </div>
+                
+                <div class="note-box">
+                    <h5>Data Transformation Challenges</h5>
+                    <p>Converting between different data formats presents several challenges:</p>
+                    <ul>
+                        <li><strong>Information Loss:</strong> Some formats contain less information than others</li>
+                        <li><strong>Coordinate Systems:</strong> Different genomic coordinate references</li>
+                        <li><strong>Identifier Mapping:</strong> Reconciling different individual identifiers</li>
+                        <li><strong>Quality Variations:</strong> Varying data quality and completeness</li>
+                    </ul>
+                    <p>Bonsai's data exchange utilities include mechanisms to handle these challenges and maintain data integrity during format conversions.</p>
+                </div>
+            </div>
+
+            <h3>API Integration</h3>
+            
+            <div class="concept-section">
+                <h4>Programmatic Access and Control</h4>
+                <p>Bonsai v3 provides several API mechanisms for programmatic integration with other systems:</p>
+                
+                <h5>Python API</h5>
+                <p>Bonsai's primary API is its Python interface, which allows direct integration with other Python-based tools:</p>
+                
+                <pre class="code-block">
+# Example of using Bonsai's Python API
+from bonsai.v3 import PedigreeBuilder, IBDProcessor
+
+# Initialize Bonsai components
+ibd_processor = IBDProcessor()
+pedigree_builder = PedigreeBuilder()
+
+# Process IBD data
+processed_ibd = ibd_processor.process_segments(raw_segments)
+
+# Build pedigree from processed IBD
+pedigree = pedigree_builder.build_from_ibd(processed_ibd)
+
+# Export results in desired format
+pedigree.export_to_gedcom("results.ged")</pre>
+                
+                <p>This API enables seamless integration with other Python-based genetic and genealogical tools, creating unified analysis workflows.</p>
+                
+                <h5>Command-Line Interface</h5>
+                <p>For integration with non-Python systems, Bonsai provides a command-line interface:</p>
+                
+                <pre class="code-block">
+# Example of command-line integration
+$ bonsai-process --input segments.csv --format 23andme --output processed.json
+$ bonsai-build --input processed.json --output pedigree.ged</pre>
+                
+                <p>This command-line interface enables easy integration with shell scripts, workflows, and other command-line tools.</p>
+                
+                <h5>Web API</h5>
+                <p>For distributed or service-oriented architectures, Bonsai can be deployed with a REST API:</p>
+                
+                <pre class="code-block">
+# Example of REST API access
+POST /api/v1/process-ibd
+{
+  "segments": [...],
+  "format": "23andme"
+}
+
+Response:
+{
+  "processed_data": [...],
+  "statistics": {...}
+}
+
+POST /api/v1/build-pedigree
+{
+  "processed_data": [...],
+  "parameters": {...}
+}
+
+Response:
+{
+  "pedigree": {...},
+  "statistics": {...}
+}</pre>
+                
+                <p>This web API enables integration with web applications, cloud-based services, and other distributed systems.</p>
+            </div>
+
+            <h3>Integration with DNA Testing Platforms</h3>
+            
+            <div class="concept-section">
+                <h4>Connecting with Commercial and Research Platforms</h4>
+                <p>Bonsai v3 includes specific integration mechanisms for major DNA testing platforms, enabling direct data exchange and analysis coordination:</p>
+                
+                <h5>Supported Testing Platforms</h5>
+                <ul>
+                    <li><strong>23andMe:</strong> Personal genome testing focused on health and ancestry</li>
+                    <li><strong>AncestryDNA:</strong> Genealogy-focused genetic testing service</li>
+                    <li><strong>Family Tree DNA:</strong> Service focusing on genetic genealogy and deep ancestry</li>
+                    <li><strong>MyHeritage DNA:</strong> Combined genetic testing and family tree service</li>
+                    <li><strong>LivingDNA:</strong> Testing with detailed geographic ancestry resolution</li>
+                    <li><strong>All of Us:</strong> NIH research program with genetic data</li>
+                    <li><strong>UK Biobank:</strong> Large-scale biomedical database and research resource</li>
+                </ul>
+                
+                <h5>Integration Approaches</h5>
+                <p>Bonsai supports several methods for integrating with these platforms:</p>
+                <ol>
+                    <li><strong>Data Import:</strong> Reading raw data files downloaded from testing platforms</li>
+                    <li><strong>API Connections:</strong> Direct API integration where supported</li>
+                    <li><strong>Format Conversion:</strong> Converting between platform-specific and standard formats</li>
+                    <li><strong>Browser Extensions:</strong> Supporting data extraction from web interfaces</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>23andMe Integration Example</h5>
+                    <pre class="code-block">
+# Example of integrating with 23andMe data
+def process_23andme_data(raw_data_file, matches_file):
+    """
+    Process 23andMe data files for Bonsai analysis.
+    
+    Args:
+        raw_data_file: Path to 23andMe raw data file
+        matches_file: Path to 23andMe matches CSV export
+        
+    Returns:
+        Processed data ready for Bonsai analysis
+    """
+    # Load and parse raw genotype data
+    genotypes = parse_23andme_raw_data(raw_data_file)
+    
+    # Load and parse matches data
+    matches = parse_23andme_matches(matches_file)
+    
+    # Convert to Bonsai format
+    bonsai_segments = []
+    for match in matches:
+        match_segments = extract_segments_from_match(match)
+        bonsai_segments.extend(match_segments)
+    
+    # Process with Bonsai
+    processed_data = ibd_processor.process_segments(bonsai_segments)
+    
+    return processed_data</pre>
+                </div>
+                
+                <div class="note-box">
+                    <h5>Platform-Specific Considerations</h5>
+                    <p>Each testing platform has unique characteristics that affect integration:</p>
+                    <ul>
+                        <li><strong>Data Completeness:</strong> Some platforms provide more detailed data than others</li>
+                        <li><strong>Access Mechanisms:</strong> Varying API availability and data export options</li>
+                        <li><strong>Coordinate Systems:</strong> Different genomic build references</li>
+                        <li><strong>Privacy Controls:</strong> Platform-specific restrictions on data sharing</li>
+                    </ul>
+                    <p>Bonsai's integration modules account for these differences to provide consistent analysis capabilities across platforms.</p>
+                </div>
+            </div>
+
+            <h3>Integration with Family Tree Systems</h3>
+            
+            <div class="concept-section">
+                <h4>Combining Genetic and Documentary Evidence</h4>
+                <p>One of the most powerful aspects of genetic genealogy is the integration of genetic evidence with traditional family tree information. Bonsai v3 supports bidirectional integration with family tree systems:</p>
+                
+                <h5>Family Tree Import</h5>
+                <p>Bonsai can import existing family tree data to:</p>
+                <ul>
+                    <li><strong>Provide Context:</strong> Using known relationships to inform genetic analysis</li>
+                    <li><strong>Generate Hypotheses:</strong> Creating relationship hypotheses to test with genetic data</li>
+                    <li><strong>Pre-populate Pedigrees:</strong> Starting with documentary pedigrees and confirming/extending with genetic evidence</li>
+                    <li><strong>Identify Gaps:</strong> Finding areas where genetic evidence might resolve uncertainties</li>
+                </ul>
+                
+                <h5>Family Tree Export</h5>
+                <p>Bonsai can export its analysis results to family tree systems for:</p>
+                <ul>
+                    <li><strong>Verification:</strong> Confirming documentary relationships with genetic evidence</li>
+                    <li><strong>Extension:</strong> Adding genetically discovered relationships to existing trees</li>
+                    <li><strong>Correction:</strong> Identifying and resolving contradictions between genetic and documentary evidence</li>
+                    <li><strong>Documentation:</strong> Recording confidence levels and evidence sources</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>GEDCOM Integration Example</h5>
+                    <pre class="code-block">
+# Example of integrating with GEDCOM family tree data
+def integrate_gedcom_with_genetic_data(gedcom_file, genetic_data):
+    """
+    Integrate GEDCOM family tree with genetic data in Bonsai.
+    
+    Args:
+        gedcom_file: Path to GEDCOM file
+        genetic_data: Processed genetic data from Bonsai
+        
+    Returns:
+        Integrated pedigree with both documentary and genetic evidence
+    """
+    # Parse GEDCOM file
+    gedcom_pedigree = parse_gedcom(gedcom_file)
+    
+    # Convert to Bonsai pedigree format
+    documentary_pedigree = convert_to_bonsai_pedigree(gedcom_pedigree)
+    
+    # Create genetic pedigree
+    genetic_pedigree = pedigree_builder.build_from_data(genetic_data)
+    
+    # Integrate the pedigrees
+    integrated_pedigree = pedigree_integrator.integrate_pedigrees(
+        documentary_pedigree,
+        genetic_pedigree,
+        conflict_resolution="genetic_priority"
+    )
+    
+    # Annotate with confidence information
+    annotated_pedigree = confidence_annotator.annotate_pedigree(
+        integrated_pedigree,
+        genetic_data
+    )
+    
+    return annotated_pedigree</pre>
+                </div>
+                
+                <h5>Supported Family Tree Systems</h5>
+                <p>Bonsai can integrate with various family tree systems:</p>
+                <ul>
+                    <li><strong>Desktop Software:</strong> Programs like Family Tree Maker, RootsMagic, Legacy</li>
+                    <li><strong>Online Services:</strong> Platforms like Ancestry, MyHeritage, FamilySearch</li>
+                    <li><strong>Open Source Systems:</strong> Tools like Gramps, webtrees</li>
+                    <li><strong>Research Databases:</strong> Specialized academic and professional systems</li>
+                </ul>
+            </div>
+
+            <h3>Integration with IBD Detection Tools</h3>
+            
+            <div class="concept-section">
+                <h4>Leveraging Specialized Detection Algorithms</h4>
+                <p>Bonsai focuses on relationship inference from IBD data, but often relies on specialized external tools for the initial IBD detection. Bonsai v3 includes integration mechanisms for several IBD detection tools:</p>
+                
+                <h5>Supported IBD Detection Tools</h5>
+                <ul>
+                    <li><strong>GERMLINE:</strong> Fast IBD detection for large datasets</li>
+                    <li><strong>Refined-IBD:</strong> High-precision IBD detection</li>
+                    <li><strong>IBDseq:</strong> IBD detection for sequencing data</li>
+                    <li><strong>IBIS:</strong> Identity-by-descent imputation system</li>
+                    <li><strong>hap-IBD:</strong> Haplotype-based IBD detection</li>
+                    <li><strong>iLASH:</strong> IBD detection for biobank-scale data</li>
+                </ul>
+                
+                <h5>Integration Workflow</h5>
+                <ol>
+                    <li><strong>Input Preparation:</strong> Formatting genetic data for IBD detection tools</li>
+                    <li><strong>Tool Execution:</strong> Running the detection algorithm (directly or via wrappers)</li>
+                    <li><strong>Result Processing:</strong> Converting detection results to Bonsai's internal format</li>
+                    <li><strong>Quality Assessment:</strong> Evaluating the reliability of detected segments</li>
+                    <li><strong>Normalization:</strong> Adjusting for tool-specific biases and characteristics</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Refined-IBD Integration Example</h5>
+                    <pre class="code-block">
+# Example of integrating with Refined-IBD
+def process_with_refined_ibd(vcf_file, map_file):
+    """
+    Process VCF data with Refined-IBD and integrate with Bonsai.
+    
+    Args:
+        vcf_file: Path to VCF file with genetic data
+        map_file: Path to genetic map file
+        
+    Returns:
+        Processed IBD segments ready for Bonsai analysis
+    """
+    # Prepare Refined-IBD input
+    refined_ibd_input = prepare_refined_ibd_input(vcf_file, map_file)
+    
+    # Run Refined-IBD (external process)
+    refined_ibd_output = run_refined_ibd(refined_ibd_input)
+    
+    # Parse Refined-IBD output
+    detected_segments = parse_refined_ibd_output(refined_ibd_output)
+    
+    # Convert to Bonsai format
+    bonsai_segments = convert_to_bonsai_format(detected_segments, "refined-ibd")
+    
+    # Process with Bonsai
+    processed_segments = ibd_processor.process_segments(bonsai_segments)
+    
+    return processed_segments</pre>
+                </div>
+                
+                <div class="note-box">
+                    <h5>Tool Selection Considerations</h5>
+                    <p>Different IBD detection tools have different strengths and limitations:</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Tool</th>
+                                <th>Strengths</th>
+                                <th>Limitations</th>
+                                <th>Best For</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>GERMLINE</td>
+                                <td>Speed, scalability</td>
+                                <td>Lower precision</td>
+                                <td>Large datasets, initial screening</td>
+                            </tr>
+                            <tr>
+                                <td>Refined-IBD</td>
+                                <td>Accuracy, modeled error rates</td>
+                                <td>Computational intensity</td>
+                                <td>High-precision requirements</td>
+                            </tr>
+                            <tr>
+                                <td>hap-IBD</td>
+                                <td>Robust to phasing errors</td>
+                                <td>Complex parameters</td>
+                                <td>Datasets with phasing challenges</td>
+                            </tr>
+                            <tr>
+                                <td>IBIS</td>
+                                <td>Works with unphased data</td>
+                                <td>Limited to shorter segments</td>
+                                <td>Unphased consumer data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p>Bonsai's integration modules account for these differences and can adjust its analysis approach based on the IBD detection tool used.</p>
+                </div>
+            </div>
+
+            <h3>Creating Integrated Workflows</h3>
+            
+            <div class="concept-section">
+                <h4>End-to-End Genetic Genealogy Processes</h4>
+                <p>By combining Bonsai v3 with other tools and systems, researchers can create comprehensive genetic genealogy workflows tailored to specific research questions and contexts:</p>
+                
+                <h5>Example Workflow: Unknown Parentage Case</h5>
+                <ol>
+                    <li><strong>Data Collection:</strong> Testing with multiple platforms for maximum match coverage</li>
+                    <li><strong>IBD Detection:</strong> Using specialized tools to identify shared DNA segments</li>
+                    <li><strong>Relationship Inference:</strong> Using Bonsai to predict relationships from IBD patterns</li>
+                    <li><strong>Match Clustering:</strong> Grouping matches by likely family branches</li>
+                    <li><strong>Tree Building:</strong> Constructing partial family trees for each cluster</li>
+                    <li><strong>Common Ancestor Identification:</strong> Finding connecting points between trees</li>
+                    <li><strong>Hypothesis Validation:</strong> Using documentary research to verify predictions</li>
+                </ol>
+                
+                <h5>Example Workflow: Population Study</h5>
+                <ol>
+                    <li><strong>Sample Collection:</strong> Gathering genetic data from the population of interest</li>
+                    <li><strong>Admixture Analysis:</strong> Using population genetics tools to assess ancestry</li>
+                    <li><strong>IBD Detection:</strong> Identifying shared segments within the population</li>
+                    <li><strong>Relationship Network Construction:</strong> Using Bonsai to build a comprehensive relationship network</li>
+                    <li><strong>Historical Context Integration:</strong> Incorporating documentary and demographic information</li>
+                    <li><strong>Network Analysis:</strong> Applying social network analysis to the relationship structure</li>
+                    <li><strong>Visualization and Reporting:</strong> Presenting the findings with appropriate visualizations</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Integration Pipeline Example</h5>
+                    <pre class="code-block">
+# Example of a complete integration pipeline
+def run_integrated_workflow(raw_data_files, known_relationships=None):
+    """
+    Run a complete integrated genetic genealogy workflow.
+    
+    Args:
+        raw_data_files: List of paths to raw genetic data files
+        known_relationships: Optional dict of known family relationships
+        
+    Returns:
+        Complete analysis results
+    """
+    # Phase 1: Data preparation
+    processed_data = []
+    for file_path in raw_data_files:
+        file_format = detect_file_format(file_path)
+        processed_file = process_raw_data(file_path, file_format)
+        processed_data.append(processed_file)
+    
+    # Phase 2: IBD detection (using appropriate external tool)
+    ibd_segments = detect_ibd_segments(processed_data)
+    
+    # Phase 3: Relationship inference with Bonsai
+    relationship_predictions = bonsai_analyzer.infer_relationships(ibd_segments)
+    
+    # Phase 4: Family tree integration
+    if known_relationships:
+        integrated_pedigree = integrate_with_known_relationships(
+            relationship_predictions, 
+            known_relationships
+        )
+    else:
+        integrated_pedigree = build_pedigree_from_predictions(relationship_predictions)
+    
+    # Phase 5: Visualization and reporting
+    visualizations = generate_visualizations(integrated_pedigree)
+    report = generate_analysis_report(integrated_pedigree, relationship_predictions)
+    
+    return {
+        "pedigree": integrated_pedigree,
+        "relationships": relationship_predictions,
+        "visualizations": visualizations,
+        "report": report
+    }</pre>
+                </div>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Bonsai v3's integration capabilities enable it to function as a key component in comprehensive genetic genealogy workflows, connecting with DNA testing platforms, family tree systems, IBD detection tools, and other specialized resources. Through mechanisms like the DRUID algorithm, standardized data exchange formats, and flexible APIs, Bonsai can adapt to diverse research contexts and leverage complementary tools to enhance its relationship inference capabilities.</p>
+                
+                <p>By understanding and utilizing these integration mechanisms, researchers can create powerful, customized workflows that combine the strengths of multiple tools and data sources to address complex genetic genealogy challenges.</p>
+                
+                <p>In the next lab, we'll explore how to implement end-to-end pedigree reconstruction pipelines using Bonsai v3, integrating all the components we've studied throughout this course.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab27_prior_models.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 27: Prior Probability Models</span>
+                        </a>
+                        <a href="lab29_end_to_end_implementation.html" class="path-item next">
+                            <span>Lab 29: End-to-End Implementation</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

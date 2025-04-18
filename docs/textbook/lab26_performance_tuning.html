@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 26: Performance Tuning for Large-Scale Applications | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Performance Tuning for Large-Scale Applications</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab26_performance_tuning.html" class="active">Lab 26: Performance Tuning</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 26: Performance Tuning for Large-Scale Applications</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores advanced performance optimization techniques for applying Bonsai v3 to large datasets. Understanding these optimization approaches is essential for efficiently processing the large-scale data encountered in practical genetic genealogy applications.</p>
+            </div>
+
+            <h3>The Performance Challenge in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Why Performance Matters</h4>
+                <p>Computational genetic genealogy presents significant performance challenges due to several inherent characteristics:</p>
+                
+                <h5>Key Performance Challenges</h5>
+                <ul>
+                    <li><strong>Quadratic Complexity:</strong> Many key algorithms have O(n²) complexity or worse, where n is the number of individuals</li>
+                    <li><strong>Memory Intensity:</strong> Processing genetic data requires substantial memory resources</li>
+                    <li><strong>Data Volume:</strong> Genetic data sets can be extremely large (gigabytes to terabytes)</li>
+                    <li><strong>Optimization Trade-offs:</strong> Speed improvements often come at the cost of accuracy or memory usage</li>
+                    <li><strong>Interactive Requirements:</strong> Many applications require near-real-time response for usability</li>
+                </ul>
+                
+                <p>As genetic testing becomes more widespread, these performance challenges are increasingly important to address. Effective performance tuning enables Bonsai v3 to scale to datasets with thousands or even millions of individuals.</p>
+                
+                <div class="note-box">
+                    <h5>Performance Impact on Usability</h5>
+                    <p>Performance is not just a technical concern—it directly affects user experience:</p>
+                    <ul>
+                        <li>Analysis times longer than a few minutes significantly reduce user engagement</li>
+                        <li>Memory limitations can prevent processing of large datasets entirely</li>
+                        <li>Responsive interfaces require fast underlying algorithms</li>
+                        <li>Batch processing needs to complete within reasonable timeframes</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Performance Profiling and Bottleneck Identification</h3>
+            
+            <div class="concept-section">
+                <h4>Finding the Performance Hotspots</h4>
+                <p>The first step in performance tuning is identifying where the bottlenecks are. Bonsai v3 includes tools and methodologies for comprehensive performance profiling:</p>
+                
+                <h5>Profiling Approaches</h5>
+                <ol>
+                    <li><strong>Time Profiling:</strong> Measuring execution time of different code sections
+                        <ul>
+                            <li>Function-level timing</li>
+                            <li>Method invocation counts</li>
+                            <li>Critical path analysis</li>
+                        </ul>
+                    </li>
+                    <li><strong>Memory Profiling:</strong> Analyzing memory usage patterns
+                        <ul>
+                            <li>Peak memory usage</li>
+                            <li>Memory allocation frequency</li>
+                            <li>Garbage collection impact</li>
+                        </ul>
+                    </li>
+                    <li><strong>I/O Profiling:</strong> Examining data access patterns
+                        <ul>
+                            <li>File read/write operations</li>
+                            <li>Database query performance</li>
+                            <li>Network communication overheads</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Typical Performance Hotspots in Bonsai</h5>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Component</th>
+                                <th>Typical Bottleneck</th>
+                                <th>Impact Level</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Pairwise likelihood computation</td>
+                                <td>CPU-bound (floating-point operations)</td>
+                                <td>Very High</td>
+                            </tr>
+                            <tr>
+                                <td>IBD segment analysis</td>
+                                <td>Memory-bound (large segment arrays)</td>
+                                <td>High</td>
+                            </tr>
+                            <tr>
+                                <td>Pedigree structure operations</td>
+                                <td>Algorithm complexity (combinatorial operations)</td>
+                                <td>High</td>
+                            </tr>
+                            <tr>
+                                <td>Data loading and preparation</td>
+                                <td>I/O-bound (file operations)</td>
+                                <td>Medium</td>
+                            </tr>
+                            <tr>
+                                <td>Visualization rendering</td>
+                                <td>CPU and memory (complex graph layouts)</td>
+                                <td>Medium</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h5>The Importance of Realistic Profiling</h5>
+                <p>For effective performance optimization, it's crucial to profile with realistic data and usage patterns:</p>
+                <ul>
+                    <li><strong>Representative Datasets:</strong> Use datasets that match real-world scale and characteristics</li>
+                    <li><strong>Typical Workflows:</strong> Profile complete workflows, not just isolated functions</li>
+                    <li><strong>End-to-End Measurements:</strong> Measure performance from the user's perspective, not just internal metrics</li>
+                    <li><strong>Environment Matching:</strong> Profile in environments similar to production deployment</li>
+                </ul>
+            </div>
+
+            <h3>Algorithmic Optimizations</h3>
+            
+            <div class="concept-section">
+                <h4>Improving Asymptotic Efficiency</h4>
+                <p>The most powerful performance improvements come from algorithmic optimizations that reduce the fundamental computational complexity. Bonsai v3 implements several key algorithmic improvements:</p>
+                
+                <h5>Key Algorithmic Strategies</h5>
+                <ol>
+                    <li><strong>Filtering and Pruning:</strong> Eliminating unnecessary computations
+                        <ul>
+                            <li>Early rejection of impossible relationships</li>
+                            <li>Pruning search spaces based on constraints</li>
+                            <li>Progressive filtering based on quick preliminary checks</li>
+                        </ul>
+                    </li>
+                    <li><strong>Divide and Conquer:</strong> Breaking problems into manageable subproblems
+                        <ul>
+                            <li>Hierarchical clustering of individuals</li>
+                            <li>Pedigree decomposition into subgraphs</li>
+                            <li>Multi-level relationship analysis</li>
+                        </ul>
+                    </li>
+                    <li><strong>Dynamic Programming:</strong> Avoiding redundant calculations
+                        <ul>
+                            <li>Memoization of expensive function results</li>
+                            <li>Bottom-up computation of subproblems</li>
+                            <li>Incremental updates for changing data</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Example: Hierarchical Relationship Analysis</h5>
+                    <pre class="code-block">
+# Pseudocode for hierarchical relationship analysis
+def analyze_relationships_hierarchical(individuals):
+    """
+    Analyze relationships using a hierarchical approach.
+    
+    Args:
+        individuals: List of individuals to analyze
+        
+    Returns:
+        Dictionary mapping individual pairs to relationships
+    """
+    # Phase 1: Cluster individuals into groups likely to be related
+    clusters = cluster_by_genetic_similarity(individuals)
+    
+    # Phase 2: Perform coarse-grained analysis to identify potential relatives
+    potential_relatives = {}
+    for cluster in clusters:
+        coarse_results = analyze_cluster_coarse(cluster)
+        potential_relatives.update(coarse_results)
+    
+    # Phase 3: Perform detailed analysis only on potential relatives
+    detailed_relationships = {}
+    for pair, relatedness_score in potential_relatives.items():
+        if relatedness_score > RELATEDNESS_THRESHOLD:
+            detailed_relationships[pair] = analyze_pair_detailed(pair)
+    
+    return detailed_relationships</pre>
+                    <p>This hierarchical approach dramatically reduces computational complexity by eliminating the need to perform detailed analysis on all possible pairs, focusing instead on those most likely to be related.</p>
+                </div>
+                
+                <h5>Algorithm Selection Trade-offs</h5>
+                <p>Choosing the right algorithm involves several key trade-offs:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Trade-off Dimension</th>
+                            <th>Options</th>
+                            <th>Considerations</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Accuracy vs. Speed</td>
+                            <td>Exact algorithms vs. approximation algorithms</td>
+                            <td>Is absolute accuracy required, or is a good approximation acceptable?</td>
+                        </tr>
+                        <tr>
+                            <td>Memory vs. Computation</td>
+                            <td>Caching/precomputation vs. recomputation</td>
+                            <td>Is memory or CPU the more constrained resource?</td>
+                        </tr>
+                        <tr>
+                            <td>Generality vs. Specialization</td>
+                            <td>Generic algorithms vs. specialized algorithms</td>
+                            <td>Are you optimizing for a specific case or general usage?</td>
+                        </tr>
+                        <tr>
+                            <td>Simplicity vs. Efficiency</td>
+                            <td>Simple algorithms vs. complex optimized algorithms</td>
+                            <td>Is maintainability or raw performance more important?</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Memory Optimization Techniques</h3>
+            
+            <div class="concept-section">
+                <h4>Efficient Memory Management</h4>
+                <p>Genetic genealogy applications often process large volumes of data, making memory optimization critical. Bonsai v3 implements several approaches to reduce memory usage:</p>
+                
+                <h5>Key Memory Optimization Strategies</h5>
+                <ol>
+                    <li><strong>Data Structure Selection:</strong> Choosing memory-efficient data structures
+                        <ul>
+                            <li>Compact array representations instead of object hierarchies</li>
+                            <li>Integer IDs instead of string identifiers</li>
+                            <li>Bit vectors for boolean data</li>
+                        </ul>
+                    </li>
+                    <li><strong>Lazy Loading and Streaming:</strong> Processing data incrementally
+                        <ul>
+                            <li>Loading data only when needed</li>
+                            <li>Processing data in chunks</li>
+                            <li>Releasing memory after processing</li>
+                        </ul>
+                    </li>
+                    <li><strong>Caching Strategies:</strong> Intelligent memory usage for caching
+                        <ul>
+                            <li>LRU (Least Recently Used) cache eviction</li>
+                            <li>Size-based cache limits</li>
+                            <li>Selective caching of high-value results</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Memory-Efficient IBD Segment Representation</h5>
+                    <p>The standard object-oriented representation of IBD segments consumes substantial memory:</p>
+                    <pre class="code-block">
+# Memory-intensive representation (approximately 136 bytes per segment)
+class IBDSegment:
+    def __init__(self, chrom, start_pos, end_pos, cm_length, snp_count):
+        self.chrom = chrom          # string: ~24 bytes
+        self.start_pos = start_pos  # int: 8 bytes
+        self.end_pos = end_pos      # int: 8 bytes
+        self.cm_length = cm_length  # float: 8 bytes
+        self.snp_count = snp_count  # int: 8 bytes
+        # Plus object overhead: ~64 bytes
+        # Plus various pointers and alignment: ~16 bytes</pre>
+                    
+                    <p>A more memory-efficient representation might use:</p>
+                    <pre class="code-block">
+# Memory-efficient representation (approximately 32 bytes per segment)
+# Using a tuple: (chrom_id, start_pos, end_pos, cm_length, snp_count)
+# Where chrom_id is a small integer (1-22, 23=X, 24=Y)</pre>
+                    
+                    <p>For a dataset with 10 million segments, this optimization reduces memory usage from 1.3 GB to 300 MB—a significant improvement that can make the difference between a process completing successfully or running out of memory.</p>
+                </div>
+                
+                <h5>Memory Profiling and Monitoring</h5>
+                <p>Effective memory optimization requires understanding memory usage patterns:</p>
+                <ul>
+                    <li><strong>Peak Memory Usage:</strong> Identify the points where memory consumption peaks</li>
+                    <li><strong>Object Counts:</strong> Track how many instances of each type are created</li>
+                    <li><strong>Lifetime Analysis:</strong> Understand how long objects remain in memory</li>
+                    <li><strong>Allocation Hotspots:</strong> Identify code sections with frequent allocations</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Memory-Related Failure Modes</h5>
+                    <p>Memory issues can manifest in several ways:</p>
+                    <ul>
+                        <li><strong>Out of Memory Errors:</strong> Process terminates when memory is exhausted</li>
+                        <li><strong>Excessive Garbage Collection:</strong> Process slows as GC struggles to free memory</li>
+                        <li><strong>Memory Leaks:</strong> Memory usage grows continuously until failure</li>
+                        <li><strong>Swapping:</strong> System performance degrades as data is moved to disk</li>
+                    </ul>
+                    <p>Effective memory optimization addresses all these failure modes.</p>
+                </div>
+            </div>
+
+            <h3>Parallel Processing Strategies</h3>
+            
+            <div class="concept-section">
+                <h4>Leveraging Multiple Processors</h4>
+                <p>Many genetic genealogy algorithms can benefit from parallel execution. Bonsai v3 implements several parallelization strategies to take advantage of multi-core processors:</p>
+                
+                <h5>Key Parallelization Approaches</h5>
+                <ol>
+                    <li><strong>Data Parallelism:</strong> Processing different data chunks in parallel
+                        <ul>
+                            <li>Dividing individuals into batches</li>
+                            <li>Processing different chromosomes in parallel</li>
+                            <li>Parallel evaluation of relationship hypotheses</li>
+                        </ul>
+                    </li>
+                    <li><strong>Task Parallelism:</strong> Executing different tasks simultaneously
+                        <ul>
+                            <li>Pipeline stages running in parallel</li>
+                            <li>Background preprocessing while interactive analysis continues</li>
+                            <li>Concurrent I/O and computation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Asynchronous Processing:</strong> Non-blocking execution models
+                        <ul>
+                            <li>Asynchronous data loading</li>
+                            <li>Callback-based processing</li>
+                            <li>Producer-consumer patterns</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Parallel Pairwise Likelihood Computation</h5>
+                    <pre class="code-block">
+# Pseudocode for parallelized relationship likelihood computation
+def compute_all_pairwise_likelihoods_parallel(individual_pairs, num_workers=8):
+    """
+    Compute relationship likelihoods for multiple pairs in parallel.
+    
+    Args:
+        individual_pairs: List of (id1, id2) tuples to analyze
+        num_workers: Number of parallel workers
+        
+    Returns:
+        Dictionary mapping pairs to relationship likelihoods
+    """
+    # Create a pool of worker processes
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        # Submit tasks to the pool
+        future_to_pair = {
+            executor.submit(compute_pairwise_likelihood, id1, id2): (id1, id2)
+            for id1, id2 in individual_pairs
+        }
+        
+        # Collect results as they complete
+        results = {}
+        for future in as_completed(future_to_pair):
+            pair = future_to_pair[future]
+            try:
+                results[pair] = future.result()
+            except Exception as e:
+                results[pair] = {"error": str(e)}
+    
+    return results</pre>
+                </div>
+                
+                <h5>Parallelization Challenges</h5>
+                <p>Effective parallelization requires addressing several challenges:</p>
+                <ul>
+                    <li><strong>Load Balancing:</strong> Ensuring work is evenly distributed across workers</li>
+                    <li><strong>Synchronization Overhead:</strong> Minimizing coordination requirements</li>
+                    <li><strong>Resource Contention:</strong> Managing shared resource access</li>
+                    <li><strong>Data Dependencies:</strong> Handling cases where tasks depend on each other's results</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Parallel Speedup Potential</h5>
+                    <p>The potential speedup from parallelization depends on the algorithm's characteristics:</p>
+                    <ul>
+                        <li><strong>Embarrassingly Parallel:</strong> Near-linear speedup with processor count (e.g., pairwise relationship analysis)</li>
+                        <li><strong>Partially Parallel:</strong> Speedup limited by sequential portions (e.g., pedigree construction with dependencies)</li>
+                        <li><strong>I/O-Bound:</strong> Limited speedup unless I/O is also parallelized</li>
+                        <li><strong>Memory-Bound:</strong> Speedup limited by memory bandwidth rather than CPU cores</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>I/O and Storage Optimizations</h3>
+            
+            <div class="concept-section">
+                <h4>Efficient Data Access Patterns</h4>
+                <p>Many genetic genealogy workflows involve substantial data loading and storage operations. Bonsai v3 implements several I/O optimizations to improve overall performance:</p>
+                
+                <h5>Key I/O Optimization Strategies</h5>
+                <ol>
+                    <li><strong>Data Format Selection:</strong> Choosing efficient storage formats
+                        <ul>
+                            <li>Binary formats instead of text formats</li>
+                            <li>Column-oriented storage for analytical queries</li>
+                            <li>Compressed formats for reduced I/O volume</li>
+                        </ul>
+                    </li>
+                    <li><strong>Access Pattern Optimization:</strong> Aligning I/O with usage patterns
+                        <ul>
+                            <li>Sequential reads instead of random access</li>
+                            <li>Batched operations instead of single operations</li>
+                            <li>Memory mapping for large files</li>
+                        </ul>
+                    </li>
+                    <li><strong>Caching and Prefetching:</strong> Anticipating data needs
+                        <ul>
+                            <li>Preloading likely-to-be-needed data</li>
+                            <li>Caching frequently accessed data</li>
+                            <li>Background loading of data before it's needed</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Optimized IBD Segment Storage Format</h5>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Format</th>
+                                <th>Characteristics</th>
+                                <th>Performance Impact</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CSV/Text</td>
+                                <td>Human-readable, larger size, parsing overhead</td>
+                                <td>Slow loading, high storage requirements</td>
+                            </tr>
+                            <tr>
+                                <td>Binary Columnar</td>
+                                <td>Type-specific encoding, column-oriented, compressed</td>
+                                <td>Fast loading, efficient filtering, compact storage</td>
+                            </tr>
+                            <tr>
+                                <td>Memory-Mapped Binary</td>
+                                <td>Direct memory mapping, native data structures</td>
+                                <td>Near-instantaneous loading, pageable access</td>
+                            </tr>
+                            <tr>
+                                <td>Database (SQLite/HDF5)</td>
+                                <td>Indexed access, query capability, structured format</td>
+                                <td>Fast filtered access, slower full scans</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h5>Optimizing for Different Storage Media</h5>
+                <p>I/O optimization strategies vary based on the storage medium:</p>
+                <ul>
+                    <li><strong>HDD (Hard Disk Drive):</strong> Minimize seeking, maximize sequential access, large block reads</li>
+                    <li><strong>SSD (Solid State Drive):</strong> Reduce write amplification, leverage parallelism, smaller reads</li>
+                    <li><strong>Network Storage:</strong> Minimize round trips, batch operations, consider latency</li>
+                    <li><strong>Memory:</strong> Optimize locality, reduce allocation overhead, direct memory access</li>
+                </ul>
+            </div>
+
+            <h3>Implementation-Level Optimizations</h3>
+            
+            <div class="concept-section">
+                <h4>Low-Level Performance Improvements</h4>
+                <p>Beyond algorithmic and architectural optimizations, Bonsai v3 implements various low-level optimizations to squeeze maximum performance from the underlying hardware:</p>
+                
+                <h5>Key Implementation Optimizations</h5>
+                <ol>
+                    <li><strong>Vectorization:</strong> Using SIMD instructions for parallel data processing
+                        <ul>
+                            <li>Vectorized segment comparisons</li>
+                            <li>Parallel floating-point operations</li>
+                            <li>Batch processing of genetic data</li>
+                        </ul>
+                    </li>
+                    <li><strong>Memory Layout:</strong> Organizing data for efficient access
+                        <ul>
+                            <li>Structure of Arrays (SoA) instead of Array of Structures (AoS)</li>
+                            <li>Alignment for cache line optimization</li>
+                            <li>Contiguous memory allocation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Computational Shortcuts:</strong> Mathematical and logical optimizations
+                        <ul>
+                            <li>Fast approximation functions</li>
+                            <li>Lookup tables for expensive calculations</li>
+                            <li>Short-circuit evaluation</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Vectorized IBD Comparison</h5>
+                    <pre class="code-block">
+# Pseudocode for vectorized IBD segment comparison
+def compare_segments_vectorized(segments1, segments2):
+    """
+    Compare two sets of segments using vectorized operations.
+    
+    Args:
+        segments1: First set of segments as structured numpy array
+        segments2: Second set of segments as structured numpy array
+        
+    Returns:
+        Array of overlap measures
+    """
+    # Extract start and end positions as contiguous arrays
+    starts1 = segments1['start_pos']
+    ends1 = segments1['end_pos']
+    starts2 = segments2['start_pos']
+    ends2 = segments2['end_pos']
+    
+    # Calculate overlap matrix using vectorized operations
+    # For each pair of segments (i, j):
+    # overlap[i, j] = min(ends1[i], ends2[j]) - max(starts1[i], starts2[j])
+    # This performs the whole calculation in parallel using SIMD
+    starts1_matrix = starts1[:, np.newaxis]
+    ends1_matrix = ends1[:, np.newaxis]
+    starts2_matrix = starts2[np.newaxis, :]
+    ends2_matrix = ends2[np.newaxis, :]
+    
+    max_starts = np.maximum(starts1_matrix, starts2_matrix)
+    min_ends = np.minimum(ends1_matrix, ends2_matrix)
+    overlap = np.maximum(0, min_ends - max_starts)
+    
+    return overlap</pre>
+                    <p>This vectorized implementation can be 10-100x faster than a nested loop approach for large segment sets.</p>
+                </div>
+                
+                <h5>Language and Library Selection</h5>
+                <p>Bonsai v3 strategically uses different languages and libraries for different components based on performance characteristics:</p>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Implementation Approach</th>
+                            <th>Rationale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Core algorithms</td>
+                            <td>Cython/C++ with NumPy integration</td>
+                            <td>Maximum computational performance for critical operations</td>
+                        </tr>
+                        <tr>
+                            <td>Data structures</td>
+                            <td>Optimized Python with typed attributes</td>
+                            <td>Balance of performance and maintainability</td>
+                        </tr>
+                        <tr>
+                            <td>I/O operations</td>
+                            <td>Specialized libraries (HDF5, Arrow)</td>
+                            <td>Optimized for specific data formats and access patterns</td>
+                        </tr>
+                        <tr>
+                            <td>User interface</td>
+                            <td>Pure Python</td>
+                            <td>Flexibility and ease of development for non-critical components</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Configuration and Tuning for Specific Workloads</h3>
+            
+            <div class="concept-section">
+                <h4>Adapting to Different Usage Scenarios</h4>
+                <p>Different genetic genealogy applications have different performance requirements and constraints. Bonsai v3 provides configuration options to tune performance for specific workloads:</p>
+                
+                <h5>Key Configurable Parameters</h5>
+                <ul>
+                    <li><strong>Memory Limits:</strong> Controlling maximum memory usage
+                        <ul>
+                            <li>Cache size limits</li>
+                            <li>Batch processing thresholds</li>
+                            <li>Precomputation settings</li>
+                        </ul>
+                    </li>
+                    <li><strong>Parallelism Settings:</strong> Configuring parallel execution
+                        <ul>
+                            <li>Worker thread/process count</li>
+                            <li>Task prioritization rules</li>
+                            <li>Load balancing approaches</li>
+                        </ul>
+                    </li>
+                    <li><strong>Algorithm Selection:</strong> Choosing between alternative implementations
+                        <ul>
+                            <li>Exact vs. approximate algorithms</li>
+                            <li>Memory-optimized vs. speed-optimized variants</li>
+                            <li>Specialized algorithms for specific data patterns</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Sample Configuration Profiles</h5>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Profile</th>
+                                <th>Optimized For</th>
+                                <th>Key Settings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Interactive Analysis</td>
+                                <td>Fast response time, moderate accuracy</td>
+                                <td>Use approximation algorithms, limit detail level, prioritize user interface responsiveness</td>
+                            </tr>
+                            <tr>
+                                <td>Batch Processing</td>
+                                <td>High throughput, efficient resource usage</td>
+                                <td>Maximize parallelism, use streaming processing, optimize for throughput over latency</td>
+                            </tr>
+                            <tr>
+                                <td>High Accuracy</td>
+                                <td>Maximum precision, thorough analysis</td>
+                                <td>Use exact algorithms, detailed examination of all evidence, comprehensive validation</td>
+                            </tr>
+                            <tr>
+                                <td>Low Memory</td>
+                                <td>Operation with constrained resources</td>
+                                <td>Minimize memory usage, process in small chunks, use disk-based storage for intermediate results</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h5>Dynamic Configuration Adjustment</h5>
+                <p>Bonsai v3 can dynamically adjust its configuration based on runtime conditions:</p>
+                <ul>
+                    <li><strong>Workload Adaptation:</strong> Adjusting parameters based on dataset characteristics</li>
+                    <li><strong>Resource Sensing:</strong> Modifying behavior based on available system resources</li>
+                    <li><strong>Performance Monitoring:</strong> Changing strategies based on observed performance</li>
+                    <li><strong>User Priority:</strong> Adjusting optimization targets based on user preferences</li>
+                </ul>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Performance tuning is a critical aspect of computational genetic genealogy, enabling the processing of large-scale datasets within reasonable time and resource constraints. Bonsai v3 implements a comprehensive set of performance optimizations, from high-level algorithmic improvements to low-level implementation details, providing efficient operation across a wide range of usage scenarios.</p>
+                
+                <p>By understanding and applying these performance optimization techniques, you can adapt Bonsai v3 to your specific needs, whether you're analyzing small family groups interactively or processing large populations in batch mode.</p>
+                
+                <p>In the next lab, we'll explore custom prior probability models in Bonsai v3, which allow for incorporating demographic information and domain-specific knowledge to enhance the accuracy of relationship predictions.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab25_real_world_datasets.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 25: Real-World Datasets</span>
+                        </a>
+                        <a href="lab27_prior_models.html" class="path-item next">
+                            <span>Lab 27: Prior Probability Models</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

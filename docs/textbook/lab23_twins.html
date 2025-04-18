@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 23: Handling Twins and Close Relatives | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Handling Twins and Close Relatives</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab23_twins.html" class="active">Lab 23: Handling Twins</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 23: Handling Twins and Close Relatives</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the specialized algorithms in Bonsai v3's <code>twins.py</code> module for handling twins and other very close relatives, which present unique challenges for pedigree reconstruction. Understanding these special cases is essential for accurate family structure inference.</p>
+            </div>
+
+            <h3>The Twin Challenge in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Why Twins Require Special Handling</h4>
+                <p>Twins create unique challenges for genetic genealogy algorithms due to their special genetic relationships:</p>
+                
+                <h5>Types of Twins and Their Genetic Signatures</h5>
+                <ul>
+                    <li><strong>Monozygotic (Identical) Twins:</strong> Develop from a single fertilized egg that splits into two embryos
+                        <ul>
+                            <li>Share virtually 100% of their genetic material</li>
+                            <li>Appear genetically indistinguishable using standard DNA tests</li>
+                            <li>Same sex (both male or both female)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Dizygotic (Fraternal) Twins:</strong> Develop from two separately fertilized eggs
+                        <ul>
+                            <li>Share approximately 50% of their DNA (like regular siblings)</li>
+                            <li>Can be different sexes</li>
+                            <li>Genetically similar to full siblings but born simultaneously</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <p>These unique genetic relationships create several challenges for pedigree reconstruction algorithms:</p>
+                
+                <ol>
+                    <li><strong>Identical Genetic Profiles:</strong> Standard algorithms may be unable to distinguish between identical twins</li>
+                    <li><strong>Relationship Ambiguity:</strong> The extremely high IBD sharing between identical twins can be confused with duplicate samples</li>
+                    <li><strong>Pedigree Placement:</strong> Algorithms must ensure both twins are consistently placed in family structures</li>
+                    <li><strong>Downstream Relationships:</strong> Children of twins have special genetic relationships that standard models don't capture</li>
+                </ol>
+                
+                <div class="note-box">
+                    <h5>Impact on Pedigree Reconstruction</h5>
+                    <p>Without specialized handling for twins, pedigree reconstruction algorithms may:</p>
+                    <ul>
+                        <li>Misidentify identical twins as the same person</li>
+                        <li>Create inconsistent relationship assignments for twin pairs</li>
+                        <li>Incorrectly model relationships involving children of twins</li>
+                        <li>Generate pedigree structures that violate biological constraints</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>The twins.py Module in Bonsai v3</h3>
+            
+            <div class="concept-section">
+                <h4>Specialized Twin Handling</h4>
+                <p>Bonsai v3 includes a dedicated <code>twins.py</code> module that implements specialized algorithms for detecting and handling twin relationships:</p>
+                
+                <pre class="code-block">
+from .constants import TWIN_THRESHOLD
+
+def is_twin_pair(
+    total_half: float,
+    total_full: float,
+    age1: int,
+    age2: int,
+    sex1: str,
+    sex2: str,
+):
+    """
+    Determine if a pair of individuals are twins.
+
+    Args:
+        total_half: The total length of half segments shared by the two individuals.
+        total_full: The total length of full segments shared by the two individuals.
+        age1: The age of the first individual.
+        age2: The age of the second individual.
+        sex1: Sex of the first individual.
+        sex2: Sex of the second individual.
+
+    Returns:
+        True if the individuals are twins, False otherwise.
+    """
+    # handle unrelated people
+    if total_half is None:
+        return False
+    if total_full is None:
+        return False
+
+    if total_half < TWIN_THRESHOLD:
+        return False
+    elif total_full < TWIN_THRESHOLD:
+        return False
+    elif sex1 != sex2:
+        return False
+    elif age1 and age2 and age1 != age2:
+        return False
+
+    return True</pre>
+                
+                <p>This module also provides functions for grouping twins into sets and integrating twin information into the pedigree reconstruction process:</p>
+                
+                <pre class="code-block">
+def get_twin_sets(
+    ibd_stat_dict: dict[frozenset, dict[str, int]],
+    age_dict: dict[int, float],
+    sex_dict: dict[int, str],
+):
+    """
+    Find all sets of twins.
+
+    Args:
+        ibd_stat_dict: A dictionary of IBD statistics.
+        age_dict: A dictionary mapping ID to age
+        sex_dict: A dictionary mapping ID to sex ('M' or 'F')
+
+    Returns:
+        idx_to_twin_set: A dictionary mapping an index to a set of node IDs
+            that form a twin set.
+        id_to_idx: A dict mapping each twin ID to its index.
+    """
+    # Implementation details...</pre>
+                
+                <h5>Key Features of the Module</h5>
+                <ul>
+                    <li><strong>Twin Detection:</strong> Uses genetic and demographic criteria to identify potential twin pairs</li>
+                    <li><strong>Twin Set Management:</strong> Groups twins into sets and maintains their relationships</li>
+                    <li><strong>Integration with Pedigree Building:</strong> Ensures consistent placement of twins in pedigree structures</li>
+                    <li><strong>Configuration Options:</strong> Provides tunable thresholds for twin identification</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>TWIN_THRESHOLD Constant</h5>
+                    <p>The <code>TWIN_THRESHOLD</code> constant in Bonsai v3 defines the minimum amount of shared DNA (in centimorgans) required to consider two individuals as potential twins. This threshold is typically set very high (e.g., 2800 cM) to avoid false positives while capturing true twin relationships.</p>
+                </div>
+            </div>
+
+            <h3>Twin Detection Algorithms</h3>
+            
+            <div class="concept-section">
+                <h4>Identifying Twin Relationships</h4>
+                <p>Bonsai v3 uses several criteria to identify potential twin relationships:</p>
+                
+                <h5>1. Genetic Criteria</h5>
+                <ul>
+                    <li><strong>Extremely High IBD Sharing:</strong> Twins share exceptional amounts of DNA
+                        <ul>
+                            <li>Identical twins: Nearly 100% (all chromosomes)</li>
+                            <li>Fraternal twins: ~50% (similar to regular siblings)</li>
+                        </ul>
+                    </li>
+                    <li><strong>IBD Pattern Analysis:</strong> Examining the pattern of half-identical and fully-identical regions
+                        <ul>
+                            <li>Identical twins show extensive fully-identical regions</li>
+                            <li>Fraternal twins show patterns similar to full siblings</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <h5>2. Demographic Criteria</h5>
+                <ul>
+                    <li><strong>Identical Age:</strong> Twins are typically born on the same day
+                        <ul>
+                            <li>When age data is available, twins should have the same birth year</li>
+                            <li>Small discrepancies might exist in reported ages</li>
+                        </ul>
+                    </li>
+                    <li><strong>Sex Compatibility:</strong> Sex information provides additional constraints
+                        <ul>
+                            <li>Identical twins must be the same sex</li>
+                            <li>Fraternal twins can be the same or different sexes</li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Distinguishing Twins from Parent-Child</h5>
+                    <p>One of the key challenges in twin detection is distinguishing identical twins from parent-child relationships, as both can exhibit very high IBD sharing. Bonsai uses several strategies:</p>
+                    <ul>
+                        <li><strong>Age Differences:</strong> Parents and children typically have significant age gaps</li>
+                        <li><strong>IBD Pattern Analysis:</strong> Parent-child relationships show half-identical regions but not fully-identical regions</li>
+                        <li><strong>Consistency Checks:</strong> Parent-child relationships must fit into a consistent generational structure</li>
+                    </ul>
+                </div>
+                
+                <h5>Implementation in <code>is_twin_pair</code> Function</h5>
+                <p>The <code>is_twin_pair</code> function implements these criteria, evaluating:</p>
+                <ol>
+                    <li>Total half-identical IBD sharing against the TWIN_THRESHOLD</li>
+                    <li>Total fully-identical IBD sharing against the TWIN_THRESHOLD</li>
+                    <li>Sex compatibility (requiring matching sex)</li>
+                    <li>Age compatibility (requiring matching age if available)</li>
+                </ol>
+                <p>Only if all these criteria are met does Bonsai classify a pair as twins.</p>
+            </div>
+
+            <h3>Twin Placement in Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Ensuring Consistent Treatment of Twins</h4>
+                <p>Once twins are identified, Bonsai must place them correctly in pedigree structures, maintaining biological consistency:</p>
+                
+                <h5>Key Principles of Twin Placement</h5>
+                <ol>
+                    <li><strong>Common Parentage:</strong> Twins must share the same parents in the pedigree</li>
+                    <li><strong>Generational Consistency:</strong> Twins must be placed in the same generation</li>
+                    <li><strong>Relationship Consistency:</strong> Twins must have consistent relationships with all other individuals</li>
+                </ol>
+                
+                <p>Bonsai enforces these principles through specialized pedigree construction logic when twins are present:</p>
+                
+                <div class="example-box">
+                    <h5>Twin Placement Algorithm</h5>
+                    <pre class="code-block">
+# Pseudocode for twin-aware pedigree construction
+for each twin_set in all_twin_sets:
+    # Identify the best placement for one twin in the set
+    primary_twin = select_representative_twin(twin_set)
+    best_parents = identify_best_parents(primary_twin, pedigree, ibd_data)
+    
+    # Place all twins in the set with the same parents
+    for twin in twin_set:
+        add_individual_to_pedigree(twin, parents=best_parents)
+        
+    # Ensure consistent relationships with others
+    for relative in all_individuals:
+        if is_related(primary_twin, relative):
+            relationship = get_relationship(primary_twin, relative)
+            # Apply same relationship to all twins in the set
+            for twin in twin_set:
+                ensure_relationship(twin, relative, relationship)</pre>
+                </div>
+                
+                <h5>Implementation Challenges</h5>
+                <p>Several practical challenges arise when implementing twin placement:</p>
+                <ul>
+                    <li><strong>Evidence Conflicts:</strong> Different twins may have slightly different IBD patterns with other relatives due to testing or analysis variation</li>
+                    <li><strong>Priority Decisions:</strong> When evidence conflicts, the algorithm must decide which relationships to prioritize</li>
+                    <li><strong>Computational Efficiency:</strong> Handling twins can increase the complexity of pedigree construction algorithms</li>
+                </ul>
+                
+                <p>Bonsai addresses these challenges through a combination of evidence pooling, confidence-weighted decision making, and specialized optimization strategies.</p>
+            </div>
+
+            <h3>Other Very Close Relatives</h3>
+            
+            <div class="concept-section">
+                <h4>Beyond Simple Twin Relationships</h4>
+                <p>Twins are just one example of special genetic relationships that require specialized handling. Bonsai v3 also addresses several other scenarios involving very close relatives:</p>
+                
+                <h5>1. Double First Cousins</h5>
+                <p>Double first cousins occur when two siblings from one family marry two siblings from another family. Their children are related through both parents:</p>
+                <ul>
+                    <li>Share approximately 25% of their DNA (similar to half-siblings)</li>
+                    <li>Can be confused with half-siblings in genetic analysis</li>
+                    <li>Require pedigree context to correctly identify</li>
+                </ul>
+                
+                <h5>2. Parent-Child Incest Cases</h5>
+                <p>Children resulting from parent-child relationships have unusual genetic patterns:</p>
+                <ul>
+                    <li>Share 75% of their DNA with the parent who is also their grandparent</li>
+                    <li>Have elevated homozygosity due to consanguinity</li>
+                    <li>Present special ethical considerations in reporting</li>
+                </ul>
+                
+                <h5>3. Compound Relationships</h5>
+                <p>Individuals can be related through multiple pathways, creating complex genetic signatures:</p>
+                <ul>
+                    <li>Half-siblings who are also first cousins</li>
+                    <li>Double cousins through multiple family connections</li>
+                    <li>Relationships in endogamous communities with multiple connections</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Endogamy and Its Impact</h5>
+                    <p>Endogamy refers to the practice of marrying within a relatively closed community, resulting in elevated background relatedness. In endogamous populations:</p>
+                    <ul>
+                        <li>Individuals share more DNA than expected for their genealogical relationship</li>
+                        <li>Standard relationship prediction models can overestimate closeness</li>
+                        <li>Pedigree reconstruction is more complex due to multiple paths of relationship</li>
+                    </ul>
+                    <p>Bonsai v3 includes specialized adjustments to account for these effects when endogamy is detected.</p>
+                </div>
+                
+                <h5>Special Handling Implementation</h5>
+                <p>Bonsai implements several strategies to handle these complex cases:</p>
+                <ol>
+                    <li><strong>Multi-Pathway Analysis:</strong> Evaluating how multiple relationship paths contribute to observed IBD</li>
+                    <li><strong>Pattern Recognition:</strong> Identifying characteristic patterns of complex relationships</li>
+                    <li><strong>Model Adjustment:</strong> Modifying likelihood models to account for unusual sharing patterns</li>
+                    <li><strong>Consistency Enforcement:</strong> Ensuring pedigree structures maintain biological consistency</li>
+                </ol>
+            </div>
+
+            <h3>The Identical Twin Problem</h3>
+            
+            <div class="concept-section">
+                <h4>Fundamental Limitations of Genetic Differentiation</h4>
+                <p>Identical twins present a fundamental challenge for genetic genealogy because standard DNA tests cannot reliably distinguish between them. This creates what we call "The Identical Twin Problem":</p>
+                
+                <h5>Key Aspects of the Problem</h5>
+                <ul>
+                    <li><strong>Genetic Indistinguishability:</strong> Standard autosomal DNA tests show effectively identical results</li>
+                    <li><strong>Algorithmic Ambiguity:</strong> Algorithms cannot determine which twin is which based solely on genetic data</li>
+                    <li><strong>Downstream Propagation:</strong> Ambiguity affects relationships with all descendants</li>
+                </ul>
+                
+                <h5>Strategies for Handling Identical Twins</h5>
+                <p>While perfect genetic differentiation is generally not possible with standard tests, several approaches can help manage the identical twin problem:</p>
+                
+                <ol>
+                    <li><strong>Incorporating Non-Genetic Information</strong>
+                        <ul>
+                            <li>Birth order and birth dates</li>
+                            <li>Names and other identifying information</li>
+                            <li>Known relationships from documentary sources</li>
+                        </ul>
+                    </li>
+                    <li><strong>Special Notation and Visualization</strong>
+                        <ul>
+                            <li>Explicit twin labeling in pedigrees</li>
+                            <li>Visual elements showing potential ambiguity</li>
+                            <li>Alternative pedigree representations</li>
+                        </ul>
+                    </li>
+                    <li><strong>Advanced Genetic Techniques</strong> (beyond standard tests)
+                        <ul>
+                            <li>Rare somatic mutations that differ between twins</li>
+                            <li>Epigenetic markers that diverge over lifetime</li>
+                            <li>Specialized testing targeting post-zygotic mutations</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Fallback Strategy in Bonsai</h5>
+                    <p>When Bonsai identifies identical twins but cannot distinguish between them, it implements a fallback strategy:</p>
+                    <ol>
+                        <li>Maintain both twins in the pedigree structure</li>
+                        <li>Apply identical relationship predictions to both twins</li>
+                        <li>Flag the twins as indistinguishable in visualization and reporting</li>
+                        <li>Allow user input to resolve ambiguity based on non-genetic information</li>
+                    </ol>
+                </div>
+            </div>
+
+            <h3>Twin-Specific Visualization and Reporting</h3>
+            
+            <div class="concept-section">
+                <h4>Communicating Twin Relationships</h4>
+                <p>Effective visualization and reporting of twin relationships is critical for user understanding. Bonsai implements several specialized approaches:</p>
+                
+                <h5>1. Visual Representation of Twins</h5>
+                <ul>
+                    <li><strong>Node Styling:</strong> Special visual markers for twin nodes in pedigree diagrams</li>
+                    <li><strong>Connection Styling:</strong> Special edges connecting twins to each other</li>
+                    <li><strong>Color Coding:</strong> Visual distinction between identical and fraternal twins</li>
+                </ul>
+                
+                <h5>2. Confidence Reporting</h5>
+                <ul>
+                    <li><strong>Twin Confidence Metrics:</strong> Quantitative measures of confidence in twin identification</li>
+                    <li><strong>Explanation Codes:</strong> Notation explaining the evidence supporting twin classification</li>
+                    <li><strong>Alternative Relationship Scores:</strong> Showing scores for competing hypotheses</li>
+                </ul>
+                
+                <h5>3. Communicating Ambiguity</h5>
+                <ul>
+                    <li><strong>Explicit Uncertainty Notation:</strong> Clear indication when twins cannot be distinguished</li>
+                    <li><strong>Alternative Placement Visualization:</strong> Showing multiple possible pedigree configurations</li>
+                    <li><strong>Confidence Intervals:</strong> Visualizing confidence in twin-related predictions</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Improving User Understanding</h5>
+                    <p>Effective visualization of twin relationships should:</p>
+                    <ul>
+                        <li>Make twin relationships immediately apparent in pedigree diagrams</li>
+                        <li>Clearly distinguish between identical and fraternal twins</li>
+                        <li>Help users understand downstream implications of twin relationships</li>
+                        <li>Communicate confidence and potential ambiguity</li>
+                        <li>Provide options for resolving ambiguity with additional information</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Handling Twin Children</h3>
+            
+            <div class="concept-section">
+                <h4>Special Genetic Relationships Through Twin Parents</h4>
+                <p>Children of twins have unique genetic relationships that require special modeling:</p>
+                
+                <h5>Children of Identical Twins</h5>
+                <ul>
+                    <li><strong>Genetic Half-Siblings:</strong> Children of identical twins are genetically equivalent to half-siblings, even though they are legally cousins</li>
+                    <li><strong>Expected Sharing:</strong> ~25% of their DNA (similar to half-siblings)</li>
+                    <li><strong>Pedigree Representation:</strong> Requires specialized notation to accurately represent the genetic relationship</li>
+                </ul>
+                
+                <h5>Children of Fraternal Twins</h5>
+                <ul>
+                    <li><strong>Enhanced First Cousins:</strong> Genetically similar to standard first cousins, but may have slightly different age patterns</li>
+                    <li><strong>Expected Sharing:</strong> ~12.5% of their DNA (typical for first cousins)</li>
+                    <li><strong>Age Considerations:</strong> Often much closer in age than typical first cousins</li>
+                </ul>
+                
+                <h5>Implementation Approaches</h5>
+                <p>Bonsai implements several strategies to correctly model relationships involving children of twins:</p>
+                <ol>
+                    <li><strong>Twin-Aware Relationship Inference:</strong> Adjusting relationship likelihoods based on twin status of parents</li>
+                    <li><strong>Special Relationship Categories:</strong> Defining specialized categories for twin-specific relationships</li>
+                    <li><strong>Modified Age Models:</strong> Adjusting age-based constraints for relationships through twin parents</li>
+                    <li><strong>Consistency Enforcement:</strong> Ensuring all relationships through twins maintain biological consistency</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Modeling Complex Twin Relationships</h5>
+                    <pre class="code-block">
+# Pseudocode for handling children of twins
+def infer_relationship_with_twin_awareness(id1, id2, ibd_data, twin_sets):
+    # Check if either individual is a child of a twin
+    parent1 = get_parents(id1)
+    parent2 = get_parents(id2)
+    
+    for twin_set in twin_sets:
+        # If parents are identical twins, adjust relationship model
+        if parent1 in twin_set and parent2 in twin_set:
+            # These individuals are genetic half-siblings through identical twin parents
+            return {
+                "legal_relationship": "first_cousins",
+                "genetic_relationship": "half_siblings",
+                "expected_sharing": 0.25,
+                "notes": "Parents are identical twins"
+            }
+        
+        # Other twin-specific relationship checks...
+    
+    # If no twin-specific condition applies, use standard inference
+    return standard_relationship_inference(id1, id2, ibd_data)</pre>
+                </div>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Handling twins and other very close relatives is a crucial aspect of computational genetic genealogy. Bonsai v3's specialized algorithms in the <code>twins.py</code> module provide robust mechanisms for detecting twin relationships, ensuring consistent pedigree placement, and correctly modeling complex genetic relationships involving twins.</p>
+                
+                <p>By understanding the unique challenges posed by twins and implementing tailored solutions, Bonsai can create more accurate and biologically consistent pedigree reconstructions, even in the presence of these special cases.</p>
+                
+                <p>In the next lab, we'll explore how Bonsai v3 handles complex relationship patterns through specialized logic in the <code>relationships.py</code> module, building on the foundation of twin handling to address an even broader range of special relationship scenarios.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab22_interpreting_results.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 22: Interpreting Results</span>
+                        </a>
+                        <a href="lab24_complex_relationships.html" class="path-item next">
+                            <span>Lab 24: Complex Relationships</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

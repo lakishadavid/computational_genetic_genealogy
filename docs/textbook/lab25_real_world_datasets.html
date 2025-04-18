@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 25: Real-World Datasets and Challenges | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Real-World Datasets and Challenges</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab25_real_world_datasets.html" class="active">Lab 25: Real-World Datasets</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 25: Real-World Datasets and Challenges</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 addresses the challenges of working with real-world genetic datasets, which often involve missing data, population-specific patterns, and various quality issues. Understanding these challenges and how to overcome them is essential for applying computational genetic genealogy techniques in practical scenarios.</p>
+            </div>
+
+            <h3>The Reality Gap in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>From Theory to Practice</h4>
+                <p>While previous labs have focused on the theoretical foundations and algorithmic approaches of computational genetic genealogy, this lab addresses the "reality gap"—the set of challenges that emerge when applying these methods to real-world data:</p>
+                
+                <h5>Key Real-World Challenges</h5>
+                <ul>
+                    <li><strong>Data Quality and Completeness:</strong> Missing, sparse, or variable-quality genetic data</li>
+                    <li><strong>Population Diversity:</strong> Different genetic patterns across diverse human populations</li>
+                    <li><strong>Testing Platform Differences:</strong> Variations in SNP coverage, phasing quality, and analysis methods</li>
+                    <li><strong>Privacy and Ethical Constraints:</strong> Limitations on data access and usage</li>
+                    <li><strong>Scale Challenges:</strong> Handling large datasets with thousands or millions of individuals</li>
+                </ul>
+                
+                <p>Bonsai v3 incorporates numerous adaptations to address these real-world challenges, enabling more robust performance across diverse scenarios and datasets.</p>
+            </div>
+
+            <h3>Data Quality and Completeness</h3>
+            
+            <div class="concept-section">
+                <h4>Handling Imperfect Data</h4>
+                <p>Real-world genetic genealogy datasets rarely have the completeness and quality assumed by theoretical models. Bonsai v3 implements several strategies to handle these imperfections:</p>
+                
+                <h5>Common Data Quality Issues</h5>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Issue</th>
+                            <th>Impact</th>
+                            <th>Bonsai's Approach</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Missing Data</td>
+                            <td>Incomplete SNP coverage leads to underestimated IBD sharing</td>
+                            <td>Normalization algorithms that adjust for coverage gaps</td>
+                        </tr>
+                        <tr>
+                            <td>Phasing Errors</td>
+                            <td>Incorrect assignment of variants to paternal/maternal chromosomes</td>
+                            <td>Robust likelihood models that account for phase uncertainty</td>
+                        </tr>
+                        <tr>
+                            <td>Genotyping Errors</td>
+                            <td>Incorrect variant calls affecting IBD detection</td>
+                            <td>Statistical filters to identify and handle potential errors</td>
+                        </tr>
+                        <tr>
+                            <td>Inconsistent Coverage</td>
+                            <td>Variable SNP density across the genome</td>
+                            <td>Region-specific calibration and weighting</td>
+                        </tr>
+                        <tr>
+                            <td>Sample Contamination</td>
+                            <td>DNA from multiple individuals mixed in a single sample</td>
+                            <td>Anomaly detection to flag potentially contaminated samples</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="example-box">
+                    <h5>Adjusting for Missing Data</h5>
+                    <pre class="code-block">
+# Pseudocode for coverage-aware IBD normalization
+def normalize_ibd_for_coverage(observed_ibd, coverage_fraction):
+    """
+    Adjust observed IBD sharing to account for incomplete coverage.
+    
+    Args:
+        observed_ibd: Observed IBD sharing in cM
+        coverage_fraction: Fraction of the genome with adequate coverage
+        
+    Returns:
+        Normalized IBD estimate
+    """
+    if coverage_fraction < MIN_COVERAGE_THRESHOLD:
+        # Too little coverage for reliable normalization
+        return observed_ibd, "low_confidence"
+    
+    # Simple linear normalization
+    normalized_ibd = observed_ibd / coverage_fraction
+    
+    # Apply confidence rating based on coverage
+    if coverage_fraction > 0.9:
+        confidence = "high"
+    elif coverage_fraction > 0.7:
+        confidence = "medium"
+    else:
+        confidence = "low"
+    
+    return normalized_ibd, confidence</pre>
+                </div>
+                
+                <h5>Partial Data Strategies</h5>
+                <p>Bonsai implements several approaches for working with partial or incomplete data:</p>
+                <ol>
+                    <li><strong>Graceful Degradation:</strong> Algorithms that continue to function with reduced accuracy as data quality decreases</li>
+                    <li><strong>Confidence Calibration:</strong> Adjusting confidence scores based on data completeness</li>
+                    <li><strong>Imputation Techniques:</strong> Filling in missing data using population references where appropriate</li>
+                    <li><strong>Feature Weighting:</strong> Giving more weight to high-quality data regions in relationship inference</li>
+                </ol>
+            </div>
+
+            <h3>Population-Specific Patterns</h3>
+            
+            <div class="concept-section">
+                <h4>Adapting to Human Genetic Diversity</h4>
+                <p>Human populations have different genetic histories and characteristics that affect genetic genealogy analysis. Bonsai v3 accounts for these population-specific patterns:</p>
+                
+                <h5>Key Population Considerations</h5>
+                <ul>
+                    <li><strong>Recombination Rate Variation:</strong> Different populations show different patterns of genetic recombination</li>
+                    <li><strong>Runs of Homozygosity (ROH):</strong> Endogamous populations have more and longer ROH regions</li>
+                    <li><strong>Demographic History:</strong> Population bottlenecks and expansions affect genetic diversity</li>
+                    <li><strong>Admixture Patterns:</strong> Mixed ancestry creates complex IBD patterns</li>
+                    <li><strong>Reference Bias:</strong> Most genetic references are skewed toward European populations</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Population-Aware Calibration</h5>
+                    <p>Bonsai v3 includes population-specific calibration for several key parameters:</p>
+                    <ul>
+                        <li><strong>Recombination Maps:</strong> Population-specific genetic maps for more accurate genetic distance calculation</li>
+                        <li><strong>IBD Detection Thresholds:</strong> Adjusted thresholds for populations with different background IBD patterns</li>
+                        <li><strong>Relationship Likelihood Models:</strong> Population-specific parameters for relationship inference</li>
+                        <li><strong>Endogamy Correction:</strong> Population-specific adjustment factors for endogamous groups</li>
+                    </ul>
+                </div>
+                
+                <h5>Implementation Approaches</h5>
+                <p>Several implementation strategies enable effective handling of population diversity:</p>
+                <ol>
+                    <li><strong>Population Inference:</strong> Automatically detecting population background from genetic data</li>
+                    <li><strong>Adaptive Parameters:</strong> Adjusting algorithm parameters based on detected population</li>
+                    <li><strong>Multi-Reference Models:</strong> Using multiple population references for improved accuracy</li>
+                    <li><strong>Admixture-Aware Analysis:</strong> Handling segments from different ancestral populations appropriately</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Example: Endogamy Adjustment by Population</h5>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Population Group</th>
+                                <th>Endogamy Factor</th>
+                                <th>Impact on Relationship Inference</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Ashkenazi Jewish</td>
+                                <td>1.5 - 2.0</td>
+                                <td>Significant adjustment needed; relationships often appear closer than genealogical distance</td>
+                            </tr>
+                            <tr>
+                                <td>Finnish</td>
+                                <td>1.2 - 1.4</td>
+                                <td>Moderate adjustment needed, especially for distant relationships</td>
+                            </tr>
+                            <tr>
+                                <td>Puerto Rican</td>
+                                <td>1.1 - 1.3</td>
+                                <td>Slight adjustment needed, primarily for distant relationships</td>
+                            </tr>
+                            <tr>
+                                <td>Northern European</td>
+                                <td>1.0 - 1.1</td>
+                                <td>Minimal adjustment needed for most relationships</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <h3>Testing Platform Differences</h3>
+            
+            <div class="concept-section">
+                <h4>Integrating Data from Multiple Sources</h4>
+                <p>Real-world genetic genealogy often involves integrating data from multiple testing platforms, each with different characteristics. Bonsai v3 addresses these platform differences:</p>
+                
+                <h5>Major Testing Platform Variations</h5>
+                <ul>
+                    <li><strong>SNP Coverage:</strong> Different tests analyze different subsets of SNPs</li>
+                    <li><strong>Chip Versions:</strong> Testing companies frequently update their genotyping arrays</li>
+                    <li><strong>Analysis Algorithms:</strong> Different companies use different algorithms for IBD detection</li>
+                    <li><strong>Reporting Formats:</strong> Data formats and segment reporting criteria vary</li>
+                    <li><strong>Reference Populations:</strong> Different platforms use different reference populations</li>
+                </ul>
+                
+                <h5>Cross-Platform Integration Approaches</h5>
+                <p>Bonsai implements several strategies for effective cross-platform integration:</p>
+                <ol>
+                    <li><strong>Common SNP Analysis:</strong> Focusing analysis on SNPs common to all platforms</li>
+                    <li><strong>Platform-Specific Calibration:</strong> Adjusting expectations based on known platform characteristics</li>
+                    <li><strong>Format Normalization:</strong> Converting data from different sources to a consistent internal format</li>
+                    <li><strong>Confidence Adjustment:</strong> Modifying confidence scores based on platform compatibility</li>
+                </ol>
+                
+                <div class="note-box">
+                    <h5>Platform Compatibility Matrix</h5>
+                    <p>Bonsai maintains a compatibility matrix for common testing platforms, informing its cross-platform integration strategies:</p>
+                    <ul>
+                        <li><strong>High Compatibility:</strong> Platforms with similar SNP sets and analysis methods</li>
+                        <li><strong>Moderate Compatibility:</strong> Platforms with partial SNP overlap but different analysis methods</li>
+                        <li><strong>Low Compatibility:</strong> Platforms with minimal SNP overlap or fundamentally different approaches</li>
+                    </ul>
+                    <p>This matrix helps Bonsai adjust its algorithms and confidence reporting when working with mixed-platform data.</p>
+                </div>
+            </div>
+
+            <h3>Privacy and Ethical Considerations</h3>
+            
+            <div class="concept-section">
+                <h4>Responsible Genetic Genealogy</h4>
+                <p>Working with real-world genetic data involves navigating important privacy and ethical considerations. Bonsai v3 incorporates several features to support responsible use:</p>
+                
+                <h5>Key Privacy and Ethical Challenges</h5>
+                <ul>
+                    <li><strong>Sensitive Relationship Discovery:</strong> Uncovering previously unknown family connections</li>
+                    <li><strong>Data Access Controls:</strong> Managing who can access genetic relationship information</li>
+                    <li><strong>Informed Consent:</strong> Ensuring participants understand how their data will be used</li>
+                    <li><strong>Secondary Discoveries:</strong> Handling incidental findings like health-related information</li>
+                    <li><strong>Re-identification Risk:</strong> Protecting against identification of individuals from anonymized data</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Relationship Sensitivity Classification</h5>
+                    <p>Bonsai implements a classification system for relationship sensitivity:</p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Sensitivity Level</th>
+                                <th>Relationship Types</th>
+                                <th>Handling Approach</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>High Sensitivity</td>
+                                <td>Parent-child misattributions, evidence of incest</td>
+                                <td>Restricted access, additional verification required, careful reporting</td>
+                            </tr>
+                            <tr>
+                                <td>Moderate Sensitivity</td>
+                                <td>Unknown siblings, unexpected close relatives</td>
+                                <td>Access controls, verification recommended, measured reporting</td>
+                            </tr>
+                            <tr>
+                                <td>Standard Sensitivity</td>
+                                <td>Expected relationships, distant cousins</td>
+                                <td>Standard access controls, normal reporting</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h5>Privacy-Preserving Features</h5>
+                <p>Bonsai implements several privacy-preserving features:</p>
+                <ol>
+                    <li><strong>Data Minimization:</strong> Using only the data necessary for relationship inference</li>
+                    <li><strong>Access Controls:</strong> Supporting granular permissions for relationship visibility</li>
+                    <li><strong>Anonymization Options:</strong> Allowing identity redaction while preserving relationship structure</li>
+                    <li><strong>Consent-Based Processing:</strong> Respecting user preferences for data usage</li>
+                </ol>
+            </div>
+
+            <h3>Scale Challenges in Real-World Applications</h3>
+            
+            <div class="concept-section">
+                <h4>Handling Large-Scale Analyses</h4>
+                <p>Real-world genetic genealogy applications often involve large datasets with thousands or millions of individuals. Bonsai v3 includes specialized optimizations for large-scale analyses:</p>
+                
+                <h5>Key Scale Challenges</h5>
+                <ul>
+                    <li><strong>Computational Complexity:</strong> Many key algorithms have quadratic or worse complexity</li>
+                    <li><strong>Memory Constraints:</strong> Large datasets can exceed available memory</li>
+                    <li><strong>Pairwise Comparison Explosion:</strong> The number of potential relationships grows quadratically</li>
+                    <li><strong>Visualization Complexity:</strong> Large pedigrees become difficult to comprehend</li>
+                    <li><strong>Consistency Maintenance:</strong> Ensuring biological consistency becomes harder at scale</li>
+                </ul>
+                
+                <h5>Bonsai's Scale Optimizations</h5>
+                <p>Several key optimizations enable Bonsai to handle large-scale analyses:</p>
+                <ol>
+                    <li><strong>Hierarchical Processing:</strong> Multi-level approaches that progressively refine analyses</li>
+                    <li><strong>Filtering Strategies:</strong> Intelligent pre-filtering to focus on likely relationships</li>
+                    <li><strong>Chunking and Batching:</strong> Processing data in manageable chunks</li>
+                    <li><strong>Parallelization:</strong> Distributing workloads across multiple processors</li>
+                    <li><strong>Incremental Updates:</strong> Efficiently incorporating new data without full recomputation</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Hierarchical IBD Analysis</h5>
+                    <pre class="code-block">
+# Pseudocode for hierarchical IBD analysis
+def hierarchical_ibd_analysis(individuals, max_group_size=1000):
+    """
+    Process large datasets using a hierarchical approach.
+    
+    Args:
+        individuals: List of all individuals to analyze
+        max_group_size: Maximum size for direct comparison groups
+        
+    Returns:
+        Complete IBD relationship graph
+    """
+    # Phase 1: Cluster individuals into manageable groups
+    groups = cluster_by_genetic_similarity(individuals, max_group_size)
+    
+    # Phase 2: Perform detailed IBD analysis within each group
+    within_group_results = {}
+    for group in groups:
+        within_group_results[group] = analyze_group_ibd(group)
+    
+    # Phase 3: Perform selected cross-group comparisons
+    cross_group_results = analyze_cross_group_connections(groups)
+    
+    # Phase 4: Merge results into a unified relationship graph
+    complete_graph = merge_ibd_results(within_group_results, cross_group_results)
+    
+    return complete_graph</pre>
+                </div>
+                
+                <h5>Performance Metrics</h5>
+                <p>Bonsai's performance optimizations yield significant improvements in processing time and memory usage:</p>
+                <ul>
+                    <li><strong>Filtering:</strong> Typically reduces computation by 90-99% with minimal accuracy impact</li>
+                    <li><strong>Chunking:</strong> Reduces peak memory usage by 70-80% for large datasets</li>
+                    <li><strong>Parallelization:</strong> Near-linear speedup with processor count for many operations</li>
+                    <li><strong>Incremental Updates:</strong> Can be 10-100x faster than full recomputation</li>
+                </ul>
+            </div>
+
+            <h3>Working with Real Datasets: Case Studies</h3>
+            
+            <div class="concept-section">
+                <h4>Learning from Application to Diverse Datasets</h4>
+                <p>Bonsai's development has been informed by application to diverse real-world datasets, each presenting unique challenges and learning opportunities:</p>
+                
+                <h5>Key Dataset Categories</h5>
+                <ul>
+                    <li><strong>Founder Populations:</strong> Groups with documented founder effects and endogamy</li>
+                    <li><strong>Admixed Populations:</strong> Groups with complex ancestral mixing patterns</li>
+                    <li><strong>Multi-Generation Pedigrees:</strong> Deep family trees with genetic data for multiple generations</li>
+                    <li><strong>Sparse Coverage Datasets:</strong> Pedigrees with genetic data for only a subset of individuals</li>
+                    <li><strong>Cross-Platform Collections:</strong> Data integrated from multiple testing platforms</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Case Study: Founder Population Analysis</h5>
+                    <p>When applied to a founder population dataset with significant endogamy:</p>
+                    <ul>
+                        <li><strong>Challenge:</strong> Standard relationship inference overestimated closeness</li>
+                        <li><strong>Solution:</strong> Population-specific endogamy correction factor derived from known relationships</li>
+                        <li><strong>Result:</strong> 78% improvement in relationship degree accuracy</li>
+                        <li><strong>Lesson:</strong> Population-specific calibration is essential for founder populations</li>
+                    </ul>
+                </div>
+                
+                <div class="example-box">
+                    <h5>Case Study: Multi-Platform Integration</h5>
+                    <p>When integrating data from four different testing platforms:</p>
+                    <ul>
+                        <li><strong>Challenge:</strong> Inconsistent IBD detection across platforms</li>
+                        <li><strong>Solution:</strong> Platform-specific normalization based on known relationships</li>
+                        <li><strong>Result:</strong> Consistent relationship inference regardless of platform</li>
+                        <li><strong>Lesson:</strong> Cross-platform calibration is critical for mixed-source datasets</li>
+                    </ul>
+                </div>
+                
+                <h5>Key Lessons from Real-World Application</h5>
+                <ol>
+                    <li><strong>Accuracy vs. Coverage Tradeoff:</strong> Sometimes less data with higher quality yields better results than more data with quality issues</li>
+                    <li><strong>Contextual Calibration:</strong> Parameters should be adjusted based on dataset context (population, platform, etc.)</li>
+                    <li><strong>Complementary Evidence:</strong> Combining genetic evidence with demographic and documentary evidence improves results</li>
+                    <li><strong>Appropriate Confidence:</strong> Confidence reporting should reflect all sources of uncertainty, not just statistical uncertainty</li>
+                </ol>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Working with real-world genetic genealogy datasets presents numerous challenges that go beyond theoretical models and ideal conditions. Bonsai v3 addresses these challenges through a combination of robust algorithms, adaptive parameters, population-specific calibration, and careful handling of data quality issues.</p>
+                
+                <p>By understanding and accounting for data quality issues, population-specific patterns, testing platform differences, privacy considerations, and scale challenges, Bonsai creates more reliable and accurate pedigree reconstructions from real-world data.</p>
+                
+                <p>In the next lab, we'll explore performance tuning techniques for Bonsai v3, focusing on how to optimize the system for specific application scenarios and computational environments.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab24_complex_relationships.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 24: Complex Relationships</span>
+                        </a>
+                        <a href="lab26_performance_tuning.html" class="path-item next">
+                            <span>Lab 26: Performance Tuning</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

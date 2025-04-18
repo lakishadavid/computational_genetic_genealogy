@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 22: Interpreting Results and Confidence Measures | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Interpreting Results and Confidence Measures</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab22_interpreting_results.html" class="active">Lab 22: Interpreting Results</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 22: Interpreting Results and Confidence Measures</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 interprets genetic data to make relationship predictions and assigns confidence levels to these predictions. Understanding the statistical foundation of relationship inference and confidence assessment is essential for making reliable genealogical conclusions from genetic data.</p>
+            </div>
+
+            <h3>The Challenge of Interpretation in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Why Confidence Matters</h4>
+                <p>Genetic genealogy involves making inferences about relationships based on patterns of DNA sharing. However, these inferences come with varying degrees of certainty due to several inherent challenges:</p>
+                
+                <ul>
+                    <li><strong>Biological Randomness:</strong> The random nature of genetic recombination creates variability in DNA sharing, even among relatives of the same degree</li>
+                    <li><strong>Overlap in Patterns:</strong> Different relationships can produce similar patterns of DNA sharing</li>
+                    <li><strong>Data Quality Issues:</strong> Testing and analysis limitations can introduce noise and uncertainty</li>
+                    <li><strong>Complexity:</strong> Real-world family structures often include complex relationships that don't fit simple models</li>
+                </ul>
+                
+                <p>Given these challenges, simply providing relationship predictions without confidence measures could lead to misinterpretations and incorrect genealogical conclusions. Bonsai v3 addresses this by implementing sophisticated statistical methods to quantify confidence and communicate uncertainty in its predictions.</p>
+            </div>
+
+            <h3>Likelihood-Based Inference</h3>
+            
+            <div class="concept-section">
+                <h4>The Statistical Foundation of Relationship Prediction</h4>
+                <p>At the core of Bonsai's relationship prediction is the computation of likelihoods—statistical measures of how well the observed data fits different relationship hypotheses.</p>
+                
+                <h5>The Likelihood Framework</h5>
+                <p>For a given pair of individuals, Bonsai calculates the likelihood of observing their shared DNA data under different relationship hypotheses:</p>
+                
+                <pre class="code-block">
+P(Data | Relationship) = Likelihood of the relationship given the observed data</pre>
+                
+                <p>This likelihood-based approach has several advantages:</p>
+                <ul>
+                    <li>It provides a principled way to compare different relationship hypotheses</li>
+                    <li>It can incorporate multiple types of evidence (genetic, age, etc.)</li>
+                    <li>It naturally leads to confidence measures based on likelihood ratios</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Likelihood Calculation in Bonsai</h5>
+                    <p>Bonsai's <code>PwLogLike</code> class implements likelihood calculations for pairwise relationships:</p>
+                    <pre class="code-block">
+class PwLogLike:
+    """
+    Class for computing pairwise log-likelihoods for different relationship
+    hypotheses.
+    
+    This class combines genetic and age-based likelihoods to determine
+    the most likely relationship between a pair of individuals.
+    """
+    
+    def get_pw_gen_ll(self, node1, node2, rel_tuple):
+        """
+        Calculate the genetic component of the log-likelihood.
+        
+        Args:
+            node1: ID of the first individual
+            node2: ID of the second individual
+            rel_tuple: Relationship tuple (up, down, num_ancestors)
+            
+        Returns:
+            Log-likelihood score for the genetic component
+        """
+        # Implementation calculates likelihood based on IBD sharing patterns
+        
+    def get_pw_age_ll(self, node1, node2, rel_tuple):
+        """
+        Calculate the age component of the log-likelihood.
+        
+        Args:
+            node1: ID of the first individual
+            node2: ID of the second individual
+            rel_tuple: Relationship tuple (up, down, num_ancestors)
+            
+        Returns:
+            Log-likelihood score for the age component
+        """
+        # Implementation calculates likelihood based on age differences</pre>
+                </div>
+                
+                <p>The total log-likelihood is typically the sum of the genetic and age-based components, following the principle that if these sources of evidence are independent, their log-likelihoods can be added:</p>
+                
+                <pre class="code-block">
+total_ll = genetic_ll + age_ll</pre>
+                
+                <div class="note-box">
+                    <h5>Working in Log Space</h5>
+                    <p>Bonsai performs most likelihood calculations in logarithmic space (using log-likelihoods) rather than raw likelihoods. This approach has several advantages:</p>
+                    <ul>
+                        <li>Prevents numerical underflow when working with very small probabilities</li>
+                        <li>Converts multiplication of probabilities to addition of log-probabilities</li>
+                        <li>Improves numerical stability in optimization procedures</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Confidence Intervals for Relationship Degree</h3>
+            
+            <div class="concept-section">
+                <h4>Quantifying Uncertainty in Degree Estimation</h4>
+                <p>When inferring the degree of relationship between individuals, it's important to capture the uncertainty in the estimate. Bonsai v3 calculates confidence intervals to provide a range of plausible relationship degrees rather than just a point estimate.</p>
+                
+                <h5>The <code>get_total_ibd_deg_lbd_pt_ubd</code> Function</h5>
+                <p>This function computes a confidence interval for the degree of relationship based on the total amount of shared IBD:</p>
+                
+                <pre class="code-block">
+def get_total_ibd_deg_lbd_pt_ubd(a, L, condition=True, alpha=0.05):
+    """
+    Calculate a confidence interval for relationship degree based on total
+    IBD length.
+    
+    Args:
+        a: Number of common ancestors (1 for most relationships)
+        L: Total IBD length in centiMorgans
+        condition: Whether to condition on observing at least one segment
+        alpha: Significance level (default: 0.05 for 95% confidence)
+        
+    Returns:
+        Tuple of (lower_bound, point_estimate, upper_bound)
+    """</pre>
+                
+                <p>The confidence interval provides valuable information about the reliability of the degree estimate:</p>
+                <ul>
+                    <li>A narrow interval indicates high confidence in the estimated degree</li>
+                    <li>A wide interval suggests considerable uncertainty</li>
+                    <li>The interval may span multiple degrees, indicating several plausible relationships</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Example: Confidence Interval Interpretation</h5>
+                    <p>Consider a confidence interval for relationship degree:</p>
+                    <ul>
+                        <li>Lower bound: 3.2 meioses</li>
+                        <li>Point estimate: 4.5 meioses</li>
+                        <li>Upper bound: 6.1 meioses</li>
+                    </ul>
+                    <p>This interval spans degrees 3 to 6, suggesting the relationship could be anything from 2nd cousin to 3rd cousin once removed, with the most likely being 3rd cousin. This uncertainty is valuable information for the genealogist.</p>
+                </div>
+                
+                <p>Bonsai computes these confidence intervals using a statistical approach based on the Highest Posterior Density (HPD) interval, which includes all degree values that together contain the specified probability mass (e.g., 95%).</p>
+            </div>
+
+            <h3>Age-Based Constraints</h3>
+            
+            <div class="concept-section">
+                <h4>Enhancing Predictions with Age Information</h4>
+                <p>Age information provides valuable constraints that can significantly improve relationship inference. Different relationships have different characteristic age differences, and biological constraints limit certain relationships (e.g., parents must be older than children).</p>
+                
+                <h5>Age-Based Likelihood Component</h5>
+                <p>Bonsai incorporates age information through an age-based likelihood component:</p>
+                
+                <pre class="code-block">
+def get_age_log_like(age1, age2, rel_tuple):
+    """
+    Calculate the log-likelihood of observing a particular age difference
+    given a relationship type.
+    
+    Args:
+        age1: Age of the first individual
+        age2: Age of the second individual
+        rel_tuple: Relationship tuple (up, down, num_ancestors)
+        
+    Returns:
+        Log-likelihood score
+    """
+    # Get mean and standard deviation for the age difference
+    # distribution for this relationship
+    mean, std = get_age_mean_std_for_rel_tuple(rel_tuple)
+    
+    # Calculate log-likelihood using normal distribution
+    age_diff = age1 - age2
+    return stats.norm.logpdf(age_diff, loc=mean, scale=std)</pre>
+                
+                <p>This age-based component is combined with the genetic component to create a more comprehensive assessment of relationship likelihood:</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Relationship</th>
+                            <th>Typical Age Difference</th>
+                            <th>Constraints</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Parent-Child</td>
+                            <td>20-40 years</td>
+                            <td>Parent must be older than child</td>
+                        </tr>
+                        <tr>
+                            <td>Full Siblings</td>
+                            <td>0-10 years</td>
+                            <td>No strict constraints</td>
+                        </tr>
+                        <tr>
+                            <td>Grandparent</td>
+                            <td>40-80 years</td>
+                            <td>Grandparent must be older than grandchild</td>
+                        </tr>
+                        <tr>
+                            <td>Aunt/Uncle</td>
+                            <td>5-50 years</td>
+                            <td>Usually older than niece/nephew</td>
+                        </tr>
+                        <tr>
+                            <td>First Cousins</td>
+                            <td>0-30 years</td>
+                            <td>No strict constraints</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <div class="note-box">
+                    <h5>Impact of Age Constraints</h5>
+                    <p>Age information can significantly improve relationship predictions, especially when genetic evidence alone is ambiguous. For example:</p>
+                    <ul>
+                        <li>Half-siblings and grandparent-grandchild relationships can have similar genetic patterns but very different age distributions</li>
+                        <li>Aunt/uncle and half-sibling relationships may be distinguished by age differences</li>
+                        <li>Age constraints can rule out biologically impossible relationships even when genetic data suggests them</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Multiple Hypothesis Testing</h3>
+            
+            <div class="concept-section">
+                <h4>Comparing Alternative Relationship Hypotheses</h4>
+                <p>In genetic genealogy, we often need to compare multiple relationship hypotheses to determine the most likely connection between individuals. Bonsai v3 implements several approaches for systematic hypothesis testing.</p>
+                
+                <h5>Bayes Factors</h5>
+                <p>One key method for comparing hypotheses is the Bayes factor, which is the ratio of the likelihoods of two competing hypotheses:</p>
+                
+                <pre class="code-block">
+BF = P(Data | Hypothesis1) / P(Data | Hypothesis2)</pre>
+                
+                <p>In log space, this becomes:</p>
+                
+                <pre class="code-block">
+log(BF) = log(P(Data | Hypothesis1)) - log(P(Data | Hypothesis2))</pre>
+                
+                <p>The Bayes factor provides a measure of the strength of evidence in favor of one hypothesis over another, with larger values indicating stronger evidence.</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Bayes Factor Range</th>
+                            <th>Interpretation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1-3</td>
+                            <td>Barely worth mentioning; very weak evidence</td>
+                        </tr>
+                        <tr>
+                            <td>3-10</td>
+                            <td>Substantial evidence</td>
+                        </tr>
+                        <tr>
+                            <td>10-30</td>
+                            <td>Strong evidence</td>
+                        </tr>
+                        <tr>
+                            <td>30-100</td>
+                            <td>Very strong evidence</td>
+                        </tr>
+                        <tr>
+                            <td>>100</td>
+                            <td>Decisive evidence</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h5>Posterior Probabilities</h5>
+                <p>Another approach is to calculate posterior probabilities for multiple hypotheses, which represent the probability of each relationship given the observed data:</p>
+                
+                <pre class="code-block">
+P(Relationship | Data) ∝ P(Data | Relationship) × P(Relationship)</pre>
+                
+                <p>This approach allows for incorporating prior probabilities (<code>P(Relationship)</code>) that reflect existing knowledge or beliefs about the relationships. The posterior probabilities are normalized to sum to 1, providing a probability distribution over all considered relationships.</p>
+                
+                <div class="example-box">
+                    <h5>Example: Multiple Hypothesis Testing</h5>
+                    <p>Consider a case where we observe 850 cM of shared DNA between two individuals:</p>
+                    <pre class="code-block">
+# Calculate log-likelihoods
+parent_child_ll = -32.5  # Very low; this sharing is too low for parent-child
+full_sibling_ll = -28.7  # Low; this sharing is too low for full siblings
+half_sibling_ll = -4.2   # High; this sharing is typical for half-siblings
+first_cousin_ll = -3.8   # Highest; this sharing is typical for first cousins
+second_cousin_ll = -12.1 # Moderate; this sharing is high for second cousins
+
+# Calculate posterior probabilities (assuming equal priors)
+posterior_parent_child = 0.0000
+posterior_full_sibling = 0.0000
+posterior_half_sibling = 0.4332
+posterior_first_cousin = 0.5667
+posterior_second_cousin = 0.0001
+
+# Bayes factor: first cousin vs half-sibling
+bf = exp(first_cousin_ll - half_sibling_ll) = 1.31</pre>
+                    <p>Interpretation: First cousin is the most likely relationship (57% probability), closely followed by half-sibling (43%). The Bayes factor of 1.31 indicates very weak evidence favoring first cousin over half-sibling. In this case, both relationships should be considered plausible explanations.</p>
+                </div>
+            </div>
+
+            <h3>Visualizing Uncertainty</h3>
+            
+            <div class="concept-section">
+                <h4>Communicating Confidence Visually</h4>
+                <p>Effectively communicating uncertainty in relationship predictions helps users make informed decisions. Bonsai v3 supports several approaches for visualizing confidence and uncertainty:</p>
+                
+                <h5>1. Probability Distribution Visualization</h5>
+                <p>Visualizing the full distribution of relationship probabilities provides a comprehensive view of the evidence:</p>
+                <ul>
+                    <li>Bar charts showing posterior probabilities for different relationships</li>
+                    <li>Highlighting the most likely relationships</li>
+                    <li>Showing the relative probabilities of alternative hypotheses</li>
+                </ul>
+                
+                <h5>2. Confidence Color Coding</h5>
+                <p>In pedigree visualizations, confidence levels can be encoded using color:</p>
+                <ul>
+                    <li>Green for high-confidence relationships (e.g., Bayes factor > 100)</li>
+                    <li>Yellow for moderate-confidence relationships (e.g., Bayes factor 10-100)</li>
+                    <li>Red for low-confidence relationships (e.g., Bayes factor < 10)</li>
+                </ul>
+                
+                <h5>3. Confidence Interval Visualization</h5>
+                <p>For degree estimation, confidence intervals can be visualized to show the range of plausible relationships:</p>
+                <ul>
+                    <li>Horizontal bars showing the confidence interval range</li>
+                    <li>Point estimates highlighted within the interval</li>
+                    <li>Relationship labels for different degrees within the interval</li>
+                </ul>
+                
+                <h5>4. Alternative Pedigree Hypotheses</h5>
+                <p>For complex cases, visualizing multiple plausible pedigree structures can be valuable:</p>
+                <ul>
+                    <li>Side-by-side comparison of alternative pedigree structures</li>
+                    <li>Annotating each alternative with its posterior probability</li>
+                    <li>Highlighting differences between alternative structures</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Uncertainty Visualization Best Practices</h5>
+                    <p>Effective uncertainty visualization follows certain principles:</p>
+                    <ul>
+                        <li>Use clear visual encodings that are intuitive to understand</li>
+                        <li>Provide context for interpreting confidence levels</li>
+                        <li>Allow comparison between alternatives</li>
+                        <li>Avoid visual elements that could be misleading</li>
+                        <li>Include both quantitative measures and qualitative interpretations</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Practical Interpretation Guidelines</h3>
+            
+            <div class="concept-section">
+                <h4>Making Sense of Relationship Predictions</h4>
+                <p>Beyond the technical aspects of confidence calculation, there are practical guidelines for interpreting relationship predictions in genetic genealogy:</p>
+                
+                <h5>1. Prioritize High-Confidence Predictions</h5>
+                <p>Focus first on relationships with high confidence levels:</p>
+                <ul>
+                    <li>Build your pedigree foundation with the most reliable connections</li>
+                    <li>Use high-confidence relationships as anchors for placing uncertain relationships</li>
+                    <li>Document confidence levels to distinguish facts from hypotheses</li>
+                </ul>
+                
+                <h5>2. Consider Multiple Lines of Evidence</h5>
+                <p>Strengthen conclusions by incorporating multiple sources of information:</p>
+                <ul>
+                    <li>Genetic evidence (total cM, number of segments, segment sizes)</li>
+                    <li>Age and demographic information</li>
+                    <li>Documentary evidence from traditional genealogy</li>
+                    <li>Input from additional relatives who have tested</li>
+                </ul>
+                
+                <h5>3. Be Aware of Confounding Factors</h5>
+                <p>Recognize situations that can complicate relationship inference:</p>
+                <ul>
+                    <li><strong>Endogamy:</strong> Marriage within a relatively closed community can inflate DNA sharing</li>
+                    <li><strong>Population structure:</strong> Shared ancestry within a population can create background relatedness</li>
+                    <li><strong>Multiple relationships:</strong> Individuals can be related through multiple pathways</li>
+                    <li><strong>Adoption and misattributed parentage:</strong> Documentary relationships may not match genetic relationships</li>
+                </ul>
+                
+                <h5>4. Interpret Confidence Appropriately</h5>
+                <p>Understand what confidence measures mean in practical terms:</p>
+                <ul>
+                    <li>High confidence doesn't always mean correctness, especially if key information is missing</li>
+                    <li>Low confidence doesn't necessarily mean the prediction is wrong, only that alternatives are plausible</li>
+                    <li>Confidence measures are relative to the hypotheses being considered</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Example: Interpreting a Complex Case</h5>
+                    <p>Consider this analysis of a relationship with mixed signals:</p>
+                    <ul>
+                        <li>Genetic data: 900 cM shared across 30 segments</li>
+                        <li>Age difference: 25 years (older individual is 65, younger is 40)</li>
+                        <li>Top relationship hypotheses: 
+                            <ul>
+                                <li>Half-sibling (30% probability)</li>
+                                <li>Aunt/Uncle (25% probability)</li>
+                                <li>First cousin (40% probability)</li>
+                                <li>Others (5% probability)</li>
+                            </ul>
+                        </li>
+                    </ul>
+                    <p>Interpretation: This is a case with significant ambiguity. The genetic data alone is consistent with several relationship types. The age difference slightly favors aunt/uncle or first cousin over half-sibling but isn't decisive. Additional testing of common relatives would be the recommended next step to resolve the ambiguity.</p>
+                </div>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Interpreting results and understanding confidence measures are essential skills for computational genetic genealogy. Bonsai v3 provides sophisticated statistical methods for quantifying confidence in relationship predictions, empowering users to make informed decisions about family connections based on genetic data.</p>
+                
+                <p>The likelihood-based approach, confidence intervals, age constraints, and multiple hypothesis testing provide a comprehensive framework for relationship inference that acknowledges and quantifies uncertainty. By properly interpreting these confidence measures and following the practical guidelines outlined in this lab, users can build more reliable family trees and make stronger genealogical conclusions.</p>
+                
+                <p>In the next lab, we'll explore how Bonsai v3 handles twins and close relatives, which present special challenges and opportunities for genetic genealogy analysis.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab21_pedigree_rendering.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 21: Pedigree Rendering</span>
+                        </a>
+                        <a href="lab23_twins.html" class="path-item next">
+                            <span>Lab 23: Handling Twins</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

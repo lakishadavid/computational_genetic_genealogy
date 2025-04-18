@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 24: Complex Relationship Patterns | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Complex Relationship Patterns</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab24_complex_relationships.html" class="active">Lab 24: Complex Relationships</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 24: Complex Relationship Patterns</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores how Bonsai v3 handles complex relationship patterns through the <code>relationships.py</code> module. Understanding these non-standard relationships is essential for accurate pedigree reconstruction in real-world scenarios where family structures often deviate from simple models.</p>
+            </div>
+
+            <h3>Beyond Standard Relationship Models</h3>
+            
+            <div class="concept-section">
+                <h4>The Challenge of Complex Relationships</h4>
+                <p>Real-world genealogy frequently involves complex relationship patterns that don't fit neatly into standard categories like "parent-child" or "first cousins." These complex relationships present several challenges for computational genetic genealogy:</p>
+                
+                <ul>
+                    <li><strong>Multiple Relationship Paths:</strong> Individuals can be related through multiple pathways simultaneously</li>
+                    <li><strong>Non-Standard Sharing Patterns:</strong> Complex relationships produce DNA sharing patterns that standard models don't account for</li>
+                    <li><strong>Recursive Relationships:</strong> Some complex patterns involve circular or recursive family connections</li>
+                    <li><strong>Representation Challenges:</strong> Complex relationships are difficult to represent in traditional pedigree charts</li>
+                </ul>
+                
+                <p>Bonsai v3's <code>relationships.py</code> module provides specialized tools for handling these complex patterns, enabling more accurate pedigree reconstruction in challenging cases.</p>
+            </div>
+
+            <h3>The relationships.py Module</h3>
+            
+            <div class="concept-section">
+                <h4>Core Functionality for Complex Relationships</h4>
+                <p>The <code>relationships.py</code> module in Bonsai v3 provides essential functions for manipulating, combining, and analyzing complex relationship patterns:</p>
+                
+                <pre class="code-block">
+from typing import Optional
+from .constants import INF
+
+def reverse_rel(
+    rel : Optional[tuple[int, int, int]],
+):
+    """
+    Reverse a relationship tuple (u, d, a)
+    to (d, u, a) or None to None.
+
+    Args:
+        rel: relationship tuple of the form (u, d, a) or None
+
+    Returns:
+        rev_rel: (d, u, a) or None
+    """
+    if type(rel) is tuple:
+        rev_rel = (rel[1], rel[0], rel[2])
+    else:
+        rev_rel = rel
+    return rev_rel
+
+def get_deg(
+    rel : Optional[tuple[int, int, int]],
+):
+    """
+    Get the degree of a relationship tuple.
+
+    Args:
+        rel: relationship tuple of the form (u, d, a), (m, a), or None
+
+    Returns:
+        deg: if rel is None or a is None: INF
+             else: u + d - a + 1
+    """
+    if type(rel) is tuple:
+        # get m and a
+        if len(rel) == 3:
+            u,d,a = rel
+            m = u+d
+        elif len(rel) == 2:
+            m, a = rel
+
+        # get degree
+        if a is None:
+            deg = INF
+        elif m == 0:
+            deg = 0
+        else:
+            deg = m - a + 1
+    else:
+        deg = INF
+    return deg</pre>
+                
+                <h5>Key Functions in the Module</h5>
+                <ul>
+                    <li><strong><code>reverse_rel</code>:</strong> Reverses a relationship tuple to view it from the opposite perspective</li>
+                    <li><strong><code>get_deg</code>:</strong> Calculates the degree of a relationship based on its structure</li>
+                    <li><strong><code>join_rels</code>:</strong> Combines two relationships to find an indirect relationship</li>
+                    <li><strong><code>get_transitive_rel</code>:</strong> Finds the relationship between the first and last individuals in a chain</li>
+                    <li><strong><code>a_m_to_rel</code>:</strong> Converts abstract relationship parameters to concrete relationship tuples</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Relationship Representation in Bonsai</h5>
+                    <p>Bonsai v3 uses tuple-based representation for relationships:</p>
+                    <ul>
+                        <li><strong><code>(u, d, a)</code>:</strong> A relationship with <code>u</code> generations up, <code>d</code> generations down, and <code>a</code> common ancestors</li>
+                        <li>For example, <code>(2, 0, 1)</code> represents a grandparent-grandchild relationship (2 generations up, 0 down, 1 common ancestor)</li>
+                        <li><code>(1, 1, 2)</code> represents full siblings (1 up to parents, 1 down, 2 common ancestors)</li>
+                        <li><code>(2, 2, 1)</code> represents first cousins (2 up to grandparents, 2 down, 1 common ancestor)</li>
+                    </ul>
+                    <p>This flexible representation can encode a wide variety of relationships, including complex ones.</p>
+                </div>
+            </div>
+
+            <h3>Joining Relationship Paths</h3>
+            
+            <div class="concept-section">
+                <h4>Combining Relationships to Find Indirect Connections</h4>
+                <p>One of the key capabilities in handling complex relationships is the ability to join relationship paths to determine how two individuals are connected indirectly. Bonsai implements this through the <code>join_rels</code> function:</p>
+                
+                <pre class="code-block">
+def join_rels(
+    rel_ab : Optional[tuple[int, int, int]],
+    rel_bc : Optional[tuple[int, int, int]],
+):
+    """
+    For three individuals A, B, and C
+    related by relAB and relBC, find relAC.
+
+    Args:
+        rel_ab: relationship between A and B of the form (u, d, a) or None
+        rel_bc: relationship between B and C of the form (u, d, a) or None
+
+    Returns:
+        relAC: relationship between A and C of the form (u, d, a) or None
+    """
+    # Implementation details...</pre>
+                
+                <p>This function enables Bonsai to navigate complex pedigree structures by computing indirect relationships through intermediary individuals. It forms the foundation for understanding multi-path relationships and identifying complex connection patterns.</p>
+                
+                <div class="example-box">
+                    <h5>Example: Relationship Joining</h5>
+                    <p>Consider these relationship types:</p>
+                    <ul>
+                        <li>A is parent of B: <code>(0, 1, 1)</code></li>
+                        <li>B is parent of C: <code>(0, 1, 1)</code></li>
+                    </ul>
+                    <p>Using <code>join_rels</code>, we can determine that:</p>
+                    <ul>
+                        <li>A is grandparent of C: <code>join_rels((0, 1, 1), (0, 1, 1)) = (0, 2, 1)</code></li>
+                    </ul>
+                    <p>This allows Bonsai to build a complete understanding of how individuals are related through multiple pathways.</p>
+                </div>
+            </div>
+
+            <h3>Transitive Relationships</h3>
+            
+            <div class="concept-section">
+                <h4>Finding Relationships Through Chains of Connections</h4>
+                <p>Bonsai extends the joining of relationships to arbitrary chains through the <code>get_transitive_rel</code> function:</p>
+                
+                <pre class="code-block">
+def get_transitive_rel(
+    rel_list : list[Optional[tuple[int, int, int]]],
+):
+    """
+    For a list of relationships in rel_list that represent
+    pairwise relationships from one person to the next in a chain
+    of relatives, find the relationship between the first person
+    in the list and the last person in the list.
+
+    Args:
+        rel_list: chain of relationships of the form [(up, down, num_ancs), ...]
+                  where rel_list[i] is the relationship between individuals i and i+1.
+
+    Returns:
+        rel: The relationship between individual 0 and individual n specified
+             by the chain of relationships in rel_list.
+    """
+    if rel_list == []:
+        return None
+
+    rel = rel_list.pop(0)
+    while rel_list:
+        next_rel = rel_list.pop(0)
+        rel = join_rels(rel, next_rel)
+
+    # ensure that ancestor/descendant relationships
+    # only have one ancestor. We can't ensure this
+    # within join_rels() so we have to do it here.
+    if rel is not None and (rel[0] == 0 or rel[1] == 0):
+        rel = (rel[0], rel[1], 1)
+
+    return rel</pre>
+                
+                <p>This capability is essential for understanding how distant individuals are connected through complex family structures and for correctly modeling the expected genetic sharing between indirectly related individuals.</p>
+                
+                <h5>Applications of Transitive Relationships</h5>
+                <ul>
+                    <li><strong>Multi-Generation Analysis:</strong> Understanding connections across many generations</li>
+                    <li><strong>Complex Pedigree Navigation:</strong> Determining how any two individuals in a pedigree are related</li>
+                    <li><strong>Validation of Inferred Relationships:</strong> Ensuring consistency in relationship chains</li>
+                    <li><strong>Identifying Shortest Relationship Paths:</strong> Finding the closest connection between individuals</li>
+                </ul>
+            </div>
+
+            <h3>Common Complex Relationship Patterns</h3>
+            
+            <div class="concept-section">
+                <h4>Special Cases with Unique Genetic Signatures</h4>
+                <p>Bonsai v3 has specialized handling for several common types of complex relationships that occur in real-world genealogy:</p>
+                
+                <h5>1. Double Relationships</h5>
+                <p>Individuals related through multiple distinct pathways:</p>
+                <ul>
+                    <li><strong>Double First Cousins:</strong> Share all four grandparents (expected sharing ~25%)</li>
+                    <li><strong>Half-Siblings Plus First Cousins:</strong> Share one parent and are also first cousins through the other parents</li>
+                    <li><strong>Double Second Cousins:</strong> Related through two different sets of great-grandparents</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Modeling Double Relationships</h5>
+                    <p>For modeling double relationships, Bonsai combines the expected IBD sharing from both pathways:</p>
+                    <pre class="code-block">
+# Pseudocode for double relationship modeling
+def calculate_expected_sharing_for_double_relationship(rel1, rel2):
+    # Get expected sharing for first relationship
+    sharing1 = get_expected_sharing(rel1)
+    
+    # Get expected sharing for second relationship
+    sharing2 = get_expected_sharing(rel2)
+    
+    # For completely independent paths, sharing is additive
+    # adjusted to account for overlap
+    combined_sharing = sharing1 + sharing2 - (sharing1 * sharing2)
+    
+    return combined_sharing</pre>
+                </div>
+                
+                <h5>2. Consanguineous Relationships</h5>
+                <p>Relationships involving individuals with common ancestors who themselves share common ancestors:</p>
+                <ul>
+                    <li><strong>Parent-Child with Shared Ancestry:</strong> When the parents are themselves related</li>
+                    <li><strong>Siblings with Related Parents:</strong> When the parents share common ancestry</li>
+                    <li><strong>Cousin Marriage Offspring:</strong> Children of couples who are related</li>
+                </ul>
+                
+                <h5>3. Compound Multi-Generation Relationships</h5>
+                <p>Complex patterns spanning multiple generations:</p>
+                <ul>
+                    <li><strong>Parallel Cousin Marriages:</strong> When multiple cousins from one family marry cousins from another</li>
+                    <li><strong>Cross-Generation Marriages:</strong> When individuals marry across different generations</li>
+                    <li><strong>Pedigree Collapse:</strong> When the same ancestor appears in multiple positions in a pedigree</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Impact on Genetic Sharing</h5>
+                    <p>Complex relationships often produce distinctive patterns of genetic sharing:</p>
+                    <ul>
+                        <li><strong>Elevated Total Sharing:</strong> More total DNA shared than expected for the nominal relationship</li>
+                        <li><strong>Unusual Segment Patterns:</strong> Distinctive patterns of fully identical regions (FIRs) and half-identical regions (HIRs)</li>
+                        <li><strong>Increased Homozygosity:</strong> More regions where the same DNA variant is inherited from both parents</li>
+                    </ul>
+                    <p>Bonsai's specialized handling accounts for these patterns to improve relationship inference accuracy.</p>
+                </div>
+            </div>
+
+            <h3>Handling Endogamy</h3>
+            
+            <div class="concept-section">
+                <h4>Relationship Inference in Endogamous Populations</h4>
+                <p>Endogamy—the practice of marrying within a relatively closed community—creates unique challenges for genetic genealogy. Bonsai v3 includes specialized approaches for handling endogamous relationships:</p>
+                
+                <h5>The Endogamy Challenge</h5>
+                <p>In endogamous populations:</p>
+                <ul>
+                    <li><strong>Background Relatedness:</strong> Individuals share more DNA than expected for their genealogical relationship</li>
+                    <li><strong>Multiple Paths:</strong> Individuals are typically related through many different pathways</li>
+                    <li><strong>Model Breakdown:</strong> Standard relationship prediction models tend to overestimate closeness</li>
+                </ul>
+                
+                <h5>Bonsai's Endogamy Handling</h5>
+                <ol>
+                    <li><strong>Endogamy Detection:</strong> Identifying patterns consistent with endogamous populations
+                        <ul>
+                            <li>Elevated IBD sharing across multiple relationship degrees</li>
+                            <li>Distinctive segment length distributions</li>
+                            <li>Population-specific markers</li>
+                        </ul>
+                    </li>
+                    <li><strong>Model Adjustment:</strong> Adapting relationship inference when endogamy is detected
+                        <ul>
+                            <li>Adjusting expected sharing thresholds</li>
+                            <li>Emphasizing segment pattern analysis over total sharing</li>
+                            <li>Incorporating population-specific priors</li>
+                        </ul>
+                    </li>
+                    <li><strong>Multi-Path Modeling:</strong> Explicitly accounting for multiple relationship paths
+                        <ul>
+                            <li>Decomposing complex relationships into component paths</li>
+                            <li>Aggregating sharing expectations across paths</li>
+                            <li>Optimizing pedigree structures for path consistency</li>
+                        </ul>
+                    </li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Adjusting Relationship Inference for Endogamy</h5>
+                    <pre class="code-block">
+# Pseudocode for endogamy-aware relationship inference
+def infer_relationship_with_endogamy_awareness(id1, id2, ibd_data, endogamy_factor):
+    # Get standard relationship likelihood scores
+    standard_rel_scores = calculate_relationship_likelihoods(id1, id2, ibd_data)
+    
+    # Adjust scores based on endogamy factor
+    adjusted_rel_scores = {}
+    for rel, score in standard_rel_scores.items():
+        # More distant relationships become more likely under endogamy
+        adjustment = adjust_for_endogamy(rel, endogamy_factor)
+        adjusted_rel_scores[rel] = score * adjustment
+    
+    # Find the most likely relationship after adjustment
+    best_rel = max(adjusted_rel_scores.items(), key=lambda x: x[1])[0]
+    
+    return {
+        "relationship": best_rel,
+        "confidence": calculate_confidence(adjusted_rel_scores),
+        "endogamy_factor": endogamy_factor,
+        "note": "Adjusted for endogamy" if endogamy_factor > 1 else ""
+    }</pre>
+                </div>
+            </div>
+
+            <h3>Relationship Degree and Classification</h3>
+            
+            <div class="concept-section">
+                <h4>Standardizing Relationship Descriptions</h4>
+                <p>To provide consistent relationship descriptions, Bonsai implements classification systems that translate genetic sharing patterns and genealogical connections into standardized relationship categories:</p>
+                
+                <h5>Relationship Degree Calculation</h5>
+                <p>The <code>get_deg</code> function calculates the "degree" of a relationship, which is a measure of genetic distance:</p>
+                
+                <pre class="code-block">
+def get_deg(rel: Optional[tuple[int, int, int]]):
+    """
+    Get the degree of a relationship tuple.
+    
+    Args:
+        rel: relationship tuple of the form (u, d, a), (m, a), or None
+        
+    Returns:
+        deg: if rel is None or a is None: INF
+             else: u + d - a + 1
+    """</pre>
+                
+                <p>This degree calculation forms the basis for standardized relationship classification, allowing for consistent terminology even for complex relationships.</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Degree</th>
+                            <th>Standard Relationship Examples</th>
+                            <th>Expected Genetic Sharing</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Parent-child, full siblings</td>
+                            <td>~50%</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Grandparent, aunt/uncle, half-sibling</td>
+                            <td>~25%</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Great-grandparent, first cousin</td>
+                            <td>~12.5%</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Great-great-grandparent, first cousin once removed</td>
+                            <td>~6.25%</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Second cousin</td>
+                            <td>~3.125%</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h5>Handling Non-Standard Relationships</h5>
+                <p>For complex relationships that don't fit neatly into standard categories, Bonsai implements several approaches:</p>
+                <ul>
+                    <li><strong>Compound Relationship Description:</strong> Describing relationships as combinations of standard types</li>
+                    <li><strong>Degree-Based Classification:</strong> Falling back to numerical degree when standard terms are inadequate</li>
+                    <li><strong>Custom Terminology:</strong> Specialized terms for common complex patterns</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Relationship Ambiguity</h5>
+                    <p>Some complex relationships can create fundamental ambiguity in classification:</p>
+                    <ul>
+                        <li>Half-siblings and double first cousins have similar expected sharing (~25%)</li>
+                        <li>Aunt/uncle relationships are genetically similar to half-siblings</li>
+                        <li>Complex multi-path relationships may not have standard terminology</li>
+                    </ul>
+                    <p>In these cases, Bonsai provides multiple possible classifications along with confidence scores and explains the potential ambiguity.</p>
+                </div>
+            </div>
+
+            <h3>Complex Relationship Visualization</h3>
+            
+            <div class="concept-section">
+                <h4>Representing Complex Patterns Visually</h4>
+                <p>Visualizing complex relationships presents unique challenges that Bonsai addresses through specialized rendering techniques:</p>
+                
+                <h5>Visualization Challenges</h5>
+                <ul>
+                    <li><strong>Multiple Connection Paths:</strong> Showing all paths connecting individuals</li>
+                    <li><strong>Layout Complexity:</strong> Arranging complex structures clearly</li>
+                    <li><strong>Information Overload:</strong> Communicating complexity without overwhelming the user</li>
+                    <li><strong>Relationship Ambiguity:</strong> Representing uncertain or alternative relationships</li>
+                </ul>
+                
+                <h5>Visualization Strategies</h5>
+                <ol>
+                    <li><strong>Multi-Path Highlighting:</strong> Using color coding to show different relationship paths</li>
+                    <li><strong>Interactive Simplification:</strong> Allowing users to focus on specific relationship aspects</li>
+                    <li><strong>Relationship Annotations:</strong> Adding descriptive labels for complex connections</li>
+                    <li><strong>Alternative Views:</strong> Providing different visualization perspectives for complex structures</li>
+                </ol>
+                
+                <div class="example-box">
+                    <h5>Visualizing a Complex Relationship</h5>
+                    <p>When visualizing a pedigree with complex relationships, Bonsai might:</p>
+                    <ol>
+                        <li>Show the standard family tree view with all connections</li>
+                        <li>Highlight multiple paths between related individuals with different colors</li>
+                        <li>Add annotations explaining relationship complexities</li>
+                        <li>Provide an alternative "relationship path" view showing direct connections</li>
+                    </ol>
+                    <p>This multi-faceted approach helps users understand complex genetic relationships that might be difficult to comprehend from a single perspective.</p>
+                </div>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Complex relationship patterns are a common feature of real-world genealogy, and handling them effectively is essential for accurate pedigree reconstruction. Bonsai v3's <code>relationships.py</code> module provides sophisticated tools for manipulating, combining, and analyzing these complex patterns, enabling more comprehensive and accurate family structure inference.</p>
+                
+                <p>By understanding how to join relationship paths, calculate transitive relationships, handle special cases like endogamy, and visualize complex structures, Bonsai can create more realistic and biologically accurate pedigree reconstructions that reflect the true complexity of human family relationships.</p>
+                
+                <p>In the next lab, we'll explore how Bonsai v3 handles real-world datasets and the practical challenges that arise when applying computational genetic genealogy techniques to diverse populations and data sources.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab23_twins.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 23: Handling Twins</span>
+                        </a>
+                        <a href="lab25_real_world_datasets.html" class="path-item next">
+                            <span>Lab 25: Real-World Datasets</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

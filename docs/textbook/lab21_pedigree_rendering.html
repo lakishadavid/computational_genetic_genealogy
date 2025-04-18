@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 21: Pedigree Rendering and Visualization | Computational Genetic Genealogy</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Open+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body class="textbook-page">
+    <header class="textbook-header">
+        <div class="container">
+            <h1>Computational Genetic Genealogy</h1>
+            <p>Pedigree Rendering and Visualization</p>
+        </div>
+    </header>
+
+    <nav class="textbook-nav">
+        <div class="container">
+            <a href="../index.html"><i class="fas fa-arrow-left"></i> Back to Main Page</a>
+            <a href="contents.html">Table of Contents</a>
+            <a href="lab21_pedigree_rendering.html" class="active">Lab 21: Pedigree Rendering</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <article class="section lab-content">
+            <h2>Lab 21: Pedigree Rendering and Visualization</h2>
+            
+            <div class="alert alert-info">
+                <p><strong>Core Component:</strong> This lab explores the pedigree rendering and visualization techniques used in Bonsai v3. These techniques are essential for helping users interpret and understand the results of genetic genealogy analyses. Effective visualization makes complex pedigree structures more accessible and highlights important genetic relationships.</p>
+            </div>
+
+            <h3>The Importance of Visualization in Genetic Genealogy</h3>
+            
+            <div class="concept-section">
+                <h4>Why Visualization Matters</h4>
+                <p>Genetic pedigrees are complex structures that can be difficult to interpret from raw data alone. Effective visualization serves several critical functions:</p>
+                
+                <ul>
+                    <li><strong>Intuitive Understanding:</strong> Translates abstract genetic relationships into visually intuitive family structures</li>
+                    <li><strong>Pattern Recognition:</strong> Helps identify patterns and connections that might be missed in tabular data</li>
+                    <li><strong>Communication:</strong> Facilitates sharing and discussing findings with others</li>
+                    <li><strong>Validation:</strong> Provides a way to visually confirm that inferred relationships make biological sense</li>
+                </ul>
+                
+                <p>Bonsai v3 includes sophisticated rendering capabilities that leverage graph theory and visualization principles to create clear, informative representations of complex pedigree structures.</p>
+            </div>
+
+            <h3>Graph-Based Representation of Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Pedigrees as Directed Graphs</h4>
+                <p>In Bonsai v3, pedigrees are naturally represented as directed graphs, where:</p>
+                
+                <ul>
+                    <li><strong>Nodes</strong> represent individuals</li>
+                    <li><strong>Edges</strong> represent parent-child relationships</li>
+                    <li><strong>Direction</strong> flows from parent to child</li>
+                </ul>
+                
+                <p>This graph-based representation enables the application of powerful graph algorithms for analyzing family structures and provides a natural basis for visualization.</p>
+                
+                <div class="note-box">
+                    <h5>Up-Node Dictionary: The Foundation of Pedigree Representation</h5>
+                    <p>Bonsai v3 uses an "up-node dictionary" as its primary data structure for representing pedigrees. This dictionary maps each individual to their parents:</p>
+                    <pre class="code-block">
+{
+  child_id_1: {parent_id_1: degree, parent_id_2: degree},
+  child_id_2: {parent_id_3: degree, parent_id_4: degree},
+  ...
+}</pre>
+                    <p>This structure efficiently encodes the directed graph of the pedigree, with each key representing a child node and the values representing the parent nodes.</p>
+                </div>
+                
+                <div class="example-box">
+                    <h5>Example: Simple Family Structure</h5>
+                    <p>Consider a simple family with grandparents (1, 2), parents (3, 4), and a child (5). In the up-node dictionary format:</p>
+                    <pre class="code-block">
+{
+  3: {1: 1, 2: 1},  # Individual 3 has parents 1 and 2
+  4: {},            # Individual 4 has no parents in the pedigree
+  5: {3: 1, 4: 1}   # Individual 5 has parents 3 and 4
+}</pre>
+                    <p>This compact representation captures the entire family structure and can be easily rendered as a directed graph.</p>
+                </div>
+            </div>
+
+            <h3>The render_ped Function in Bonsai v3</h3>
+            
+            <div class="concept-section">
+                <h4>Core Visualization Function</h4>
+                <p>At the heart of Bonsai's pedigree visualization is the <code>render_ped</code> function in the <code>rendering.py</code> module, which converts an up-node dictionary into a graphical representation using the Graphviz library:</p>
+                
+                <pre class="code-block">
+def render_ped(
+    up_dct: dict[int, dict[int, int]],
+    name: str,
+    out_dir: str,
+    color_dict=None,
+    label_dict=None,
+    focal_id=None,
+):
+    """
+    Render a pedigree as a directed graph.
+    
+    Args:
+        up_dct: Up-node dictionary mapping individuals to their parents
+        name: Base name for the output file
+        out_dir: Directory to save the rendered image
+        color_dict: Dictionary mapping node IDs to colors
+        label_dict: Dictionary mapping node IDs to labels
+        focal_id: ID of the focal individual to highlight
+    """
+    dot = graphviz.Digraph(name)
+    all_id_set = get_all_id_set(up_dct)
+    
+    # Set default values
+    if color_dict is None:
+        color_dict = {i: 'dodgerblue' for i in all_id_set if i > 0}
+    if label_dict is None:
+        label_dict = {n: str(n) for n in all_id_set}
+    if focal_id is not None:
+        color_dict[focal_id] = 'red'
+    
+    # Add nodes (individuals)
+    for n in all_id_set:
+        edge_color = None
+        fill_color = color_dict[n] if n in color_dict else None
+        style = 'filled' if n in color_dict else None
+        label = label_dict.get(n, "")
+        
+        dot.node(
+            str(n),
+            color=edge_color,
+            fillcolor=fill_color,
+            style=style,
+            label=label,
+        )
+    
+    # Add edges (parent-child relationships)
+    for c, pset in up_dct.items():
+        for p in pset:
+            dot.edge(str(p), str(c), arrowhead='none')
+    
+    # Render the graph
+    plt.clf()
+    dot.render(directory=out_dir).replace('\\', '/')
+</pre>
+                
+                <p>This function provides a flexible foundation for pedigree visualization, with options to customize colors, labels, and highlight focal individuals.</p>
+            </div>
+
+            <h3>Customizing Pedigree Visualizations</h3>
+            
+            <div class="concept-section">
+                <h4>Beyond Basic Rendering</h4>
+                <p>While Bonsai's <code>render_ped</code> function provides solid baseline functionality, there are many ways to enhance and customize pedigree visualizations:</p>
+                
+                <h5>1. Node Attributes by Individual Characteristics</h5>
+                <p>Nodes can be customized to represent individual characteristics:</p>
+                <ul>
+                    <li><strong>Color coding</strong> by sex (blue for males, pink for females)</li>
+                    <li><strong>Shape variation</strong> by status (rectangles for living, ovals for deceased)</li>
+                    <li><strong>Border styles</strong> for additional attributes (dashed for adopted, dotted for uncertain)</li>
+                    <li><strong>Size variation</strong> for emphasis or to represent additional metrics</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Example: Sex-Based Node Styling</h5>
+                    <pre class="code-block">
+# Create dictionaries for customization
+color_dict = {
+    id_val: 'skyblue' if sex_dict[id_val] == 'M' else 'pink' 
+    for id_val in pedigree.keys()
+}
+
+shape_dict = {
+    id_val: 'box' if sex_dict[id_val] == 'M' else 'ellipse' 
+    for id_val in pedigree.keys()
+}
+
+# Use in enhanced rendering function
+dot.node(
+    str(node_id),
+    fillcolor=color_dict.get(node_id, 'white'),
+    shape=shape_dict.get(node_id, 'box'),
+    style='filled'
+)</pre>
+                </div>
+                
+                <h5>2. Edge Styling for Relationship Information</h5>
+                <p>Edges can be styled to convey relationship information:</p>
+                <ul>
+                    <li><strong>Color variation</strong> for relationship types or confidence</li>
+                    <li><strong>Line thickness</strong> for relationship closeness or strength of evidence</li>
+                    <li><strong>Line styles</strong> for relationship types (solid for biological, dashed for adoptive)</li>
+                    <li><strong>Edge labels</strong> for additional relationship details</li>
+                </ul>
+                
+                <h5>3. Layout Customization</h5>
+                <p>The layout of the pedigree can significantly impact its interpretability:</p>
+                <ul>
+                    <li><strong>Direction settings</strong> (top-down, bottom-up, left-right)</li>
+                    <li><strong>Node spacing</strong> for clearer visual separation</li>
+                    <li><strong>Subgraph clustering</strong> for organizing related individuals</li>
+                    <li><strong>Rank alignment</strong> to position individuals by generation</li>
+                </ul>
+                
+                <div class="note-box">
+                    <h5>Graphviz Layout Options</h5>
+                    <p>Graphviz supports several layout algorithms that can be applied to pedigrees:</p>
+                    <ul>
+                        <li><strong>dot</strong>: Hierarchical layout ideal for pedigrees with clear generational structure</li>
+                        <li><strong>neato</strong>: Spring model layout useful for pedigrees with many interconnections</li>
+                        <li><strong>fdp</strong>: Force-directed layout good for large pedigrees</li>
+                        <li><strong>twopi</strong>: Radial layout that places focal individuals at the center</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Visualizing IBD Sharing in Pedigrees</h3>
+            
+            <div class="concept-section">
+                <h4>Integrating Genetic Evidence in Visualizations</h4>
+                <p>One of the most powerful applications of pedigree visualization is the ability to overlay genetic sharing information onto the family structure. This helps users understand how genetic evidence supports the inferred relationships.</p>
+                
+                <h5>IBD Overlay Techniques</h5>
+                <ul>
+                    <li><strong>Additional edges</strong> between individuals who share DNA</li>
+                    <li><strong>Edge thickness</strong> proportional to amount of shared DNA</li>
+                    <li><strong>Color gradients</strong> to indicate strength of genetic connection</li>
+                    <li><strong>Edge labels</strong> showing total cM and segment counts</li>
+                </ul>
+                
+                <div class="example-box">
+                    <h5>Example: Adding IBD Sharing Information</h5>
+                    <pre class="code-block">
+# First, add regular parent-child edges
+for child, parents in pedigree.items():
+    for parent in parents:
+        dot.edge(
+            str(parent),
+            str(child),
+            color='black',
+            style='solid',
+            penwidth='1'
+        )
+
+# Then add IBD sharing edges with custom styling
+for (id1, id2), data in ibd_data.items():
+    total_cm = data['total_cm']
+    
+    # Skip if below threshold
+    if total_cm < min_cm:
+        continue
+    
+    # Calculate edge attributes based on total cM
+    # Thicker edges for more sharing
+    penwidth = 0.5 + min(5, total_cm / 500)
+    
+    # Color intensity based on total cM
+    intensity = min(255, int(50 + (total_cm / 3500) * 205))
+    color = f"#{intensity:02x}00{255-intensity:02x}"
+    
+    # Add the IBD edge
+    dot.edge(
+        str(id1),
+        str(id2),
+        color=color,
+        style='dashed',
+        penwidth=str(penwidth),
+        constraint='false',  # Don't use this edge for layout
+        label=f"{total_cm:.1f} cM"
+    )</pre>
+                </div>
+                
+                <p>This technique creates a visual representation that combines the structural information of the pedigree with the genetic evidence supporting those relationships, providing a more complete picture.</p>
+            </div>
+
+            <h3>Chromosome Painting Visualizations</h3>
+            
+            <div class="concept-section">
+                <h4>Visualizing Segment-Level IBD Sharing</h4>
+                <p>Chromosome painting is another important visualization technique in genetic genealogy that complements pedigree diagrams by showing the specific chromosomal segments shared between individuals.</p>
+                
+                <p>While not directly implemented in Bonsai's rendering module, chromosome painting can be created using matplotlib to provide detailed segment-level information:</p>
+                
+                <div class="example-box">
+                    <h5>Example: Chromosome Painting Implementation</h5>
+                    <pre class="code-block">
+def create_chromosome_painting(individual_id, ibd_data, figsize=(15, 10)):
+    """
+    Create a chromosome painting visualization for an individual.
+    
+    Args:
+        individual_id: ID of the individual to visualize
+        ibd_data: Dictionary mapping pairs of individuals to IBD sharing data
+        figsize: Figure size (width, height)
+        
+    Returns:
+        Matplotlib figure
+    """
+    # Extract segments involving the individual
+    segments = []
+    for (id1, id2), data in ibd_data.items():
+        if id1 == individual_id or id2 == individual_id:
+            other_id = id2 if id1 == individual_id else id1
+            for segment in data['segments']:
+                segments.append({
+                    'chromosome': segment['chromosome'],
+                    'start_pos': segment['start_pos'],
+                    'end_pos': segment['end_pos'],
+                    'cm': segment['cm'],
+                    'other_id': other_id
+                })
+    
+    # Sort segments by chromosome and position
+    segments.sort(key=lambda s: (
+        int(s['chromosome']) if s['chromosome'].isdigit() else 999, 
+        s['start_pos']
+    ))
+    
+    # Get the unique chromosomes
+    chromosomes = sorted(set(s['chromosome'] for s in segments), 
+                        key=lambda x: int(x) if x.isdigit() else 999)
+    
+    # Create figure with one subplot per chromosome
+    fig, axs = plt.subplots(len(chromosomes), 1, figsize=figsize, 
+                          squeeze=False, sharex=True)
+    axs = axs.flatten()
+    
+    # Create a color map for each unique "other_id"
+    other_ids = sorted(set(s['other_id'] for s in segments))
+    colors = plt.cm.tab10.colors
+    color_map = {other_id: colors[i % len(colors)] 
+                for i, other_id in enumerate(other_ids)}
+    
+    # Draw segments on each chromosome
+    for i, chrom in enumerate(chromosomes):
+        ax = axs[i]
+        chrom_segments = [s for s in segments if s['chromosome'] == chrom]
+        
+        # Draw chromosome backbone
+        ax.plot([0, max(s['end_pos'] for s in chrom_segments)], 
+                [0, 0], 'k-', linewidth=2)
+        
+        # Draw segments
+        for segment in chrom_segments:
+            other_id = segment['other_id']
+            ax.plot(
+                [segment['start_pos'], segment['end_pos']],
+                [0, 0],
+                '-',
+                linewidth=10,
+                color=color_map[other_id],
+                solid_capstyle='butt',
+                alpha=0.7
+            )
+    
+    return fig</pre>
+                </div>
+                
+                <p>Chromosome paintings provide complementary information to pedigree diagrams, showing exactly which parts of the genome are shared between individuals. When used together, these visualization techniques offer a comprehensive view of genetic relationships.</p>
+            </div>
+
+            <h3>Practical Applications and Best Practices</h3>
+            
+            <div class="concept-section">
+                <h4>Using Pedigree Visualization Effectively</h4>
+                <p>Effective pedigree visualization is both an art and a science. Here are some best practices for creating clear, informative pedigree visualizations:</p>
+                
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Challenge</th>
+                            <th>Solution</th>
+                            <th>Implementation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Large pedigrees become unwieldy</td>
+                            <td>Focus on subtrees of interest</td>
+                            <td>Extract subtrees using <code>get_subdict()</code> before rendering</td>
+                        </tr>
+                        <tr>
+                            <td>Unclear relationship types</td>
+                            <td>Use consistent visual encoding</td>
+                            <td>Standardize edge styles and colors for relationship types</td>
+                        </tr>
+                        <tr>
+                            <td>Difficulty identifying key individuals</td>
+                            <td>Highlight focal individuals</td>
+                            <td>Use the <code>focal_id</code> parameter or custom colors</td>
+                        </tr>
+                        <tr>
+                            <td>Overlapping edges in complex pedigrees</td>
+                            <td>Adjust layout algorithms</td>
+                            <td>Try different Graphviz engines (dot, neato, fdp)</td>
+                        </tr>
+                        <tr>
+                            <td>Uncertainty in relationships</td>
+                            <td>Encode confidence visually</td>
+                            <td>Use dashed lines or color gradients for uncertain connections</td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h5>Common Applications of Pedigree Visualization</h5>
+                <ol>
+                    <li><strong>Verifying relationship hypotheses</strong> by visualizing how they fit into existing family structures</li>
+                    <li><strong>Identifying potential connections</strong> between seemingly unrelated individuals</li>
+                    <li><strong>Documenting complex family histories</strong> for genealogical research</li>
+                    <li><strong>Communicating findings</strong> to family members and other researchers</li>
+                    <li><strong>Validating genetic analysis results</strong> by ensuring they form biologically plausible structures</li>
+                </ol>
+            </div>
+
+            <h3>Extending Bonsai's Visualization Capabilities</h3>
+            
+            <div class="concept-section">
+                <h4>Beyond Basic Rendering</h4>
+                <p>While Bonsai's <code>render_ped</code> function provides a solid foundation, it can be extended in various ways to create more sophisticated visualizations:</p>
+                
+                <h5>Interactive Visualizations</h5>
+                <p>Converting static pedigree diagrams to interactive visualizations using tools like D3.js or Plotly can significantly enhance user exploration:</p>
+                <ul>
+                    <li><strong>Zooming and panning</strong> for navigating large pedigrees</li>
+                    <li><strong>Hover tooltips</strong> showing detailed information about individuals</li>
+                    <li><strong>Collapsible subtrees</strong> for managing complexity</li>
+                    <li><strong>Dynamic filtering</strong> to show specific relationships or IBD thresholds</li>
+                </ul>
+                
+                <h5>Integrating Multiple Data Types</h5>
+                <p>Pedigree visualizations can be enhanced by incorporating additional data types:</p>
+                <ul>
+                    <li><strong>Historical records</strong> linked to specific individuals</li>
+                    <li><strong>Geographic information</strong> showing migration patterns</li>
+                    <li><strong>Ethnicity estimates</strong> encoded in node colors or patterns</li>
+                    <li><strong>Timeline information</strong> showing temporal relationships</li>
+                </ul>
+                
+                <h5>Community Extensions</h5>
+                <p>The genetic genealogy community has developed various extensions to standard pedigree visualization:</p>
+                <ul>
+                    <li><strong>McGuire diagrams</strong> for visualizing shared DNA between multiple individuals</li>
+                    <li><strong>Fan charts</strong> for compact representation of ancestral relationships</li>
+                    <li><strong>DNA painter</strong> style visualizations for chromosome mapping</li>
+                    <li><strong>Network graphs</strong> showing complex interrelationships in endogamous populations</li>
+                </ul>
+            </div>
+
+            <h3>Conclusion and Next Steps</h3>
+            
+            <div class="concept-section">
+                <p>Pedigree rendering and visualization are essential components of computational genetic genealogy, transforming abstract genetic relationships into intuitive visual forms. Bonsai v3's rendering capabilities provide a flexible foundation for creating clear, informative pedigree visualizations that help users interpret genetic data in the context of family structures.</p>
+                
+                <p>By customizing node and edge attributes, integrating IBD sharing information, and applying effective visual design principles, pedigree visualizations can become powerful tools for understanding complex family relationships.</p>
+                
+                <p>In the next lab, we'll explore how to interpret results and assess confidence in relationship predictions, complementing the visual representations we've explored in this lab with statistical measures of certainty.</p>
+                
+                <div class="learning-path">
+                    <h4>Your Learning Pathway</h4>
+                    <div class="path-container">
+                        <a href="lab20_error_handling.html" class="path-item previous">
+                            <i class="fas fa-arrow-left"></i>
+                            <span>Lab 20: Error Handling</span>
+                        </a>
+                        <a href="lab22_interpreting_results.html" class="path-item next">
+                            <span>Lab 22: Interpreting Results</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </main>
+
+    <footer class="textbook-footer">
+        <div class="container">
+            <p>&copy; 2025 Dr. LaKisha David, Department of Anthropology, University of Illinois Urbana-Champaign</p>
+        </div>
+    </footer>
+</body>
+</html>

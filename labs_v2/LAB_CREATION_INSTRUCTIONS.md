@@ -9,11 +9,11 @@ I need assistance creating comprehensive laboratory notebooks for the "Computati
 - Bonsai v3 codebase: `/home/lakishadavid/computational_genetic_genealogy/utils/bonsaitree`
 - Course plan: `/home/lakishadavid/computational_genetic_genealogy/docs/slides/course_plan_cgg.md`
 - Template: `Lab00_Template.ipynb`
-- Existing labs: Labs 1-22 are already complete
+- Existing labs: labs_v2 dir: Labs 1-22 are already complete
 
 ## Requirements
 
-1. Create one lab for each remaining session (23-30) listed in the course plan
+1. Create one lab for each remaining session (23-30) listed in the course plan (labs_v2 dir)
 2. Each lab must strictly follow the session topic outlined in the course plan
 3. Use the **actual Bonsai v3 functions** as much as possible rather than simplified versions
 4. Follow the structure and formatting of `Lab00_Template.ipynb`

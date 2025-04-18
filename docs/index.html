@@ -86,53 +86,53 @@
                 <h2>Course Structure</h2>
             </div>
             <div class="content-card">
-                <p>This course follows a lab-based approach, guiding students through:</p>
+                <p>This course follows a lab-based approach, guiding students through a deep dive into the Bonsai v3 pedigree reconstruction system:</p>
 
                 <div class="structure-grid">
                     <div class="structure-item">
                         <div class="structure-number">01</div>
-                        <h4>Environment Setup & Data Acquisition</h4>
-                        <p>Preparing computational tools and accessing genetic data</p>
+                        <h4>Foundations</h4>
+                        <p>Core concepts of genetic genealogy and Bonsai architecture</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">02</div>
-                        <h4>Data Processing & Quality Control</h4>
-                        <p>Converting, cleaning, and preparing genetic data for analysis</p>
+                        <h4>IBD Processing Framework</h4>
+                        <p>Data formats, preprocessing, and statistical analysis</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">03</div>
-                        <h4>IBD Detection</h4>
-                        <p>Using multiple algorithms to identify genetically related individuals</p>
+                        <h4>Mathematical Foundations</h4>
+                        <p>Statistical models and probabilistic relationship inference</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">04</div>
-                        <h4>Simulations & Evaluation</h4>
-                        <p>Creating synthetic data to test and validate methods</p>
+                        <h4>Relationship Analysis</h4>
+                        <p>Likelihood computation and age-based relationship modeling</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">05</div>
-                        <h4>Pedigree Reconstruction</h4>
-                        <p>Building family trees from genetic data alone</p>
+                        <h4>Core Algorithms</h4>
+                        <p>Pedigree data structures and representation techniques</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">06</div>
-                        <h4>Bonsai Fundamentals</h4>
-                        <p>Core concepts and architecture of the Bonsai system</p>
+                        <h4>Building Pedigrees</h4>
+                        <p>Connection logic, relationship assessment, and optimization</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">07</div>
-                        <h4>Advanced Pedigree Techniques</h4>
-                        <p>Specialized algorithms for complex pedigree scenarios</p>
+                        <h4>Advanced Techniques</h4>
+                        <p>Merging pedigrees, optimization, and caching mechanisms</p>
                     </div>
                     <div class="structure-item">
                         <div class="structure-number">08</div>
-                        <h4>Real-World Applications</h4>
-                        <p>Applying pedigree reconstruction to practical scenarios</p>
+                        <h4>Applications & Extensions</h4>
+                        <p>Visualization, special cases, and real-world datasets</p>
                     </div>
                 </div>
                 
                 <div class="structure-note">
-                    <i class="fas fa-info-circle"></i> Course modules are described above. See the Lab Series section below for links to individual labs.
+                    <i class="fas fa-info-circle"></i> The course is structured around 30 lab sessions covering the complete Bonsai v3 system. See the Lab Series section below for links to individual labs.
                 </div>
 
                 <div class="textbook-link">
@@ -143,7 +143,7 @@
             </div>
         </section>
 
-        <!-- Lab Series (Updated with content from index.html) -->
+        <!-- Lab Series -->
         <section id="labs" class="section">
             <div class="section-header">
                 <i class="fas fa-flask section-icon"></i>
@@ -151,44 +151,12 @@
             </div>
             <div class="content-card lab-series">
                 <div class="tabs">
-                    <button class="tab-btn active" data-target="fundamentals">Data Fundamentals</button>
-                    <button class="tab-btn" data-target="ibd">IBD Detection</button>
-                    <button class="tab-btn" data-target="pedigree">Simulation & Distributions</button>
-                    <button class="tab-btn" data-target="bonsai">Bonsai Core (Labs 1-10)</button>
-                    <button class="tab-btn" data-target="advanced">Bonsai Advanced (Labs 11-30)</button>
+                    <button class="tab-btn active" data-target="bonsai1">Bonsai Labs 1-10</button>
+                    <button class="tab-btn" data-target="bonsai2">Bonsai Labs 11-20</button>
+                    <button class="tab-btn" data-target="bonsai3">Bonsai Labs 21-30</button>
                 </div>
 
-                <div id="fundamentals" class="tab-content active">
-                    <ul class="lab-list">
-                        <li><a href="textbook/lab0_environment.html"><span class="lab-number">0.1</span> Environment Setup</a></li>
-                        <li><a href="textbook/lab0_data.html"><span class="lab-number">0.2</span> Getting Data</a></li>
-                        <li><a href="textbook/lab0_data.html#opensnp"><span class="lab-number">0.3</span> OpenSNP Data</a></li>
-                        <li><a href="textbook/lab0_data.html#1000genomes"><span class="lab-number">0.4</span> 1000 Genomes Data</a></li>
-                        <li><a href="textbook/lab1_exploring.html"><span class="lab-number">1</span> Exploring Data</a></li>
-                        <li><a href="textbook/lab2_process.html"><span class="lab-number">2</span> Processing Raw DNA</a></li>
-                        <li><a href="textbook/lab3_qc.html"><span class="lab-number">3</span> Quality Control</a></li>
-                    </ul>
-                </div>
-
-                <div id="ibd" class="tab-content">
-                    <ul class="lab-list">
-                        <li><a href="textbook/lab4_ibis.html"><span class="lab-number">4</span> IBIS</a></li>
-                        <li><a href="textbook/lab5_hapibd.html"><span class="lab-number">5</span> Hap-IBD</a></li>
-                        <li><a href="textbook/lab6_refinedibd.html"><span class="lab-number">6</span> Refined-IBD</a></li>
-                        <li><a href="textbook/lab7_pedsim.html"><span class="lab-number">7</span> Ped-Sim</a></li>
-                        <li><a href="textbook/lab8_evaluation.html"><span class="lab-number">8</span> IBD Evaluation</a></li>
-                    </ul>
-                </div>
-
-                <div id="pedigree" class="tab-content">
-                    <ul class="lab-list">
-                        <li><a href="textbook/lab9_msprime.html"><span class="lab-number">9</span> MSPrime</a></li>
-                        <li><a href="textbook/lab10_distributions.html"><span class="lab-number">10</span> Distributions</a></li>
-                        <li><a href="textbook/lab11_bonsai.html"><span class="lab-number">11</span> Bonsai</a></li>
-                    </ul>
-                </div>
-
-                <div id="bonsai" class="tab-content">
+                <div id="bonsai1" class="tab-content active">
                     <ul class="lab-list">
                         <li><a href="textbook/lab01_ibd_genealogy_intro.html"><span class="lab-number">1</span> IBD and Genealogy Intro</a></li>
                         <li><a href="textbook/lab02_bonsai_architecture.html"><span class="lab-number">2</span> Bonsai Architecture</a></li>
@@ -203,7 +171,7 @@
                     </ul>
                 </div>
                 
-                <div id="advanced" class="tab-content">
+                <div id="bonsai2" class="tab-content">
                     <ul class="lab-list">
                         <li><a href="textbook/lab11_finding_connection_points.html"><span class="lab-number">11</span> Finding Connection Points</a></li>
                         <li><a href="textbook/lab12_relationship_assessment.html"><span class="lab-number">12</span> Relationship Assessment</a></li>
@@ -215,6 +183,11 @@
                         <li><a href="textbook/lab18_optimization_techniques.html"><span class="lab-number">18</span> Optimization Techniques</a></li>
                         <li><a href="textbook/lab19_caching_mechanisms.html"><span class="lab-number">19</span> Caching Mechanisms</a></li>
                         <li><a href="textbook/lab20_error_handling.html"><span class="lab-number">20</span> Error Handling</a></li>
+                    </ul>
+                </div>
+                
+                <div id="bonsai3" class="tab-content">
+                    <ul class="lab-list">
                         <li><a href="textbook/lab21_pedigree_rendering.html"><span class="lab-number">21</span> Pedigree Rendering</a></li>
                         <li><a href="textbook/lab22_interpreting_results.html"><span class="lab-number">22</span> Interpreting Results</a></li>
                         <li><a href="textbook/lab23_twins.html"><span class="lab-number">23</span> Handling Twins</a></li>

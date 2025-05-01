@@ -41,6 +41,13 @@ jupyterlite = "^0.5.1"
 jupyterlite-pyodide-kernel = "^0.5.2"
 numba = "^0.61.0"
 jupyter = "^1.1.1"
+cython = "^3.0.12"
+funcy = "^2.0"
+six = "^1.17.0"
+setuptools-scm = "^8.3.1"
+wheel = "^0.45.1"
+frozendict = "^2.4.6"
+ipympl = "^0.9.7"
 
 
 [tool.poetry.group.dev.dependencies]

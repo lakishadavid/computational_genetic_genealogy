@@ -4,59 +4,64 @@
 - Poetry: `poetry config virtualenvs.in-project true` (configure), `poetry install --no-root` (install dependencies)
 - Run scripts: `poetry run python -m scripts_work.<script_name> [arguments]`
 - Run specific script: `poetry run python -m scripts_work.run_ibd_detection --algorithm IBIS`
-- Run notebook: Navigate to instruction directory and execute Jupyter notebooks
-- JupyterLite build: `cd docs/jupyterlite && ./build.sh`
-- Test JupyterLite: `cd docs/jupyterlite/app && poetry run python -m http.server 8000`
+- Run notebook locally: `poetry run jupyter lab`
+- Google Colab: All labs are designed to run directly in Google Colab with one-click setup
 
-## JupyterLite Configuration and Deployment
+## Course Architecture
 
-### Required Configuration Files
-For proper JupyterLite functionality, ensure these configuration files exist:
-1. `/docs/jupyterlite/jupyter_lite_config.json` - Main build configuration
-2. `/docs/jupyterlite/jupyter-lite.json` - Application settings
+This repository contains a complete **Computational Genetic Genealogy** course with 30 progressive lab notebooks designed for Google Colab deployment.
 
-### Critical HTML Configuration
-JupyterLite requires proper configuration in HTML files, particularly:
-- The configuration section in `app/lab/index.html` must contain a valid JSON object (not empty `{}`)
-- The main `app/index.html` file should have correct redirection settings
+### Google Colab Integration
+- **Primary Platform**: All labs run in Google Colab with automatic setup
+- **No Installation Required**: Students click "Open in Colab" links to access labs
+- **Automatic Environment Setup**: First cell in each notebook handles dependency installation and data download
+- **Cross-Compatibility Module**: `scripts_support/lab_cross_compatibility.py` handles environment detection and setup
 
-### Common Issues and Solutions
-1. **Blank screens on GitHub Pages**: Usually caused by:
-   - Missing configuration in HTML files - The `jupyter-config-data` script section needs valid config
-   - Missing or incorrectly named notebook files - Check for case sensitivity in filenames
-   - Path reference errors - Ensure paths correctly reference the GitHub Pages URL structure
+### Lab Structure
+- **30 Progressive Labs**: Lab01 through Lab30 covering comprehensive curriculum
+- **Modular Design**: Each lab is self-contained with explanations, code, and exercises
+- **Standardized Setup**: All labs use the same Colab setup pattern for consistency
+- **Data Integration**: Automatic download of class data from S3 storage
 
-2. **Manual fixes (when needed)**: 
-   - Edit `app/lab/index.html` to contain proper configuration in the `jupyter-config-data` script tag
-   - Update app name in both HTML files and configuration files for consistent branding
-   - Create lowercase symlinks if your JavaScript is looking for different filenames than actual files
+## Documentation
+For genomic analysis pipeline documentation, refer to the consolidated documentation in the bagg_website repository:
 
-3. **Debugging process**:
-   - Check browser console for errors (F12)
-   - Verify configuration objects are properly formatted JSON
-   - Ensure all required extensions are properly listed in configuration
-   - Test locally before deploying to GitHub Pages
+- **Documentation Hub**: `/home/lakishadavid/bagg_website/documentation/README.md`
+- **Batch Processing**: `/home/lakishadavid/bagg_website/documentation/user_guides/batch_processing_workflow.md`
+- **Genetic Similarity Implementation**: `/home/lakishadavid/bagg_website/documentation/developer/genetic_similarity_implementation.md`
+- **Status Tracking Reference**: `/home/lakishadavid/bagg_website/documentation/developer/status_tracking_reference.md`
 
-### Build Process
-The `build.sh` script handles proper setup by:
-1. Building the JupyterLite application with configuration
-2. Copying notebooks from the labs directory
-3. Setting up class data access
-4. Fixing HTML titles and configurations
-5. Creating symlinks for more reliable notebook access
+## Course Content Structure
 
-### Directory Structure
-```
-docs/jupyterlite/
-├── app/               # Built JupyterLite application
-│   ├── files/         # Notebook files directory
-│   │   ├── Lab*.ipynb # Original notebook files
-│   │   └── lab*.ipynb # Lowercase symlinks
-│   └── lab/           # JupyterLab interface
-├── build.sh           # Build script
-├── jupyter_lite_config.json # Build configuration
-└── jupyter-lite.json  # Application settings
-```
+### Module 1: Foundations (Labs 1-6)
+- Introduction to genetic genealogy and IBD concepts
+- Bonsai v3 architecture and data structures
+- IBD file formats and statistics extraction
+- Statistical models for relationship inference
+
+### Module 2: Core Algorithms (Labs 7-12)
+- PwLogLike class for likelihood calculations
+- Age-based relationship modeling
+- Pedigree data structures and up-node dictionaries
+- Finding connection points in pedigrees
+
+### Module 3: Pedigree Construction (Labs 13-18)
+- Small pedigree structures and optimization
+- Combining up-node dictionaries
+- Merging pedigrees and incremental addition
+- Advanced optimization techniques
+
+### Module 4: System Integration (Labs 19-24)
+- Caching mechanisms and error handling
+- Pedigree rendering and result interpretation
+- Handling special cases (twins, complex relationships)
+- Real-world dataset processing
+
+### Module 5: Advanced Applications (Labs 25-30)
+- Performance tuning and scalability
+- Custom prior probability models
+- Integration with external tools
+- End-to-end implementation projects
 
 ## Code Style Guidelines
 - **Imports**: Standard library → third-party → project-specific, with blank lines between
@@ -68,4 +73,32 @@ docs/jupyterlite/
 - **Logging**: Configure file/console logging with appropriate levels (INFO/DEBUG)
 - **Function Structure**: Modular functions with clear purposes and descriptive names
 
-When working in this repo, ensure all scripts properly load environment variables from ~/.env file.
+## Local Development (Optional)
+
+While designed for Google Colab, the repository supports local development:
+
+### Prerequisites
+- Ubuntu 24.04 (or WSL2 with Ubuntu 24.04)
+- Python 3.12
+- Poetry for dependency management
+
+### Setup Commands
+```bash
+# Clone and setup
+git clone https://github.com/lakishadavid/computational_genetic_genealogy.git
+cd computational_genetic_genealogy
+poetry config virtualenvs.in-project true
+poetry install --no-root
+
+# Run notebooks locally
+poetry run jupyter lab
+```
+
+When working locally, ensure all scripts properly load environment variables from ~/.env file.
+
+## Deployment
+
+- **GitHub Pages**: Course website at https://lakishadavid.github.io/computational_genetic_genealogy/
+- **Google Colab Integration**: Direct links from website to Colab notebooks
+- **Automatic Setup**: No manual configuration required for students
+- **Data Delivery**: Class data automatically downloaded from S3 storage during lab setup

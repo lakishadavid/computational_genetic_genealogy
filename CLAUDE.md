@@ -1,5 +1,8 @@
 # Computational Genetic Genealogy Guidelines
 
+## Development Principles
+**NEVER use "Perfect!" to describe work**: Do not use the word "Perfect!" to describe your work unless the fix has been verified and tested by the user.
+
 ## Build/Run Commands
 - Poetry: `poetry config virtualenvs.in-project true` (configure), `poetry install --no-root` (install dependencies)
 - Run scripts: `poetry run python -m scripts_work.<script_name> [arguments]`
